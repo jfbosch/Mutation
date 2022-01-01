@@ -120,7 +120,18 @@ namespace Mutation
 					image.Save(imageStream, ImageFormat.Jpeg);
 					imageStream.Seek(0, SeekOrigin.Begin);
 					string text = await this.OcrService.ExtractText(imageStream).ConfigureAwait(true);
-					MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+
+					//MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+
+					SetTextToClipboard(text);
+					Console.Beep(1050, 40);
+					Console.Beep(1050, 40);
+
+					//using MessageForm msgForm = new MessageForm();
+					//msgForm.Show();
+					//msgForm.Activate();
+
+
 				}
 				else
 					MessageBox.Show("No image found on the clipboard.");
@@ -141,6 +152,11 @@ namespace Mutation
 			return returnImage;
 		}
 
+		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
+		public void SetTextToClipboard(string text)
+		{
+			Clipboard.SetText(text, TextDataFormat.Text);
+		}
 
 		private void HookupToggleMichrophoneMuteHotkey()
 		{
