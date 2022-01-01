@@ -1,6 +1,7 @@
 ﻿using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
+using System.Drawing.Imaging;
 
 namespace Mutation
 {
@@ -90,21 +91,50 @@ namespace Mutation
 		private void HookupHotkeys()
 		{
 			HookupToggleMichrophoneMuteHotkey();
+			lbl2.Text = "Toggle Michrophone Mute: " + _hkToggleMicMute;
 
 			HookupOcrExtractText();
-
-			lbl2.Text = "Toggle Michrophone Mute: " + _hkToggleMicMute;
 		}
 
 		private void HookupOcrExtractText()
 		{
 			_hkOcr = new Hotkey();
-			_hkOcr.Control = true;
-			_hkOcr.Shift = true;
-			_hkOcr.KeyCode = Keys.Z;
-			_hkOcr.Pressed += delegate { ToggleMicrophoneMute(); };
+			_hkOcr.Alt = true;
+			_hkOcr.KeyCode = Keys.J;
+			_hkOcr.Pressed += delegate { ExtractText(); };
 
-			//TryRegisterHotkey(_hkOcr);
+			TryRegisterHotkey(_hkOcr);
+		}
+
+		private async Task ExtractText()
+		{
+			try
+			{
+				Image image = GetClipboardImage();
+				if (image is not null)
+				{
+					using MemoryStream imageStream = new MemoryStream();
+					image.Save(imageStream, ImageFormat.Bmp);
+					string text = await this.OcrService.ExtractText(imageStream).ConfigureAwait(true);
+					MessageBox.Show(text);
+				}
+				else
+					MessageBox.Show("No image found on the clipboard.");
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Failed extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}");
+			}
+		}
+
+		public Image GetClipboardImage()
+		{
+			Image returnImage = null;
+			if (Clipboard.ContainsImage())
+			{
+				returnImage = Clipboard.GetImage();
+			}
+			return returnImage;
 		}
 
 
