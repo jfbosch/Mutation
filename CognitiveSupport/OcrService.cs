@@ -28,7 +28,7 @@ public class OcrService
 
 
 	public async Task<string> ExtractText(
-		MemoryStream imageStream)
+		Stream imageStream)
 	{
 		return await ReadFile(client, imageStream).ConfigureAwait(false);
 	}
@@ -55,7 +55,7 @@ public class OcrService
 	 */
 	async Task<string> ReadFile(
 		ComputerVisionClient client,
-		MemoryStream imageStream)
+		Stream imageStream)
 	{
 		Console.WriteLine("----------------------------------------------------------");
 		Console.WriteLine("READ FROM file");
