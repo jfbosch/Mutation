@@ -1,10 +1,15 @@
 ﻿using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
+using CognitiveSupport;
 
 namespace Mutation
 {
 	public partial class MutationForm : Form
 	{
+		internal Hotkey _hkOcr;
+		private OcrService OcrService { get; set; }
+
+
 		internal Hotkey _hkToggleMicMute;
 		private bool IsMuted = false;
 		private CoreAudioController _audioController;
@@ -15,6 +20,9 @@ namespace Mutation
 		{
 			InitializeComponent();
 			InitializeAudioControls();
+
+			OcrService = new OcrService(null, null);
+
 			HookupHotkeys();
 		}
 
@@ -82,22 +90,25 @@ namespace Mutation
 		private void HookupHotkeys()
 		{
 			HookupToggleMichrophoneMuteHotkey();
-			HookupPushToUnmuteMichriphoneHotkey();
+
+			HookupOcrExtractText();
+
 			lbl2.Text = "Toggle Michrophone Mute: " + _hkToggleMicMute;
 		}
 
-		private void HookupToggleMichrophoneMuteHotkey()
+		private void HookupOcrExtractText()
 		{
-			_hkToggleMicMute = new Hotkey();
-			_hkToggleMicMute.Control = true;
-			_hkToggleMicMute.Shift = true;
-			_hkToggleMicMute.KeyCode = Keys.Z;
-			_hkToggleMicMute.Pressed += delegate { ToggleMicrophoneMute(); };
+			_hkOcr = new Hotkey();
+			_hkOcr.Control = true;
+			_hkOcr.Shift = true;
+			_hkOcr.KeyCode = Keys.Z;
+			_hkOcr.Pressed += delegate { ToggleMicrophoneMute(); };
 
-			TryRegisterHotkey(_hkToggleMicMute);
+			//TryRegisterHotkey(_hkOcr);
 		}
 
-		private void HookupPushToUnmuteMichriphoneHotkey()
+
+		private void HookupToggleMichrophoneMuteHotkey()
 		{
 			_hkToggleMicMute = new Hotkey();
 			_hkToggleMicMute.Alt = true;
