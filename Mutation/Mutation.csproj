@@ -13,4 +13,8 @@
     <PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="3.0.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CognitiveSupport\CognitiveSupport.csproj" />
+  </ItemGroup>
+
 </Project>
