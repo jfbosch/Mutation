@@ -1,0 +1,15 @@
+# To learn more about .editorconfig see https://aka.ms/editorconfigdocs
+############################### 
+# Core EditorConfig Options   # 
+############################### 
+# All files 
+[*]
+indent_style=tab
+
+# ReSharper properties
+resharper_csharp_insert_final_newline=false
+# Code files 
+[*.{cs,csx,vb,vbx}]
+#indent_size = 4 
+insert_final_newline=false
+charset=utf-8-bom

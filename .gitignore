@@ -1,0 +1,79 @@
+# Autosave files
+*~
+
+# build
+[Oo]bj/
+[Bb]in/
+packages/
+TestResults/
+node_modules/
+elm-stuff/
+dist/
+
+# globs
+Makefile.in
+*.DS_Store
+*.sln.cache
+*.suo
+*.cache
+*.pidb
+*.userprefs
+*.usertasks
+config.log
+config.make
+config.status
+aclocal.m4
+install-sh
+autom4te.cache/
+*.user
+*.tar.gz
+tarballs/
+test-results/
+Thumbs.db
+
+# Mac bundle stuff
+*.dmg
+*.app
+
+# resharper
+*_Resharper.*
+*.Resharper
+
+# dotCover
+*.dotCover
+
+# rider
+.idea
+
+# visual studio stuff
+.vs
+
+# merge crap
+*.orig
+
+#vscode
+.vscode
+
+#JS and CSS assets
+**/wwwroot/js/*.js
+!**/wwwroot/js/site.js
+!**/wwwroot/js/scroll2top.js
+!**/wwwroot/js/SupportRequestForm.js
+**/wwwroot/css/*.css
+!**/wwwroot/css/site.css
+!**/wwwroot/css/home-page.css
+!**/wwwroot/css/pricing-table.css
+
+
+# Elm web output
+src/Positron.Website/wwwroot/internal/app.js
+src/Positron.Website/wwwroot/internal/*.ttf
+src/Positron.Website/wwwroot/internal/*.eot
+src/Positron.Website/wwwroot/internal/*.woff
+src/Positron.Website/wwwroot/internal/*.woff2
+src/Positron.Website/wwwroot/internal/*.svg
+
+# Elm mobile output
+src/Positron.Website/wwwroot/app/1.2/
+src/Positron.Website/appsettings.Development.json
+/src/Positron.Website/wwwroot/internal
