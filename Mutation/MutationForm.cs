@@ -7,6 +7,8 @@ namespace Mutation
 {
 	public partial class MutationForm : Form
 	{
+		private Settings Settings { get; set; }
+
 		internal Hotkey _hkOcr;
 		private OcrService OcrService { get; set; }
 
@@ -19,12 +21,29 @@ namespace Mutation
 
 		public MutationForm()
 		{
+			LoadSettings();
+
 			InitializeComponent();
 			InitializeAudioControls();
 
 			OcrService = new OcrService(null, null);
 
 			HookupHotkeys();
+		}
+
+		private void LoadSettings()
+		{
+			try
+			{
+				string filePath = "Mutation.json";
+				this.Settings = new SettingsManager(filePath).LoadSettings();
+			}
+			catch (Exception ex)
+				when (ex.Message.ToLower().Contains("could not find the settings"))
+			{
+				MessageBox.Show($"Failed to load settings: {ex.Message}");
+			}
+
 		}
 
 		internal void InitializeAudioControls()
@@ -134,10 +153,17 @@ namespace Mutation
 
 				}
 				else
+				{
+					Console.Beep(550, 40);
+					Console.Beep(550, 40);
+
+					this.Activate();
 					MessageBox.Show("No image found on the clipboard.");
+				}
 			}
 			catch (Exception ex)
 			{
+				this.Activate();
 				MessageBox.Show($"Failed extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}");
 			}
 		}
