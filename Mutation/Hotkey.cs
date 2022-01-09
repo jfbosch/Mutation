@@ -133,9 +133,9 @@ namespace Mutation
 			{
 				// Is the error that the hotkey is registered?
 				if (Marshal.GetLastWin32Error() == ERROR_HOTKEY_ALREADY_REGISTERED)
-				{ return false; }
+					return false;
 				else
-				{ throw new Win32Exception(); }
+					throw new Win32Exception();
 			}
 
 			// Save the control reference and register state
@@ -150,14 +150,14 @@ namespace Mutation
 		{
 			// Check that we have registered
 			if (!this.registered)
-			{ throw new NotSupportedException("You cannot unregister a hotkey that is not registered"); }
+				throw new NotSupportedException("You cannot unregister a hotkey that is not registered");
 
 			// It's possible that the control itself has died: in that case, no need to unregister!
 			if (!this.windowControl.IsDisposed)
 			{
 				// Clean up after ourselves
 				if (Hotkey.UnregisterHotKey(this.windowControl.Handle, this.id) == 0)
-				{ throw new Win32Exception(); }
+					throw new Win32Exception();
 			}
 
 			// Clear the control reference and register state

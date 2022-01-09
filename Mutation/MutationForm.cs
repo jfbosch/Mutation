@@ -36,7 +36,7 @@ namespace Mutation
 			try
 			{
 				string filePath = "Mutation.json";
-				this.Settings = new SettingsManager(filePath).LoadSettings();
+				this.Settings = new SettingsManager(filePath).LoadAndEnsureSettings();
 			}
 			catch (Exception ex)
 				when (ex.Message.ToLower().Contains("could not find the settings"))
@@ -183,20 +183,39 @@ namespace Mutation
 
 		private void HookupToggleMichrophoneMuteHotkey()
 		{
-			_hkToggleMicMute = new Hotkey();
-			_hkToggleMicMute.Alt = true;
-			_hkToggleMicMute.KeyCode = Keys.Q;
+			_hkToggleMicMute = MapHotKey(Settings.AudioSettings.MicrophoneToggleMuteHotKey);
 			_hkToggleMicMute.Pressed += delegate { ToggleMicrophoneMute(); };
-
 			TryRegisterHotkey(_hkToggleMicMute);
 		}
 
-		private void TryRegisterHotkey(Hotkey hotkey)
+		private static Hotkey MapHotKey(string hotKeySetting)
 		{
-			if (!hotkey.GetCanRegister(this))
-				MessageBox.Show("Whoops, looks like attempts to register the hotkey " + hotkey + " will fail or throw an exception.");
+			var hotKey = new Hotkey();
+
+			var keyStrings = hotKeySetting.Split(@"_-+,;: ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries)
+				.Select(k => k.ToUpper())
+				.ToList();
+			string mainKeyString = keyStrings.Last();
+			hotKey.KeyCode = Enum.Parse<Keys>(mainKeyString, true);
+
+			if (keyStrings.Contains("ALT"))
+				hotKey.Alt = true;
+			if (keyStrings.Contains("CTRL") || keyStrings.Contains("CONTROL"))
+				hotKey.Control = true;
+			if (keyStrings.Contains("SHFT") || keyStrings.Contains("SHIFT"))
+				hotKey.Shift = true;
+			if (keyStrings.Contains("WIN") || keyStrings.Contains("WINDOWS") || keyStrings.Contains("START"))
+				hotKey.Windows = true;
+
+			return hotKey;
+		}
+
+		private void TryRegisterHotkey(Hotkey hotKey)
+		{
+			if (!hotKey.GetCanRegister(this))
+				MessageBox.Show("Whoops, looks like attempts to register the hotkey " + hotKey + " will fail or throw an exception.");
 			else
-				hotkey.Register(this);
+				hotKey.Register(this);
 		}
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)

@@ -7,6 +7,7 @@ namespace Mutation;
 internal class SettingsManager
 {
 	private string SettingsFilePath { get; set; }
+	private string SettingsFileFullPath => Path.GetFullPath(SettingsFilePath);
 
 	public SettingsManager(
 		string settingsFilePath)
@@ -14,13 +15,17 @@ internal class SettingsManager
 		SettingsFilePath = settingsFilePath;
 	}
 
-	internal Settings LoadSettings()
+	internal Settings LoadAndEnsureSettings()
 	{
-		string fullPath = Path.GetFullPath(SettingsFilePath);
-		CreateSettingsFileOfNotExists(fullPath);
+		CreateSettingsFileOfNotExists(SettingsFileFullPath);
 
-		string json = File.ReadAllText(fullPath);
+		string json = File.ReadAllText(SettingsFileFullPath);
 		Settings settings = JsonConvert.DeserializeObject<Settings>(json);
+
+		if (EnsureSettings(settings))
+		{
+			SaveSettingsToFile(settings);
+		}
 
 		return settings;
 	}
@@ -29,15 +34,62 @@ internal class SettingsManager
 	{
 		if (!File.Exists(fullPath))
 		{
-			var settings = new Settings
-			{
-				UserInstructions = $"Populate this Mutation settings file with valid settings, save, and restart the app: {fullPath}",
-				AzureComputerVisionSettings = new(),
-			};
+			var settings = new Settings();
+			EnsureSettings(settings);
 
-			string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
-			File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
+			SaveSettingsToFile(settings);
 			Process.Start("notepad.exe", SettingsFilePath);
 		}
+	}
+
+	private bool EnsureSettings(Settings settings)
+	{
+		const string Placeholder = "<placeholder>";
+
+		bool somethingWasMissing = false;
+
+		if (settings.AzureComputerVisionSettings is null)
+		{
+			settings.AzureComputerVisionSettings = new AzureComputerVisionSettings();
+			somethingWasMissing = true;
+		}
+
+		{
+			var x = settings.AzureComputerVisionSettings;
+			if (string.IsNullOrWhiteSpace(x.SubscriptionKey))
+			{
+				x.SubscriptionKey = Placeholder;
+				somethingWasMissing = true;
+			}
+
+			if (string.IsNullOrWhiteSpace(x.Endpoint))
+			{
+				x.Endpoint = Placeholder;
+				somethingWasMissing = true;
+			}
+		}
+
+		if (settings.AudioSettings is null)
+		{
+			settings.AudioSettings = new AudioSettings();
+			somethingWasMissing = true;
+		}
+
+		{
+			var x = settings.AudioSettings;
+			if (string.IsNullOrWhiteSpace(x.MicrophoneToggleMuteHotKey))
+			{
+				x.MicrophoneToggleMuteHotKey = "ALT+Q";
+				somethingWasMissing = true;
+			}
+		}
+
+		return somethingWasMissing;
+	}
+
+	public void SaveSettingsToFile(Settings settings)
+	{
+		string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
+		File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
 	}
 }
