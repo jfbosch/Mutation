@@ -1,4 +1,8 @@
-﻿namespace Mutation;
+﻿using Newtonsoft.Json;
+using System.Diagnostics;
+using System.Text;
+
+namespace Mutation;
 
 internal class SettingsManager
 {
@@ -13,10 +17,27 @@ internal class SettingsManager
 	internal Settings LoadSettings()
 	{
 		string fullPath = Path.GetFullPath(SettingsFilePath);
+		CreateSettingsFileOfNotExists(fullPath);
+
+		string json = File.ReadAllText(fullPath);
+		Settings settings = JsonConvert.DeserializeObject<Settings>(json);
+
+		return settings;
+	}
+
+	private void CreateSettingsFileOfNotExists(string fullPath)
+	{
 		if (!File.Exists(fullPath))
 		{
-			throw new Exception($"Could not find the settings file:{Environment.NewLine}{Environment.NewLine}{fullPath}{Environment.NewLine}{Environment.NewLine}It has now been created. Populate it with valid settings and restart the app.");
+			var settings = new Settings
+			{
+				UserInstructions = $"Populate this Mutation settings file with valid settings, save, and restart the app: {fullPath}",
+				AzureComputerVisionSettings = new(),
+			};
+
+			string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
+			File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
+			Process.Start("notepad.exe", SettingsFilePath);
 		}
-		return null;
 	}
 }

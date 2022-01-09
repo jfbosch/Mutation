@@ -1,12 +1,13 @@
 ﻿namespace Mutation;
 
-internal class Settings
+public class Settings
 {
-	internal AzureComputerVisionSettings AzureComputerVisionSettings { get; set; }
+	public string UserInstructions { get; set; }
+	public AzureComputerVisionSettings AzureComputerVisionSettings { get; set; }
 }
 
-internal class AzureComputerVisionSettings
+public class AzureComputerVisionSettings
 {
-	internal string SubscriptionKey { get; set; }
-	internal string Endpoint { get; set; }
+	public string SubscriptionKey { get; set; }
+	public string Endpoint { get; set; }
 }

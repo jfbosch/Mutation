@@ -1,4 +1,4 @@
-namespace Mutation
+﻿namespace Mutation
 {
 	internal static class Program
 	{
@@ -15,7 +15,14 @@ namespace Mutation
 			Application.SetCompatibleTextRenderingDefault(false);
 
 			ApplicationConfiguration.Initialize();
-			Application.Run(new MutationForm());
+			try
+			{
+				Application.Run(new MutationForm());
+			}
+			catch (Exception ex)
+			{
+				MessageBox.Show($"Error starting up: {ex.ToString()}");
+			}
 		}
 	}
 }

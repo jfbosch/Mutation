@@ -7,25 +7,21 @@ namespace CognitiveSupport;
 
 public class OcrService
 {
-	//TODO: move to config
-	string SubscriptionKey = "674d788a168941dd887fe5674f3a3110";
-	string Endpoint = "https://bo-computer-vission-01.cognitiveservices.azure.com/";
+	private string SubscriptionKey { get; init; }
+	private string Endpoint { get; init; }
 
 	private ComputerVisionClient client;
 
 	private readonly object _lock = new object();
 
-
 	public OcrService(
 		string? subscriptionKey,
 		string? endpoint)
 	{
-		//SubscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
-		//Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
-
+		SubscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
+		Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
 		client = Authenticate(Endpoint, SubscriptionKey);
 	}
-
 
 	public async Task<string> ExtractText(
 		Stream imageStream)

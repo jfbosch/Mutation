@@ -26,7 +26,7 @@ namespace Mutation
 			InitializeComponent();
 			InitializeAudioControls();
 
-			OcrService = new OcrService(null, null);
+			OcrService = new OcrService(Settings.AzureComputerVisionSettings.SubscriptionKey, Settings.AzureComputerVisionSettings.Endpoint);
 
 			HookupHotkeys();
 		}
@@ -135,7 +135,6 @@ namespace Mutation
 				if (image is not null)
 				{
 					using MemoryStream imageStream = new MemoryStream();
-					//using FileStream imageStream = new FileStream(@"C:\Temp\1.jpg", FileMode.OpenOrCreate, FileAccess.ReadWrite);
 					image.Save(imageStream, ImageFormat.Jpeg);
 					imageStream.Seek(0, SeekOrigin.Begin);
 					string text = await this.OcrService.ExtractText(imageStream).ConfigureAwait(true);
@@ -149,8 +148,6 @@ namespace Mutation
 					//using MessageForm msgForm = new MessageForm();
 					//msgForm.Show();
 					//msgForm.Activate();
-
-
 				}
 				else
 				{
