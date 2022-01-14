@@ -48,40 +48,42 @@ internal class SettingsManager
 
 		bool somethingWasMissing = false;
 
+		settings.UserInstructions = "Change the values of the settings below to your preferences, save the file, and restart Mutation.exe";
+
 		if (settings.AzureComputerVisionSettings is null)
 		{
 			settings.AzureComputerVisionSettings = new AzureComputerVisionSettings();
 			somethingWasMissing = true;
 		}
 
+		var azureComputerVisionSettings = settings.AzureComputerVisionSettings;
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.OcrImageToTextHotKey))
 		{
-			var x = settings.AzureComputerVisionSettings;
-			if (string.IsNullOrWhiteSpace(x.SubscriptionKey))
-			{
-				x.SubscriptionKey = Placeholder;
-				somethingWasMissing = true;
-			}
-
-			if (string.IsNullOrWhiteSpace(x.Endpoint))
-			{
-				x.Endpoint = Placeholder;
-				somethingWasMissing = true;
-			}
+			azureComputerVisionSettings.OcrImageToTextHotKey = "ALT+J";
+			somethingWasMissing = true;
 		}
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.SubscriptionKey))
+		{
+			azureComputerVisionSettings.SubscriptionKey = Placeholder;
+			somethingWasMissing = true;
+		}
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.Endpoint))
+		{
+			azureComputerVisionSettings.Endpoint = Placeholder;
+			somethingWasMissing = true;
+		}
+
 
 		if (settings.AudioSettings is null)
 		{
 			settings.AudioSettings = new AudioSettings();
 			somethingWasMissing = true;
 		}
-
+		var audioSettings = settings.AudioSettings;
+		if (string.IsNullOrWhiteSpace(audioSettings.MicrophoneToggleMuteHotKey))
 		{
-			var x = settings.AudioSettings;
-			if (string.IsNullOrWhiteSpace(x.MicrophoneToggleMuteHotKey))
-			{
-				x.MicrophoneToggleMuteHotKey = "ALT+Q";
-				somethingWasMissing = true;
-			}
+			audioSettings.MicrophoneToggleMuteHotKey = "ALT+Q";
+			somethingWasMissing = true;
 		}
 
 		return somethingWasMissing;

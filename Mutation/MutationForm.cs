@@ -109,19 +109,14 @@ namespace Mutation
 
 		private void HookupHotkeys()
 		{
-			HookupToggleMichrophoneMuteHotkey();
-			lbl2.Text = "Toggle Michrophone Mute: " + _hkToggleMicMute;
-
-			HookupOcrExtractText();
+			HookupHotKeyToggleMichrophoneMuteHotkey();
+			HookupHotKeyOcrExtractText();
 		}
 
-		private void HookupOcrExtractText()
+		private void HookupHotKeyOcrExtractText()
 		{
-			_hkOcr = new Hotkey();
-			_hkOcr.Alt = true;
-			_hkOcr.KeyCode = Keys.J;
+			_hkOcr = MapHotKey(Settings.AzureComputerVisionSettings.OcrImageToTextHotKey);
 			_hkOcr.Pressed += delegate { ExtractText(); };
-
 			TryRegisterHotkey(_hkOcr);
 		}
 
@@ -181,18 +176,20 @@ namespace Mutation
 			Clipboard.SetText(text, TextDataFormat.Text);
 		}
 
-		private void HookupToggleMichrophoneMuteHotkey()
+		private void HookupHotKeyToggleMichrophoneMuteHotkey()
 		{
 			_hkToggleMicMute = MapHotKey(Settings.AudioSettings.MicrophoneToggleMuteHotKey);
 			_hkToggleMicMute.Pressed += delegate { ToggleMicrophoneMute(); };
 			TryRegisterHotkey(_hkToggleMicMute);
+
+			lbl2.Text = $"Toggle Michrophone Mute: {_hkToggleMicMute}";
 		}
 
-		private static Hotkey MapHotKey(string hotKeySetting)
+		private static Hotkey MapHotKey(string hotKeyStringRepresentation)
 		{
 			var hotKey = new Hotkey();
 
-			var keyStrings = hotKeySetting.Split(@"_-+,;: ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries)
+			var keyStrings = hotKeyStringRepresentation.Split(@"_-+,;: ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries)
 				.Select(k => k.ToUpper())
 				.ToList();
 			string mainKeyString = keyStrings.Last();
@@ -213,15 +210,25 @@ namespace Mutation
 		private void TryRegisterHotkey(Hotkey hotKey)
 		{
 			if (!hotKey.GetCanRegister(this))
-				MessageBox.Show("Whoops, looks like attempts to register the hotkey " + hotKey + " will fail or throw an exception.");
+			{
+				this.Activate();
+				MessageBox.Show($"Oops, looks like attempts to register the hotkey {hotKey} will fail or throw an exception.");
+			}
 			else
 				hotKey.Register(this);
 		}
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
-			if (_hkToggleMicMute != null && _hkToggleMicMute.Registered)
-				_hkToggleMicMute.Unregister();
+			UnregisterHotkey(_hkToggleMicMute);
+			UnregisterHotkey(_hkOcr);
 		}
+
+		private static void UnregisterHotkey(Hotkey hk)
+		{
+			if (hk != null && hk.Registered)
+				hk.Unregister();
+		}
+
 	}
 }
