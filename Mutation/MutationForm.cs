@@ -11,6 +11,7 @@ namespace Mutation
 
 		internal Hotkey _hkOcr;
 		private OcrService OcrService { get; set; }
+		internal Hotkey _hkSpeechToText { get; set; }
 
 
 		internal Hotkey _hkToggleMicMute;
@@ -111,6 +112,7 @@ namespace Mutation
 		{
 			HookupHotKeyToggleMichrophoneMuteHotkey();
 			HookupHotKeyOcrExtractText();
+			HookupHotKeySpeechToText();
 		}
 
 		private void HookupHotKeyOcrExtractText()
@@ -178,6 +180,7 @@ namespace Mutation
 			Clipboard.SetText(text, TextDataFormat.Text);
 		}
 
+
 		private void HookupHotKeyToggleMichrophoneMuteHotkey()
 		{
 			_hkToggleMicMute = MapHotKey(Settings.AudioSettings.MicrophoneToggleMuteHotKey);
@@ -186,6 +189,17 @@ namespace Mutation
 
 			lblToggleMic.Text = $"Toggle Michrophone Mute: {_hkToggleMicMute}";
 		}
+
+		private void HookupHotKeySpeechToText()
+		{
+			_hkSpeechToText = MapHotKey(Settings.OpenAiSettings.SpeechToTextHotKey);
+			_hkSpeechToText.Pressed += delegate { ExtractText(); };
+			TryRegisterHotkey(_hkSpeechToText);
+
+			lblSpeechToText.Text = $"Speach to Text: {_hkSpeechToText}";
+		}
+
+
 
 		private static Hotkey MapHotKey(string hotKeyStringRepresentation)
 		{
