@@ -28,73 +28,104 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.lblActiveMic = new System.Windows.Forms.Label();
-			this.lbl2 = new System.Windows.Forms.Label();
-			this.txtActiveMic = new System.Windows.Forms.TextBox();
-			this.txtAllMics = new System.Windows.Forms.TextBox();
-			this.SuspendLayout();
+			lblActiveMic = new Label();
+			lblToggleMic = new Label();
+			txtActiveMic = new TextBox();
+			txtAllMics = new TextBox();
+			lblOcrHotKey = new Label();
+			lblSpeechToText = new Label();
+			SuspendLayout();
 			// 
 			// lblActiveMic
 			// 
-			this.lblActiveMic.AutoSize = true;
-			this.lblActiveMic.Location = new System.Drawing.Point(137, 13);
-			this.lblActiveMic.Name = "lblActiveMic";
-			this.lblActiveMic.Size = new System.Drawing.Size(57, 13);
-			this.lblActiveMic.TabIndex = 0;
-			this.lblActiveMic.Text = "Active Mic";
+			lblActiveMic.AutoSize = true;
+			lblActiveMic.Location = new Point(160, 15);
+			lblActiveMic.Margin = new Padding(4, 0, 4, 0);
+			lblActiveMic.Name = "lblActiveMic";
+			lblActiveMic.Size = new Size(63, 15);
+			lblActiveMic.TabIndex = 0;
+			lblActiveMic.Text = "Active Mic";
 			// 
-			// lbl2
+			// lblToggleMic
 			// 
-			this.lbl2.AutoSize = true;
-			this.lbl2.Location = new System.Drawing.Point(15, 41);
-			this.lbl2.Name = "lbl2";
-			this.lbl2.Size = new System.Drawing.Size(16, 13);
-			this.lbl2.TabIndex = 1;
-			this.lbl2.Text = "...";
+			lblToggleMic.AutoSize = true;
+			lblToggleMic.Location = new Point(18, 47);
+			lblToggleMic.Margin = new Padding(4, 0, 4, 0);
+			lblToggleMic.Name = "lblToggleMic";
+			lblToggleMic.Size = new Size(16, 15);
+			lblToggleMic.TabIndex = 1;
+			lblToggleMic.Text = "...";
 			// 
 			// txtActiveMic
 			// 
-			this.txtActiveMic.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.txtActiveMic.Location = new System.Drawing.Point(216, 10);
-			this.txtActiveMic.Name = "txtActiveMic";
-			this.txtActiveMic.ReadOnly = true;
-			this.txtActiveMic.Size = new System.Drawing.Size(257, 20);
-			this.txtActiveMic.TabIndex = 2;
+			txtActiveMic.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			txtActiveMic.Location = new Point(252, 12);
+			txtActiveMic.Margin = new Padding(4, 3, 4, 3);
+			txtActiveMic.Name = "txtActiveMic";
+			txtActiveMic.ReadOnly = true;
+			txtActiveMic.Size = new Size(299, 23);
+			txtActiveMic.TabIndex = 2;
 			// 
 			// txtAllMics
 			// 
-			this.txtAllMics.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.txtAllMics.Location = new System.Drawing.Point(216, 36);
-			this.txtAllMics.Multiline = true;
-			this.txtAllMics.Name = "txtAllMics";
-			this.txtAllMics.ReadOnly = true;
-			this.txtAllMics.Size = new System.Drawing.Size(257, 58);
-			this.txtAllMics.TabIndex = 3;
+			txtAllMics.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			txtAllMics.Location = new Point(252, 42);
+			txtAllMics.Margin = new Padding(4, 3, 4, 3);
+			txtAllMics.Multiline = true;
+			txtAllMics.Name = "txtAllMics";
+			txtAllMics.ReadOnly = true;
+			txtAllMics.Size = new Size(299, 66);
+			txtAllMics.TabIndex = 3;
+			// 
+			// lblOcrHotKey
+			// 
+			lblOcrHotKey.AutoSize = true;
+			lblOcrHotKey.Location = new Point(18, 134);
+			lblOcrHotKey.Margin = new Padding(4, 0, 4, 0);
+			lblOcrHotKey.Name = "lblOcrHotKey";
+			lblOcrHotKey.Size = new Size(16, 15);
+			lblOcrHotKey.TabIndex = 4;
+			lblOcrHotKey.Text = "...";
+			// 
+			// lblSpeechToText
+			// 
+			lblSpeechToText.AutoSize = true;
+			lblSpeechToText.Location = new Point(18, 162);
+			lblSpeechToText.Margin = new Padding(4, 0, 4, 0);
+			lblSpeechToText.Name = "lblSpeechToText";
+			lblSpeechToText.Size = new Size(16, 15);
+			lblSpeechToText.TabIndex = 5;
+			lblSpeechToText.Text = "...";
 			// 
 			// MutationForm
 			// 
-			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(477, 100);
-			this.Controls.Add(this.txtAllMics);
-			this.Controls.Add(this.txtActiveMic);
-			this.Controls.Add(this.lbl2);
-			this.Controls.Add(this.lblActiveMic);
-			this.Name = "MutationForm";
-			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-			this.Text = "Mutation";
-			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MutationForm_FormClosing);
-			this.ResumeLayout(false);
-			this.PerformLayout();
-
+			AutoScaleDimensions = new SizeF(7F, 15F);
+			AutoScaleMode = AutoScaleMode.Font;
+			ClientSize = new Size(556, 264);
+			Controls.Add(lblSpeechToText);
+			Controls.Add(lblOcrHotKey);
+			Controls.Add(txtAllMics);
+			Controls.Add(txtActiveMic);
+			Controls.Add(lblToggleMic);
+			Controls.Add(lblActiveMic);
+			Margin = new Padding(4, 3, 4, 3);
+			Name = "MutationForm";
+			StartPosition = FormStartPosition.CenterScreen;
+			Text = "Mutation";
+			FormClosing += MutationForm_FormClosing;
+			Load += MutationForm_Load;
+			ResumeLayout(false);
+			PerformLayout();
 		}
 
 		#endregion
 
-		private System.Windows.Forms.Label lblActiveMic;
-		private System.Windows.Forms.Label lbl2;
-		private System.Windows.Forms.TextBox txtActiveMic;
-		private System.Windows.Forms.TextBox txtAllMics;
+		private Label lblActiveMic;
+		private Label lblToggleMic;
+		private TextBox txtActiveMic;
+		private TextBox txtAllMics;
+		private Label lblOcrHotKey;
+		private Label lblSpeechToText;
 	}
 }
 

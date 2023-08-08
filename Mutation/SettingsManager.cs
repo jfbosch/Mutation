@@ -50,12 +50,12 @@ internal class SettingsManager
 
 		settings.UserInstructions = "Change the values of the settings below to your preferences, save the file, and restart Mutation.exe";
 
+
 		if (settings.AzureComputerVisionSettings is null)
 		{
 			settings.AzureComputerVisionSettings = new AzureComputerVisionSettings();
 			somethingWasMissing = true;
 		}
-
 		var azureComputerVisionSettings = settings.AzureComputerVisionSettings;
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.OcrImageToTextHotKey))
 		{
@@ -85,6 +85,31 @@ internal class SettingsManager
 			audioSettings.MicrophoneToggleMuteHotKey = "ALT+Q";
 			somethingWasMissing = true;
 		}
+
+
+
+		if (settings.OpenAiSettings is null)
+		{
+			settings.OpenAiSettings = new OpenAiSettings();
+			somethingWasMissing = true;
+		}
+		var openAiSettings = settings.OpenAiSettings;
+		if (string.IsNullOrWhiteSpace(openAiSettings.SpeechToTextHotKey))
+		{
+			openAiSettings.SpeechToTextHotKey = "ALT+O"; // You can choose a different hotkey if needed
+			somethingWasMissing = true;
+		}
+		if (string.IsNullOrWhiteSpace(openAiSettings.ApiKey))
+		{
+			openAiSettings.ApiKey = Placeholder;
+			somethingWasMissing = true;
+		}
+		if (string.IsNullOrWhiteSpace(openAiSettings.Endpoint))
+		{
+			openAiSettings.Endpoint = Placeholder;
+			somethingWasMissing = true;
+		}
+
 
 		return somethingWasMissing;
 	}

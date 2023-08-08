@@ -118,6 +118,8 @@ namespace Mutation
 			_hkOcr = MapHotKey(Settings.AzureComputerVisionSettings.OcrImageToTextHotKey);
 			_hkOcr.Pressed += delegate { ExtractText(); };
 			TryRegisterHotkey(_hkOcr);
+
+			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
 		}
 
 		private async Task ExtractText()
@@ -182,7 +184,7 @@ namespace Mutation
 			_hkToggleMicMute.Pressed += delegate { ToggleMicrophoneMute(); };
 			TryRegisterHotkey(_hkToggleMicMute);
 
-			lbl2.Text = $"Toggle Michrophone Mute: {_hkToggleMicMute}";
+			lblToggleMic.Text = $"Toggle Michrophone Mute: {_hkToggleMicMute}";
 		}
 
 		private static Hotkey MapHotKey(string hotKeyStringRepresentation)
@@ -230,5 +232,9 @@ namespace Mutation
 				hk.Unregister();
 		}
 
+		private void MutationForm_Load(object sender, EventArgs e)
+		{
+
+		}
 	}
 }
