@@ -216,17 +216,21 @@ namespace Mutation
 			{
 				lock (_audioRecorderLock)
 				{
-					if (RecordingAudio)
-					{
-						AudioRecorder.StopRecording();
-						AudioRecorder.Dispose();
-						AudioRecorder = null;
-					}
-					else
+					if (!RecordingAudio)
 					{
 						AudioRecorder = new AudioRecorder();
 						AudioRecorder.StartRecording(@"C:\Temp\Mutation\output.mp3");
 						Console.Beep(970, 80);
+					}
+					else // Busy recording, so we want to stop it.
+					{
+						AudioRecorder.StopRecording();
+						AudioRecorder.Dispose();
+						AudioRecorder = null;
+
+						Console.Beep(1050, 40);
+						Console.Beep(1050, 40);
+
 					}
 				}
 				//this.SpeechToTextService.StartRecording();
@@ -241,8 +245,6 @@ namespace Mutation
 				//MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
 
 				SetTextToClipboard(text);
-				Console.Beep(1050, 40);
-				Console.Beep(1050, 40);
 
 				// failed beep
 			}
