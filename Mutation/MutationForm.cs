@@ -214,12 +214,17 @@ namespace Mutation
 		{
 			try
 			{
+				if (!Directory.Exists(Settings.OpenAiSettings.TempDirectory))
+					Directory.CreateDirectory(Settings.OpenAiSettings.TempDirectory);
+
+				string audioFilePath = Path.Combine(Settings.OpenAiSettings.TempDirectory, "mutation_recording.mp3");
+
 				lock (_audioRecorderLock)
 				{
 					if (!RecordingAudio)
 					{
 						AudioRecorder = new AudioRecorder();
-						AudioRecorder.StartRecording(@"C:\Temp\Mutation\output.mp3");
+						AudioRecorder.StartRecording(audioFilePath);
 						Console.Beep(970, 80);
 					}
 					else // Busy recording, so we want to stop it.
@@ -229,22 +234,18 @@ namespace Mutation
 						AudioRecorder = null;
 
 						Console.Beep(1050, 40);
-						Console.Beep(1050, 40);
 
+						this.SpeechToTextService.ConvertAudioToText(@"C:\Temp\Mutation\1.mp3", 3);
+						string text = "boo";
+						SetTextToClipboard(text);
+
+						Console.Beep(1050, 40);
 					}
 				}
-				//this.SpeechToTextService.StartRecording();
-				//this.SpeechToTextService.RecordToFile(@"C:\Temp\Mutation\1.mp3", 3);
 
-				//Thread.Sleep(3000);
-				//this.SpeechToTextService.StartRecording();
-
-				//string text = await this.OcrService.ExtractText(imageStream).ConfigureAwait(true);
-				string text = "boo";
 
 				//MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
 
-				SetTextToClipboard(text);
 
 				// failed beep
 			}

@@ -109,6 +109,11 @@ internal class SettingsManager
 			openAiSettings.Endpoint = Placeholder;
 			somethingWasMissing = true;
 		}
+		if (string.IsNullOrWhiteSpace(openAiSettings.TempDirectory))
+		{
+			openAiSettings.TempDirectory= @"C:\Temp\Mutation";
+			somethingWasMissing = true;
+		}
 
 
 		return somethingWasMissing;
