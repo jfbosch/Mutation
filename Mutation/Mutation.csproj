@@ -10,8 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="AudioSwitcher.AudioApi" Version="3.0.0" />
-    <PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="3.0.0.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="3.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>

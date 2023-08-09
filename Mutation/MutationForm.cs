@@ -256,19 +256,17 @@ namespace Mutation
 					}
 				}
 
-
-				//MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
-
-
-				// failed beep
 			}
 			catch (Exception ex)
 			{
 				Console.Beep(550, 40);
 				Console.Beep(550, 40);
 
+				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
+				txtSpeechToText.Text = msg;
+
 				this.Activate();
-				MessageBox.Show($"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}");
+				MessageBox.Show(msg);
 			}
 			finally
 			{
