@@ -9,16 +9,21 @@ namespace Mutation
 	{
 		private Settings Settings { get; set; }
 
-		internal Hotkey _hkOcr;
+		private Hotkey _hkOcr;
 		private OcrService OcrService { get; set; }
+
+		private object _audioRecorderLock = new object();
+		private AudioRecorder AudioRecorder { get; set; }
+		private bool RecordingAudio => AudioRecorder != null;
+
 		private SpeechToTextService SpeechToTextService { get; set; }
-		internal Hotkey _hkSpeechToText { get; set; }
+		private Hotkey _hkSpeechToText { get; set; }
 
 
-		internal Hotkey _hkToggleMicMute;
+		private Hotkey _hkToggleMicMute;
 		private bool IsMuted = false;
 		private CoreAudioController _audioController;
-		IEnumerable<CoreAudioDevice> _devices;
+		private IEnumerable<CoreAudioDevice> _devices;
 		private CoreAudioDevice Microphone { get; set; }
 
 		public MutationForm()
@@ -209,10 +214,23 @@ namespace Mutation
 		{
 			try
 			{
-				Console.Beep(970, 80);
-
+				lock (_audioRecorderLock)
+				{
+					if (RecordingAudio)
+					{
+						AudioRecorder.StopRecording();
+						AudioRecorder.Dispose();
+						AudioRecorder = null;
+					}
+					else
+					{
+						AudioRecorder = new AudioRecorder();
+						AudioRecorder.StartRecording(@"C:\Temp\Mutation\output.mp3");
+						Console.Beep(970, 80);
+					}
+				}
 				//this.SpeechToTextService.StartRecording();
-				this.SpeechToTextService.RecordToFile(@"C:\Temp\Mutation\1.mp3", 3);
+				//this.SpeechToTextService.RecordToFile(@"C:\Temp\Mutation\1.mp3", 3);
 
 				//Thread.Sleep(3000);
 				//this.SpeechToTextService.StartRecording();
