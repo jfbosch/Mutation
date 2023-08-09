@@ -11,6 +11,7 @@ namespace Mutation
 
 		internal Hotkey _hkOcr;
 		private OcrService OcrService { get; set; }
+		private SpeechToTextService SpeechToTextService { get; set; }
 		internal Hotkey _hkSpeechToText { get; set; }
 
 
@@ -28,6 +29,11 @@ namespace Mutation
 			InitializeAudioControls();
 
 			OcrService = new OcrService(Settings.AzureComputerVisionSettings.SubscriptionKey, Settings.AzureComputerVisionSettings.Endpoint);
+			SpeechToTextService = new SpeechToTextService(
+				Settings.OpenAiSettings.ApiKey
+				, Settings.OpenAiSettings.Endpoint
+				, "./Temp"
+				, 1);
 
 			HookupHotkeys();
 		}
@@ -193,12 +199,44 @@ namespace Mutation
 		private void HookupHotKeySpeechToText()
 		{
 			_hkSpeechToText = MapHotKey(Settings.OpenAiSettings.SpeechToTextHotKey);
-			_hkSpeechToText.Pressed += delegate { ExtractText(); };
+			_hkSpeechToText.Pressed += delegate { SpeechToText(); };
 			TryRegisterHotkey(_hkSpeechToText);
 
 			lblSpeechToText.Text = $"Speach to Text: {_hkSpeechToText}";
 		}
 
+		private async Task SpeechToText()
+		{
+			try
+			{
+				Console.Beep(970, 80);
+
+				//this.SpeechToTextService.StartRecording();
+				this.SpeechToTextService.RecordToFile(@"C:\Temp\Mutation\1.mp3", 3);
+
+				//Thread.Sleep(3000);
+				//this.SpeechToTextService.StartRecording();
+
+				//string text = await this.OcrService.ExtractText(imageStream).ConfigureAwait(true);
+				string text = "boo";
+
+				//MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
+
+				SetTextToClipboard(text);
+				Console.Beep(1050, 40);
+				Console.Beep(1050, 40);
+
+				// failed beep
+			}
+			catch (Exception ex)
+			{
+				Console.Beep(550, 40);
+				Console.Beep(550, 40);
+
+				this.Activate();
+				MessageBox.Show($"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}");
+			}
+		}
 
 
 		private static Hotkey MapHotKey(string hotKeyStringRepresentation)
