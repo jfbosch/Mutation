@@ -12,7 +12,7 @@ namespace Mutation
 		private Hotkey _hkOcr;
 		private OcrService OcrService { get; set; }
 
-		private object _audioRecorderLock = new object();
+		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
 		private AudioRecorder AudioRecorder { get; set; }
 		private bool RecordingAudio => AudioRecorder != null;
 
@@ -139,6 +139,8 @@ namespace Mutation
 			{
 				Console.Beep(970, 80);
 
+				txtOcr.Text = "Running OCR on image";
+
 				Image image = GetClipboardImage();
 				if (image is not null)
 				{
@@ -150,6 +152,8 @@ namespace Mutation
 					//MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
 
 					SetTextToClipboard(text);
+					txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
+
 					Console.Beep(1050, 40);
 					Console.Beep(1050, 40);
 
@@ -160,16 +164,23 @@ namespace Mutation
 				else
 				{
 					Console.Beep(550, 40);
-					Console.Beep(550, 40);
+					Console.Beep(400, 40);
 
+					txtOcr.Text = "No image found on the clipboard.";
 					this.Activate();
 					MessageBox.Show("No image found on the clipboard.");
 				}
 			}
 			catch (Exception ex)
 			{
-				this.Activate();
-				MessageBox.Show($"Failed extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}");
+				string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
+				txtOcr.Text = msg;
+
+				Console.Beep(550, 80);
+				Console.Beep(400, 80);
+
+				//this.Activate();
+				//MessageBox.Show(msg);
 			}
 		}
 
@@ -217,10 +228,11 @@ namespace Mutation
 
 				string audioFilePath = Path.Combine(Settings.OpenAiSettings.TempDirectory, "mutation_recording.mp3");
 
-				//lock (_audioRecorderLock)
+				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
 					if (!RecordingAudio)
 					{
+						txtSpeechToText.Text = "Recording microphone...";
 						AudioRecorder = new AudioRecorder();
 						AudioRecorder.StartRecording(audioFilePath);
 						Console.Beep(970, 80);
@@ -233,10 +245,14 @@ namespace Mutation
 
 						Console.Beep(1050, 40);
 
+						txtSpeechToText.Text = "Converting speech to text...";
 						string text = await this.SpeechToTextService.ConvertAudioToText(audioFilePath).ConfigureAwait(true);
+
 						SetTextToClipboard(text);
+						txtSpeechToText.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
 
 						Console.Beep(1050, 40);
+						Console.Beep(1150, 40);
 					}
 				}
 
@@ -253,6 +269,10 @@ namespace Mutation
 
 				this.Activate();
 				MessageBox.Show($"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}");
+			}
+			finally
+			{
+				_audioRecorderLock.Release();
 			}
 		}
 

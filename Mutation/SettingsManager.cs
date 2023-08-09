@@ -96,7 +96,7 @@ internal class SettingsManager
 		var openAiSettings = settings.OpenAiSettings;
 		if (string.IsNullOrWhiteSpace(openAiSettings.SpeechToTextHotKey))
 		{
-			openAiSettings.SpeechToTextHotKey = "ALT+O"; // You can choose a different hotkey if needed
+			openAiSettings.SpeechToTextHotKey = "ALT+U"; // You can choose a different hotkey if needed
 			somethingWasMissing = true;
 		}
 		if (string.IsNullOrWhiteSpace(openAiSettings.ApiKey))
