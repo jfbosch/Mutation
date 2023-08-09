@@ -36,9 +36,7 @@ namespace Mutation
 			OcrService = new OcrService(Settings.AzureComputerVisionSettings.SubscriptionKey, Settings.AzureComputerVisionSettings.Endpoint);
 			SpeechToTextService = new SpeechToTextService(
 				Settings.OpenAiSettings.ApiKey
-				, Settings.OpenAiSettings.Endpoint
-				, "./Temp"
-				, 1);
+				, Settings.OpenAiSettings.Endpoint);
 
 			HookupHotkeys();
 		}
@@ -219,7 +217,7 @@ namespace Mutation
 
 				string audioFilePath = Path.Combine(Settings.OpenAiSettings.TempDirectory, "mutation_recording.mp3");
 
-				lock (_audioRecorderLock)
+				//lock (_audioRecorderLock)
 				{
 					if (!RecordingAudio)
 					{
@@ -235,8 +233,7 @@ namespace Mutation
 
 						Console.Beep(1050, 40);
 
-						this.SpeechToTextService.ConvertAudioToText(@"C:\Temp\Mutation\1.mp3", 3);
-						string text = "boo";
+						string text = await this.SpeechToTextService.ConvertAudioToText(audioFilePath).ConfigureAwait(true);
 						SetTextToClipboard(text);
 
 						Console.Beep(1050, 40);
