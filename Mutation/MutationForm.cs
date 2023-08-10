@@ -1,6 +1,7 @@
 ﻿using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
+using NAudio.Wave;
 using System.Drawing.Imaging;
 
 namespace Mutation
@@ -18,6 +19,8 @@ namespace Mutation
 
 		private SpeechToTextService SpeechToTextService { get; set; }
 		private Hotkey _hkSpeechToText { get; set; }
+
+		private int _defaultCaptureDeviceIndex = -1;
 
 
 		private Hotkey _hkToggleMicMute;
@@ -51,7 +54,7 @@ namespace Mutation
 			catch (Exception ex)
 				when (ex.Message.ToLower().Contains("could not find the settings"))
 			{
-				MessageBox.Show($"Failed to load settings: {ex.Message}");
+				MessageBox.Show(this, $"Failed to load settings: {ex.Message}", "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 
 		}
@@ -61,6 +64,7 @@ namespace Mutation
 			txtActiveMic.Text = "(Initializing...)";
 			Application.DoEvents();
 
+
 			_audioController = new CoreAudioController();
 			_devices = _audioController.GetDevices(DeviceType.Capture, DeviceState.Active);
 			var defaultMicDevice = _devices
@@ -68,6 +72,36 @@ namespace Mutation
 			if (defaultMicDevice != null)
 			{
 				this.Microphone = defaultMicDevice;
+
+				// The AudioSwitcher library, CoreAudioDevice.Name returns a value like
+				// "Krisp Michrophone". This is the name of the device as under Windows recording devices.
+				// While the NAudio library, WaveInEvent.GetCapabilities(i).ProductName, returns a value like
+				// "Krisp Michrophone (Krisp Audio)". This has the device name, but also contains a suffix.
+				// So, we do a starts with match to find the mic we are looking for using the default device name followed by a space and a (
+
+				string startsWithNameToMatch = defaultMicDevice.Name + " (";
+				int deviceCount = WaveIn.DeviceCount;
+				bool micMatchFound = false;
+				for (int i = 0; i < deviceCount; i++)
+				{
+					if (WaveInEvent.GetCapabilities(i).ProductName.StartsWith(startsWithNameToMatch))
+					{
+						micMatchFound = true;
+						_defaultCaptureDeviceIndex = i;
+
+						// Debugging message
+						//MessageBox.Show(
+						//	defaultMicDevice.Name
+						//	+ Environment.NewLine
+						//	+ WaveInEvent.GetCapabilities(i).ProductName
+						//	+ Environment.NewLine
+						//	+ "Device Index: " + _defaultCaptureDeviceIndex);
+
+						break;
+					}
+				}
+				if (!micMatchFound)
+					MessageBox.Show($"No michrophone match found for {this.Microphone.Name}");
 
 				FeedbackToUser();
 			}
@@ -113,7 +147,6 @@ namespace Mutation
 
 				int i = 1;
 				txtAllMics.Text = string.Join(Environment.NewLine, _devices.Select(m => $"{i++}) {m.FullName}{(m.IsMuted ? "       - muted" : "")}").ToArray());
-
 			}
 		}
 
@@ -179,8 +212,8 @@ namespace Mutation
 				Console.Beep(550, 80);
 				Console.Beep(400, 80);
 
-				//this.Activate();
-				//MessageBox.Show(msg);
+				this.Activate();
+				//MessageBox.Show(this, msg, "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
@@ -234,7 +267,7 @@ namespace Mutation
 					{
 						txtSpeechToText.Text = "Recording microphone...";
 						AudioRecorder = new AudioRecorder();
-						AudioRecorder.StartRecording(audioFilePath);
+						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
 						Console.Beep(970, 80);
 					}
 					else // Busy recording, so we want to stop it.
@@ -266,7 +299,7 @@ namespace Mutation
 				txtSpeechToText.Text = msg;
 
 				this.Activate();
-				MessageBox.Show(msg);
+				MessageBox.Show(this, msg, "Speech to text error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			finally
 			{
@@ -321,6 +354,11 @@ namespace Mutation
 		}
 
 		private void MutationForm_Load(object sender, EventArgs e)
+		{
+
+		}
+
+		private void txtSpeechToText_TextChanged(object sender, EventArgs e)
 		{
 
 		}

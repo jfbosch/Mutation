@@ -109,6 +109,7 @@
 			txtSpeechToText.ReadOnly = true;
 			txtSpeechToText.Size = new Size(299, 66);
 			txtSpeechToText.TabIndex = 6;
+			txtSpeechToText.TextChanged += txtSpeechToText_TextChanged;
 			// 
 			// txtOcr
 			// 
