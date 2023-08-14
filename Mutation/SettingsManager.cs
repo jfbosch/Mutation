@@ -57,9 +57,21 @@ internal class SettingsManager
 			somethingWasMissing = true;
 		}
 		var azureComputerVisionSettings = settings.AzureComputerVisionSettings;
-		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.OcrImageToTextHotKey))
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.OcrHotKey))
 		{
-			azureComputerVisionSettings.OcrImageToTextHotKey = "ALT+J";
+			azureComputerVisionSettings.OcrHotKey = "ALT+J";
+			somethingWasMissing = true;
+		}
+
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotHotKey))
+		{
+			azureComputerVisionSettings.ScreenshotHotKey = "SHIFT+ALT+K\""; 
+			somethingWasMissing = true;
+		}
+
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotOcrHotKey))
+		{
+			azureComputerVisionSettings.ScreenshotOcrHotKey = "SHIFT+ALT+Q";
 			somethingWasMissing = true;
 		}
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.SubscriptionKey))
@@ -87,7 +99,6 @@ internal class SettingsManager
 		}
 
 
-
 		if (settings.OpenAiSettings is null)
 		{
 			settings.OpenAiSettings = new OpenAiSettings();
@@ -111,7 +122,7 @@ internal class SettingsManager
 		}
 		if (string.IsNullOrWhiteSpace(openAiSettings.TempDirectory))
 		{
-			openAiSettings.TempDirectory= @"C:\Temp\Mutation";
+			openAiSettings.TempDirectory = @"C:\Temp\Mutation";
 			somethingWasMissing = true;
 		}
 

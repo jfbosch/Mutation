@@ -159,7 +159,7 @@ namespace Mutation
 
 		private void HookupHotKeyOcrExtractText()
 		{
-			_hkOcr = MapHotKey(Settings.AzureComputerVisionSettings.OcrImageToTextHotKey);
+			_hkOcr = MapHotKey(Settings.AzureComputerVisionSettings.OcrHotKey);
 			_hkOcr.Pressed += delegate { ExtractText(); };
 			TryRegisterHotkey(_hkOcr);
 

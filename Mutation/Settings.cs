@@ -16,7 +16,9 @@ public class AudioSettings
 
 public class AzureComputerVisionSettings
 {
-	public string OcrImageToTextHotKey { get; set; }
+	public string ScreenshotHotKey { get; set; }
+	public string ScreenshotOcrHotKey { get; set; }
+	public string OcrHotKey { get; set; }
 	public string SubscriptionKey { get; set; }
 	public string Endpoint { get; set; }
 }
