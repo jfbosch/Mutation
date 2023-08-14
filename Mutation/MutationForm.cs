@@ -2,6 +2,7 @@
 using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using NAudio.Wave;
+using ScreenCapturing;
 using System.Drawing.Imaging;
 
 namespace Mutation
@@ -10,7 +11,10 @@ namespace Mutation
 	{
 		private Settings Settings { get; set; }
 
+		private Hotkey _hkScreenshot;
+		private Hotkey _hkScreenshotOcr;
 		private Hotkey _hkOcr;
+
 		private OcrService OcrService { get; set; }
 
 		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
@@ -153,20 +157,70 @@ namespace Mutation
 		private void HookupHotkeys()
 		{
 			HookupHotKeyToggleMichrophoneMuteHotkey();
-			HookupHotKeyOcrExtractText();
+
+			HookupHotKeyScreenshot();
+			HookupHotKeyScreenshotOcr();
+			HookupHotKeyOcr();
+
+
 			HookupHotKeySpeechToText();
 		}
 
-		private void HookupHotKeyOcrExtractText()
+		private void HookupHotKeyScreenshot()
+		{
+			_hkScreenshot = MapHotKey(Settings.AzureComputerVisionSettings.ScreenshotHotKey);
+			_hkScreenshot.Pressed += delegate { TakeScreenshotToClipboard(); };
+			TryRegisterHotkey(_hkScreenshot);
+
+			lblScreenshotHotKey.Text = $"Screenshot: {_hkScreenshot}";
+		}
+
+		private void TakeScreenshotToClipboard()
+		{
+			using (Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
+			using (Graphics g = Graphics.FromImage(screenshot))
+			{
+				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
+				using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(screenshot)))
+				{
+					screenCaptureForm.ShowDialog();
+				}
+			}
+		}
+
+		private void HookupHotKeyScreenshotOcr()
+		{
+			_hkScreenshotOcr = MapHotKey(Settings.AzureComputerVisionSettings.ScreenshotOcrHotKey);
+			_hkScreenshotOcr.Pressed += delegate { TakeScreenshotAndExtractText(); };
+			TryRegisterHotkey(_hkScreenshotOcr);
+
+			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hkScreenshotOcr}";
+		}
+
+		private void TakeScreenshotAndExtractText()
+		{
+			using (Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
+			using (Graphics g = Graphics.FromImage(screenshot))
+			{
+				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
+				using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(screenshot)))
+				{
+					screenCaptureForm.ShowDialog();
+					ExtractText(screenshot);
+				}
+			}
+		}
+
+		private void HookupHotKeyOcr()
 		{
 			_hkOcr = MapHotKey(Settings.AzureComputerVisionSettings.OcrHotKey);
-			_hkOcr.Pressed += delegate { ExtractText(); };
+			_hkOcr.Pressed += delegate { ExtractText(GetClipboardImage()); };
 			TryRegisterHotkey(_hkOcr);
 
 			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
 		}
 
-		private async Task ExtractText()
+		private async Task ExtractText(Image image)
 		{
 			try
 			{
@@ -174,7 +228,6 @@ namespace Mutation
 
 				txtOcr.Text = "Running OCR on image";
 
-				Image image = GetClipboardImage();
 				if (image is not null)
 				{
 					using MemoryStream imageStream = new MemoryStream();

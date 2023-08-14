@@ -71,7 +71,7 @@ internal class SettingsManager
 
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotOcrHotKey))
 		{
-			azureComputerVisionSettings.ScreenshotOcrHotKey = "SHIFT+ALT+Q";
+			azureComputerVisionSettings.ScreenshotOcrHotKey = "SHIFT+ALT+J";
 			somethingWasMissing = true;
 		}
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.SubscriptionKey))
