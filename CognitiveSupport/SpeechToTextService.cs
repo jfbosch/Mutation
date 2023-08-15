@@ -26,6 +26,7 @@ namespace CognitiveSupport
 				ApiKey = apiKey,
 			};
 			HttpClient httpClient = new HttpClient();
+			httpClient.Timeout = TimeSpan.FromSeconds(30);
 			_openAIService = new OpenAIService(options, httpClient);
 		}
 
