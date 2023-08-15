@@ -9,6 +9,8 @@ namespace Mutation
 {
 	public partial class MutationForm : Form
 	{
+		private ScreenCaptureForm _activeScreenCaptureForm = null;
+
 		private Settings Settings { get; set; }
 
 		private Hotkey _hkScreenshot;
@@ -177,13 +179,25 @@ namespace Mutation
 
 		private void TakeScreenshotToClipboard()
 		{
+			if (_activeScreenCaptureForm is not null)
+			{
+				// If there is already an active capture form open, just make sure it is topmost and short-circuit.
+				_activeScreenCaptureForm?.Activate();
+				return;
+			}
+
 			using (Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
 			using (Graphics g = Graphics.FromImage(screenshot))
 			{
 				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
 				using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(screenshot)))
 				{
+					_activeScreenCaptureForm = screenCaptureForm;
+
+					screenCaptureForm.TopMost = true;
 					screenCaptureForm.ShowDialog();
+
+					_activeScreenCaptureForm = null;
 				}
 			}
 		}
@@ -199,13 +213,26 @@ namespace Mutation
 
 		private void TakeScreenshotAndExtractText()
 		{
+			if (_activeScreenCaptureForm is not null)
+			{
+				// If there is already an active capture form open, just make sure it is topmost and short-circuit.
+				_activeScreenCaptureForm?.Activate();
+				return;
+			}
+
 			using (Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
 			using (Graphics g = Graphics.FromImage(screenshot))
 			{
 				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
 				using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(screenshot)))
 				{
+					_activeScreenCaptureForm = screenCaptureForm;
+
+					screenCaptureForm.TopMost = true;
 					screenCaptureForm.ShowDialog();
+
+					_activeScreenCaptureForm = null;
+
 					ExtractText(screenshot);
 				}
 			}

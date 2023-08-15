@@ -20,6 +20,9 @@
 			// Initialize the overlay with the same size as the screenshot
 			overlay = new Bitmap(screenshot.Width, screenshot.Height);
 			Invalidate(); // Invalidate to refresh the form display
+
+			// Make sure this form is always the topmost form when it opens. This is particularly useful if the main application is hidden when the hotkey is pressed to capture the screen. 
+			this.Activate();
 		}
 
 		protected override void OnMouseDown(MouseEventArgs e)

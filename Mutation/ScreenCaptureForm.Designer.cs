@@ -36,7 +36,8 @@
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(800, 450);
 			Name = "ScreenCaptureForm";
-			Text = "ScreenCaptureForm";
+			Text = "Screen Capture Form";
+			TopMost = true;
 			FormClosing += ScreenCaptureForm_FormClosing;
 			ResumeLayout(false);
 		}
