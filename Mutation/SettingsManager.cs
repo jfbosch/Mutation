@@ -65,7 +65,7 @@ internal class SettingsManager
 
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotHotKey))
 		{
-			azureComputerVisionSettings.ScreenshotHotKey = "SHIFT+ALT+K\""; 
+			azureComputerVisionSettings.ScreenshotHotKey = "SHIFT+ALT+K";
 			somethingWasMissing = true;
 		}
 
