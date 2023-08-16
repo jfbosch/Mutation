@@ -38,12 +38,17 @@ The free tier is quite sufficient for daily use by a single person.
 -- Pricing Tier: Select the free tier.
 - Deploy: Review the information and click "Create."
 - Access Keys & Endpoint: After deployment, find the keys and endpoint on the "Keys and Endpoint" page.
-- Edit Mutation.json, put the key in the AzureComputerVisionSettings, SubscriptionKey value and save. (restart Mutation).
+-- Edit Mutation.json, copy the key into the AzureComputerVisionSettings, SubscriptionKey value
+-- Copy the Endpoint URL into the AzureComputerVisionSettings, Endpoint value.
+- Save the JSON file and restart Mutation.
 
 #### Speech to text
+Whisper is an incredibly capable speech-to-text model developed by OpenAI. This application uses the OpenAI API to allow you to transcribe your voice at random in any application into text onto the clipboard with the press of a hotkey. The resulting text can then be pasted into the application of your choice. Whisper also supports many different languages. Check out the OpenAI site for more information.
+
 If you want to use the speech-to-text functionality, you will need to create an OpenAI API account, add a credit card, configure a budget, generate API keys for the Whisper API, and configure the key in Mutation.json under OpenAiSettings, ApiKey.
 Unfortunately, this only has a limited free credit, but in my experience it is fairly cheap even with quite aggressive daily use.
 https://platform.openai.com/overview
+Currently, in Mutation.json, the OpenAiSettings.Endpoint value is not used and can be left unpopulated. For now, the application will use the default Whisper endpoint.
 
 
 Lastly, simply run the application, and you'll have access to all the features accessible via hotkeys. You can then use these hotkeys to perform the actions described in the Features section.
