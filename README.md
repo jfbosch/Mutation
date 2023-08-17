@@ -16,7 +16,7 @@ The Mutation project is a simple .Net multifaceted tool designed to enhance prod
 #### Hotkey to start recording the microphone, and when the same hotkey is pressed a second time, converting the speech to text that is placed on the clipboard.
 
 ## Getting Started
-You need at least .NET 6 installed, and then you can just run Mutation.exe.
+You need at least .NET 7 runtime installed, and then you can just run Mutation.exe.
 
 ### Configuration / Settings
 All settings are stored in a file called Mutation.json. The first time you run Mutation.exe, it will create the JSON file and will open it in notepad. At that point, you can modify the config values, save it, and then restart mutation.
