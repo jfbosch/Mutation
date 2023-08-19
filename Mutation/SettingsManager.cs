@@ -128,8 +128,8 @@ internal class SettingsManager
 
 		if (string.IsNullOrWhiteSpace(openAiSettings.SpeechToTextPrompt))
 		{
-			openAiSettings.SpeechToTextPrompt = ""; // Default is no prompt.
-																 // This is optional, so we don't need to flag that something was missing.
+			openAiSettings.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro."; 
+			// This is optional, so we don't need to flag that something was missing.
 		}
 
 		return somethingWasMissing;

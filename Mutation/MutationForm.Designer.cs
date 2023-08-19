@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			components = new System.ComponentModel.Container();
 			lblActiveMic = new Label();
 			lblToggleMic = new Label();
 			txtActiveMic = new TextBox();
@@ -40,6 +41,7 @@
 			lblScreenshotHotKey = new Label();
 			txtSpeechToTextPrompt = new TextBox();
 			lblSpeechToTextPrompt = new Label();
+			toolTip = new ToolTip(components);
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -113,7 +115,6 @@
 			txtSpeechToText.ReadOnly = true;
 			txtSpeechToText.Size = new Size(898, 116);
 			txtSpeechToText.TabIndex = 6;
-			txtSpeechToText.TextChanged += txtSpeechToText_TextChanged;
 			// 
 			// txtOcr
 			// 
@@ -157,6 +158,8 @@
 			txtSpeechToTextPrompt.Name = "txtSpeechToTextPrompt";
 			txtSpeechToTextPrompt.Size = new Size(898, 66);
 			txtSpeechToTextPrompt.TabIndex = 10;
+			txtSpeechToTextPrompt.MouseLeave += txtSpeechToTextPrompt_MouseLeave;
+			txtSpeechToTextPrompt.MouseHover += txtSpeechToTextPrompt_MouseHover;
 			// 
 			// lblSpeechToTextPrompt
 			// 
@@ -167,6 +170,14 @@
 			lblSpeechToTextPrompt.Size = new Size(127, 15);
 			lblSpeechToTextPrompt.TabIndex = 11;
 			lblSpeechToTextPrompt.Text = "Speech To Text Prompt";
+			// 
+			// toolTip
+			// 
+			toolTip.AutomaticDelay = 300;
+			toolTip.AutoPopDelay = 2000;
+			toolTip.InitialDelay = 300;
+			toolTip.ReshowDelay = 60;
+			toolTip.ToolTipTitle = "Whisper Speech To Text Prompt";
 			// 
 			// MutationForm
 			// 
@@ -209,6 +220,7 @@
 		private Label lblScreenshotHotKey;
 		private TextBox txtSpeechToTextPrompt;
 		private Label lblSpeechToTextPrompt;
+		private ToolTip toolTip;
 	}
 }
 
