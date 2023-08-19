@@ -12,6 +12,7 @@ namespace Mutation
 		private ScreenCaptureForm _activeScreenCaptureForm = null;
 
 		private Settings Settings { get; set; }
+		private SettingsManager SettingsManager { get; set; }
 
 		private Hotkey _hkScreenshot;
 		private Hotkey _hkScreenshotOcr;
@@ -47,6 +48,8 @@ namespace Mutation
 				Settings.OpenAiSettings.ApiKey
 				, Settings.OpenAiSettings.Endpoint);
 
+			txtSpeechToTextPrompt.Text = Settings.OpenAiSettings.SpeechToTextPrompt;
+
 			HookupHotkeys();
 		}
 
@@ -55,14 +58,14 @@ namespace Mutation
 			try
 			{
 				string filePath = "Mutation.json";
-				this.Settings = new SettingsManager(filePath).LoadAndEnsureSettings();
+				this.SettingsManager = new SettingsManager(filePath);
+				this.Settings = this.SettingsManager.LoadAndEnsureSettings();
 			}
 			catch (Exception ex)
 				when (ex.Message.ToLower().Contains("could not find the settings"))
 			{
 				MessageBox.Show(this, $"Failed to load settings: {ex.Message}", "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
-
 		}
 
 		internal void InitializeAudioControls()
@@ -359,7 +362,7 @@ namespace Mutation
 						Console.Beep(1050, 40);
 
 						txtSpeechToText.Text = "Converting speech to text...";
-						string text = await this.SpeechToTextService.ConvertAudioToText(audioFilePath).ConfigureAwait(true);
+						string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
 
 						SetTextToClipboard(text);
 						txtSpeechToText.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
@@ -423,6 +426,9 @@ namespace Mutation
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
+			Settings.OpenAiSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			this.SettingsManager.SaveSettingsToFile(Settings);
+
 			UnregisterHotkey(_hkToggleMicMute);
 			UnregisterHotkey(_hkOcr);
 		}
@@ -442,5 +448,6 @@ namespace Mutation
 		{
 
 		}
+
 	}
 }

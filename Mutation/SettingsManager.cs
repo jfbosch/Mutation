@@ -126,6 +126,11 @@ internal class SettingsManager
 			somethingWasMissing = true;
 		}
 
+		if (string.IsNullOrWhiteSpace(openAiSettings.SpeechToTextPrompt))
+		{
+			openAiSettings.SpeechToTextPrompt = ""; // Default is no prompt.
+																 // This is optional, so we don't need to flag that something was missing.
+		}
 
 		return somethingWasMissing;
 	}

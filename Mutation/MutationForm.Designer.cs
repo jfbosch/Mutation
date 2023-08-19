@@ -38,6 +38,8 @@
 			txtOcr = new TextBox();
 			lblScreenshotOcrHotKey = new Label();
 			lblScreenshotHotKey = new Label();
+			txtSpeechToTextPrompt = new TextBox();
+			lblSpeechToTextPrompt = new Label();
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -63,7 +65,7 @@
 			// txtActiveMic
 			// 
 			txtActiveMic.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			txtActiveMic.Location = new Point(252, 12);
+			txtActiveMic.Location = new Point(851, 12);
 			txtActiveMic.Margin = new Padding(4, 3, 4, 3);
 			txtActiveMic.Name = "txtActiveMic";
 			txtActiveMic.ReadOnly = true;
@@ -72,13 +74,13 @@
 			// 
 			// txtAllMics
 			// 
-			txtAllMics.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			txtAllMics.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 			txtAllMics.Location = new Point(252, 42);
 			txtAllMics.Margin = new Padding(4, 3, 4, 3);
 			txtAllMics.Multiline = true;
 			txtAllMics.Name = "txtAllMics";
 			txtAllMics.ReadOnly = true;
-			txtAllMics.Size = new Size(299, 66);
+			txtAllMics.Size = new Size(898, 66);
 			txtAllMics.TabIndex = 3;
 			// 
 			// lblOcrHotKey
@@ -94,7 +96,7 @@
 			// lblSpeechToText
 			// 
 			lblSpeechToText.AutoSize = true;
-			lblSpeechToText.Location = new Point(18, 226);
+			lblSpeechToText.Location = new Point(18, 434);
 			lblSpeechToText.Margin = new Padding(4, 0, 4, 0);
 			lblSpeechToText.Name = "lblSpeechToText";
 			lblSpeechToText.Size = new Size(16, 15);
@@ -103,31 +105,31 @@
 			// 
 			// txtSpeechToText
 			// 
-			txtSpeechToText.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			txtSpeechToText.Location = new Point(252, 186);
+			txtSpeechToText.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			txtSpeechToText.Location = new Point(252, 394);
 			txtSpeechToText.Margin = new Padding(4, 3, 4, 3);
 			txtSpeechToText.Multiline = true;
 			txtSpeechToText.Name = "txtSpeechToText";
 			txtSpeechToText.ReadOnly = true;
-			txtSpeechToText.Size = new Size(299, 66);
+			txtSpeechToText.Size = new Size(898, 116);
 			txtSpeechToText.TabIndex = 6;
 			txtSpeechToText.TextChanged += txtSpeechToText_TextChanged;
 			// 
 			// txtOcr
 			// 
-			txtOcr.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			txtOcr.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 			txtOcr.Location = new Point(252, 114);
 			txtOcr.Margin = new Padding(4, 3, 4, 3);
 			txtOcr.Multiline = true;
 			txtOcr.Name = "txtOcr";
 			txtOcr.ReadOnly = true;
-			txtOcr.Size = new Size(299, 66);
+			txtOcr.Size = new Size(898, 116);
 			txtOcr.TabIndex = 7;
 			// 
 			// lblScreenshotOcrHotKey
 			// 
 			lblScreenshotOcrHotKey.AutoSize = true;
-			lblScreenshotOcrHotKey.Location = new Point(18, 206);
+			lblScreenshotOcrHotKey.Location = new Point(18, 414);
 			lblScreenshotOcrHotKey.Margin = new Padding(4, 0, 4, 0);
 			lblScreenshotOcrHotKey.Name = "lblScreenshotOcrHotKey";
 			lblScreenshotOcrHotKey.Size = new Size(16, 15);
@@ -137,18 +139,42 @@
 			// lblScreenshotHotKey
 			// 
 			lblScreenshotHotKey.AutoSize = true;
-			lblScreenshotHotKey.Location = new Point(18, 186);
+			lblScreenshotHotKey.Location = new Point(18, 394);
 			lblScreenshotHotKey.Margin = new Padding(4, 0, 4, 0);
 			lblScreenshotHotKey.Name = "lblScreenshotHotKey";
 			lblScreenshotHotKey.Size = new Size(16, 15);
 			lblScreenshotHotKey.TabIndex = 9;
 			lblScreenshotHotKey.Text = "...";
 			// 
+			// txtSpeechToTextPrompt
+			// 
+			txtSpeechToTextPrompt.AcceptsReturn = true;
+			txtSpeechToTextPrompt.AccessibleDescription = "The speech-to-text prompt for potentially improving accuracy.";
+			txtSpeechToTextPrompt.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			txtSpeechToTextPrompt.Location = new Point(252, 322);
+			txtSpeechToTextPrompt.Margin = new Padding(4, 3, 4, 3);
+			txtSpeechToTextPrompt.Multiline = true;
+			txtSpeechToTextPrompt.Name = "txtSpeechToTextPrompt";
+			txtSpeechToTextPrompt.Size = new Size(898, 66);
+			txtSpeechToTextPrompt.TabIndex = 10;
+			// 
+			// lblSpeechToTextPrompt
+			// 
+			lblSpeechToTextPrompt.AutoSize = true;
+			lblSpeechToTextPrompt.Location = new Point(18, 322);
+			lblSpeechToTextPrompt.Margin = new Padding(4, 0, 4, 0);
+			lblSpeechToTextPrompt.Name = "lblSpeechToTextPrompt";
+			lblSpeechToTextPrompt.Size = new Size(127, 15);
+			lblSpeechToTextPrompt.TabIndex = 11;
+			lblSpeechToTextPrompt.Text = "Speech To Text Prompt";
+			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
-			ClientSize = new Size(556, 264);
+			ClientSize = new Size(1155, 530);
+			Controls.Add(lblSpeechToTextPrompt);
+			Controls.Add(txtSpeechToTextPrompt);
 			Controls.Add(lblScreenshotHotKey);
 			Controls.Add(lblScreenshotOcrHotKey);
 			Controls.Add(txtOcr);
@@ -181,6 +207,8 @@
 		private TextBox txtOcr;
 		private Label lblScreenshotOcrHotKey;
 		private Label lblScreenshotHotKey;
+		private TextBox txtSpeechToTextPrompt;
+		private Label lblSpeechToTextPrompt;
 	}
 }
 

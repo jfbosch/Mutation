@@ -29,4 +29,6 @@ public class OpenAiSettings
 	public string ApiKey { get; set; }
 	public string Endpoint { get; set; }
 	public string TempDirectory { get; set; }
+	public string SpeechToTextPrompt { get; set; }
+
 }

@@ -31,12 +31,14 @@ namespace CognitiveSupport
 		}
 
 		public async Task<string> ConvertAudioToText(
-			string filePath)
+			string speechToTextPrompt,
+			string audioffilePath)
 		{
-			var audioBytes = await File.ReadAllBytesAsync(filePath).ConfigureAwait(false);
+			var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
 			var audioResult = await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
 			{
-				FileName = Path.GetFileName(filePath),
+				Prompt = speechToTextPrompt,
+				FileName = Path.GetFileName(audioffilePath),
 				File = audioBytes,
 				Model = Models.WhisperV1,
 				ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson
