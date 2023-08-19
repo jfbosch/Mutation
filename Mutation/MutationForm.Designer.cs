@@ -98,7 +98,7 @@
 			// lblSpeechToText
 			// 
 			lblSpeechToText.AutoSize = true;
-			lblSpeechToText.Location = new Point(18, 434);
+			lblSpeechToText.Location = new Point(18, 370);
 			lblSpeechToText.Margin = new Padding(4, 0, 4, 0);
 			lblSpeechToText.Name = "lblSpeechToText";
 			lblSpeechToText.Size = new Size(16, 15);
@@ -107,13 +107,13 @@
 			// 
 			// txtSpeechToText
 			// 
-			txtSpeechToText.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-			txtSpeechToText.Location = new Point(252, 394);
+			txtSpeechToText.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+			txtSpeechToText.Location = new Point(252, 330);
 			txtSpeechToText.Margin = new Padding(4, 3, 4, 3);
 			txtSpeechToText.Multiline = true;
 			txtSpeechToText.Name = "txtSpeechToText";
 			txtSpeechToText.ReadOnly = true;
-			txtSpeechToText.Size = new Size(898, 116);
+			txtSpeechToText.Size = new Size(898, 194);
 			txtSpeechToText.TabIndex = 9;
 			// 
 			// txtOcr
@@ -130,7 +130,7 @@
 			// lblScreenshotOcrHotKey
 			// 
 			lblScreenshotOcrHotKey.AutoSize = true;
-			lblScreenshotOcrHotKey.Location = new Point(18, 414);
+			lblScreenshotOcrHotKey.Location = new Point(18, 350);
 			lblScreenshotOcrHotKey.Margin = new Padding(4, 0, 4, 0);
 			lblScreenshotOcrHotKey.Name = "lblScreenshotOcrHotKey";
 			lblScreenshotOcrHotKey.Size = new Size(16, 15);
@@ -140,7 +140,7 @@
 			// lblScreenshotHotKey
 			// 
 			lblScreenshotHotKey.AutoSize = true;
-			lblScreenshotHotKey.Location = new Point(18, 394);
+			lblScreenshotHotKey.Location = new Point(18, 330);
 			lblScreenshotHotKey.Margin = new Padding(4, 0, 4, 0);
 			lblScreenshotHotKey.Name = "lblScreenshotHotKey";
 			lblScreenshotHotKey.Size = new Size(16, 15);
@@ -152,7 +152,7 @@
 			txtSpeechToTextPrompt.AcceptsReturn = true;
 			txtSpeechToTextPrompt.AccessibleDescription = "The speech-to-text prompt for potentially improving accuracy.";
 			txtSpeechToTextPrompt.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-			txtSpeechToTextPrompt.Location = new Point(252, 322);
+			txtSpeechToTextPrompt.Location = new Point(252, 258);
 			txtSpeechToTextPrompt.Margin = new Padding(4, 3, 4, 3);
 			txtSpeechToTextPrompt.Multiline = true;
 			txtSpeechToTextPrompt.Name = "txtSpeechToTextPrompt";
@@ -164,7 +164,7 @@
 			// lblSpeechToTextPrompt
 			// 
 			lblSpeechToTextPrompt.AutoSize = true;
-			lblSpeechToTextPrompt.Location = new Point(18, 322);
+			lblSpeechToTextPrompt.Location = new Point(18, 258);
 			lblSpeechToTextPrompt.Margin = new Padding(4, 0, 4, 0);
 			lblSpeechToTextPrompt.Name = "lblSpeechToTextPrompt";
 			lblSpeechToTextPrompt.Size = new Size(127, 15);
