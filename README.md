@@ -9,8 +9,9 @@ The Mutation project is a simple .Net multifaceted tool designed to enhance prod
 
 ### Screen Capturing and OCR
 #### Hotkey that allows user to draw a selection rectangle of the region on the screen that is of interest, and copy the resulting screenshot it to the clipboard as an image that can then be pasted into any compatible application.
-#### Hotkey to perform OCR on the image on the clipboard using Microsoft Azure Cognitive Services, and puts the extracted text back on to the clipboard.
-#### hotkey that combines the above two to allow the user to select a region of the screen followed by an immediate OCR process using Microsoft Azure Cognitive Services and placing the extracted text back on the clipboard.
+#### Hotkey to perform OCR on the image on the clipboard using Microsoft Azure Computer Vision, and puts the extracted text back on to the clipboard.
+#### hotkey that combines the above two to allow the user to select a region of the screen followed by an immediate OCR process using Microsoft Azure Computer Vision and placing the extracted text back on the clipboard.
+Azure Computer Vision seems far superior at OCR than the built-in Windows 10 and 11 OCR engine.
 
 ### Speech to Text Conversion using OpenAI Whisper API
 #### Hotkey to start recording the microphone, and when the same hotkey is pressed a second time, converting the speech to text that is placed on the clipboard.
