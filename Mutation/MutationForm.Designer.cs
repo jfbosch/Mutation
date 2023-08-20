@@ -42,6 +42,7 @@
 			txtSpeechToTextPrompt = new TextBox();
 			lblSpeechToTextPrompt = new Label();
 			toolTip = new ToolTip(components);
+			btnSpeechToTextRecord = new Button();
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -88,21 +89,21 @@
 			// lblOcrHotKey
 			// 
 			lblOcrHotKey.AutoSize = true;
-			lblOcrHotKey.Location = new Point(18, 114);
+			lblOcrHotKey.Location = new Point(18, 134);
 			lblOcrHotKey.Margin = new Padding(4, 0, 4, 0);
 			lblOcrHotKey.Name = "lblOcrHotKey";
 			lblOcrHotKey.Size = new Size(16, 15);
-			lblOcrHotKey.TabIndex = 4;
+			lblOcrHotKey.TabIndex = 5;
 			lblOcrHotKey.Text = "...";
 			// 
 			// lblSpeechToText
 			// 
 			lblSpeechToText.AutoSize = true;
-			lblSpeechToText.Location = new Point(18, 370);
+			lblSpeechToText.Location = new Point(18, 330);
 			lblSpeechToText.Margin = new Padding(4, 0, 4, 0);
 			lblSpeechToText.Name = "lblSpeechToText";
 			lblSpeechToText.Size = new Size(16, 15);
-			lblSpeechToText.TabIndex = 11;
+			lblSpeechToText.TabIndex = 10;
 			lblSpeechToText.Text = "...";
 			// 
 			// txtSpeechToText
@@ -114,7 +115,7 @@
 			txtSpeechToText.Name = "txtSpeechToText";
 			txtSpeechToText.ReadOnly = true;
 			txtSpeechToText.Size = new Size(898, 194);
-			txtSpeechToText.TabIndex = 9;
+			txtSpeechToText.TabIndex = 12;
 			// 
 			// txtOcr
 			// 
@@ -125,26 +126,26 @@
 			txtOcr.Name = "txtOcr";
 			txtOcr.ReadOnly = true;
 			txtOcr.Size = new Size(898, 116);
-			txtOcr.TabIndex = 5;
+			txtOcr.TabIndex = 7;
 			// 
 			// lblScreenshotOcrHotKey
 			// 
 			lblScreenshotOcrHotKey.AutoSize = true;
-			lblScreenshotOcrHotKey.Location = new Point(18, 350);
+			lblScreenshotOcrHotKey.Location = new Point(18, 158);
 			lblScreenshotOcrHotKey.Margin = new Padding(4, 0, 4, 0);
 			lblScreenshotOcrHotKey.Name = "lblScreenshotOcrHotKey";
 			lblScreenshotOcrHotKey.Size = new Size(16, 15);
-			lblScreenshotOcrHotKey.TabIndex = 10;
+			lblScreenshotOcrHotKey.TabIndex = 6;
 			lblScreenshotOcrHotKey.Text = "...";
 			// 
 			// lblScreenshotHotKey
 			// 
 			lblScreenshotHotKey.AutoSize = true;
-			lblScreenshotHotKey.Location = new Point(18, 330);
+			lblScreenshotHotKey.Location = new Point(18, 114);
 			lblScreenshotHotKey.Margin = new Padding(4, 0, 4, 0);
 			lblScreenshotHotKey.Name = "lblScreenshotHotKey";
 			lblScreenshotHotKey.Size = new Size(16, 15);
-			lblScreenshotHotKey.TabIndex = 8;
+			lblScreenshotHotKey.TabIndex = 4;
 			lblScreenshotHotKey.Text = "...";
 			// 
 			// txtSpeechToTextPrompt
@@ -157,9 +158,7 @@
 			txtSpeechToTextPrompt.Multiline = true;
 			txtSpeechToTextPrompt.Name = "txtSpeechToTextPrompt";
 			txtSpeechToTextPrompt.Size = new Size(898, 66);
-			txtSpeechToTextPrompt.TabIndex = 7;
-			txtSpeechToTextPrompt.MouseLeave += txtSpeechToTextPrompt_MouseLeave;
-			txtSpeechToTextPrompt.MouseHover += txtSpeechToTextPrompt_MouseHover;
+			txtSpeechToTextPrompt.TabIndex = 9;
 			// 
 			// lblSpeechToTextPrompt
 			// 
@@ -168,7 +167,7 @@
 			lblSpeechToTextPrompt.Margin = new Padding(4, 0, 4, 0);
 			lblSpeechToTextPrompt.Name = "lblSpeechToTextPrompt";
 			lblSpeechToTextPrompt.Size = new Size(127, 15);
-			lblSpeechToTextPrompt.TabIndex = 6;
+			lblSpeechToTextPrompt.TabIndex = 8;
 			lblSpeechToTextPrompt.Text = "Speech To Text Prompt";
 			// 
 			// toolTip
@@ -179,11 +178,22 @@
 			toolTip.ReshowDelay = 60;
 			toolTip.ToolTipTitle = "Whisper Speech To Text Prompt";
 			// 
+			// btnSpeechToTextRecord
+			// 
+			btnSpeechToTextRecord.Location = new Point(18, 359);
+			btnSpeechToTextRecord.Name = "btnSpeechToTextRecord";
+			btnSpeechToTextRecord.Size = new Size(110, 23);
+			btnSpeechToTextRecord.TabIndex = 11;
+			btnSpeechToTextRecord.Text = "&Record";
+			btnSpeechToTextRecord.UseVisualStyleBackColor = true;
+			btnSpeechToTextRecord.Click += btnSpeechToTextRecord_Click;
+			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1155, 530);
+			Controls.Add(btnSpeechToTextRecord);
 			Controls.Add(lblSpeechToTextPrompt);
 			Controls.Add(txtSpeechToTextPrompt);
 			Controls.Add(lblScreenshotHotKey);
@@ -221,6 +231,7 @@
 		private TextBox txtSpeechToTextPrompt;
 		private Label lblSpeechToTextPrompt;
 		private ToolTip toolTip;
+		private Button btnSpeechToTextRecord;
 	}
 }
 

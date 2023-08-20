@@ -370,6 +370,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 						txtSpeechToText.Text = "Recording microphone...";
 						AudioRecorder = new AudioRecorder();
 						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
+						btnSpeechToTextRecord.Text = "Stop &Recording";
+
 						Console.Beep(970, 80);
 					}
 					else // Busy recording, so we want to stop it.
@@ -381,10 +383,16 @@ The model may also leave out common filler words in the audio. If you want to ke
 						Console.Beep(1050, 40);
 
 						txtSpeechToText.Text = "Converting speech to text...";
+						btnSpeechToTextRecord.Text = "Processing";
+						btnSpeechToTextRecord.Enabled = false;
+
 						string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
 
 						SetTextToClipboard(text);
 						txtSpeechToText.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
+						
+						btnSpeechToTextRecord.Text = "&Record";
+						btnSpeechToTextRecord.Enabled = true;
 
 						Console.Beep(1050, 40);
 						Console.Beep(1150, 40);
@@ -399,6 +407,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
 				txtSpeechToText.Text = msg;
+
+				btnSpeechToTextRecord.Text = "&Record";
+				btnSpeechToTextRecord.Enabled = true;
 
 				this.Activate();
 				MessageBox.Show(this, msg, "Speech to text error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -463,19 +474,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		}
 
-		private void txtSpeechToText_TextChanged(object sender, EventArgs e)
+		private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)
 		{
-
-		}
-
-		private void txtSpeechToTextPrompt_MouseHover(object sender, EventArgs e)
-		{
-
-		}
-
-		private void txtSpeechToTextPrompt_MouseLeave(object sender, EventArgs e)
-		{
-
+			await SpeechToText();
 		}
 	}
 }
