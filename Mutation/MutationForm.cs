@@ -390,7 +390,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 						SetTextToClipboard(text);
 						txtSpeechToText.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
-						
+
 						btnSpeechToTextRecord.Text = "&Record";
 						btnSpeechToTextRecord.Enabled = true;
 

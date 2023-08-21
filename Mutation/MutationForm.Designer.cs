@@ -43,6 +43,12 @@
 			lblSpeechToTextPrompt = new Label();
 			toolTip = new ToolTip(components);
 			btnSpeechToTextRecord = new Button();
+			lblProofreadingPrompt = new Label();
+			txtProofreadingPrompt = new TextBox();
+			btnProofreadingReviewAndCorrect = new Button();
+			txtProofreadingResponse = new TextBox();
+			lblProofreadingResponse = new Label();
+			chkAutoReviewAndCorrectAfterTranscription = new CheckBox();
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -72,7 +78,7 @@
 			txtActiveMic.Margin = new Padding(4, 3, 4, 3);
 			txtActiveMic.Name = "txtActiveMic";
 			txtActiveMic.ReadOnly = true;
-			txtActiveMic.Size = new Size(898, 23);
+			txtActiveMic.Size = new Size(927, 23);
 			txtActiveMic.TabIndex = 1;
 			// 
 			// txtAllMics
@@ -83,7 +89,7 @@
 			txtAllMics.Multiline = true;
 			txtAllMics.Name = "txtAllMics";
 			txtAllMics.ReadOnly = true;
-			txtAllMics.Size = new Size(898, 66);
+			txtAllMics.Size = new Size(927, 66);
 			txtAllMics.TabIndex = 3;
 			// 
 			// lblOcrHotKey
@@ -99,7 +105,7 @@
 			// lblSpeechToText
 			// 
 			lblSpeechToText.AutoSize = true;
-			lblSpeechToText.Location = new Point(18, 330);
+			lblSpeechToText.Location = new Point(18, 271);
 			lblSpeechToText.Margin = new Padding(4, 0, 4, 0);
 			lblSpeechToText.Name = "lblSpeechToText";
 			lblSpeechToText.Size = new Size(16, 15);
@@ -108,13 +114,13 @@
 			// 
 			// txtSpeechToText
 			// 
-			txtSpeechToText.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-			txtSpeechToText.Location = new Point(252, 330);
+			txtSpeechToText.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			txtSpeechToText.Location = new Point(252, 271);
 			txtSpeechToText.Margin = new Padding(4, 3, 4, 3);
 			txtSpeechToText.Multiline = true;
 			txtSpeechToText.Name = "txtSpeechToText";
 			txtSpeechToText.ReadOnly = true;
-			txtSpeechToText.Size = new Size(898, 194);
+			txtSpeechToText.Size = new Size(927, 126);
 			txtSpeechToText.TabIndex = 12;
 			// 
 			// txtOcr
@@ -125,7 +131,7 @@
 			txtOcr.Multiline = true;
 			txtOcr.Name = "txtOcr";
 			txtOcr.ReadOnly = true;
-			txtOcr.Size = new Size(898, 116);
+			txtOcr.Size = new Size(927, 79);
 			txtOcr.TabIndex = 7;
 			// 
 			// lblScreenshotOcrHotKey
@@ -153,17 +159,17 @@
 			txtSpeechToTextPrompt.AcceptsReturn = true;
 			txtSpeechToTextPrompt.AccessibleDescription = "The speech-to-text prompt for potentially improving accuracy.";
 			txtSpeechToTextPrompt.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-			txtSpeechToTextPrompt.Location = new Point(252, 258);
+			txtSpeechToTextPrompt.Location = new Point(252, 199);
 			txtSpeechToTextPrompt.Margin = new Padding(4, 3, 4, 3);
 			txtSpeechToTextPrompt.Multiline = true;
 			txtSpeechToTextPrompt.Name = "txtSpeechToTextPrompt";
-			txtSpeechToTextPrompt.Size = new Size(898, 66);
+			txtSpeechToTextPrompt.Size = new Size(927, 66);
 			txtSpeechToTextPrompt.TabIndex = 9;
 			// 
 			// lblSpeechToTextPrompt
 			// 
 			lblSpeechToTextPrompt.AutoSize = true;
-			lblSpeechToTextPrompt.Location = new Point(18, 258);
+			lblSpeechToTextPrompt.Location = new Point(18, 199);
 			lblSpeechToTextPrompt.Margin = new Padding(4, 0, 4, 0);
 			lblSpeechToTextPrompt.Name = "lblSpeechToTextPrompt";
 			lblSpeechToTextPrompt.Size = new Size(127, 15);
@@ -180,7 +186,7 @@
 			// 
 			// btnSpeechToTextRecord
 			// 
-			btnSpeechToTextRecord.Location = new Point(18, 359);
+			btnSpeechToTextRecord.Location = new Point(18, 300);
 			btnSpeechToTextRecord.Name = "btnSpeechToTextRecord";
 			btnSpeechToTextRecord.Size = new Size(110, 23);
 			btnSpeechToTextRecord.TabIndex = 11;
@@ -188,11 +194,78 @@
 			btnSpeechToTextRecord.UseVisualStyleBackColor = true;
 			btnSpeechToTextRecord.Click += btnSpeechToTextRecord_Click;
 			// 
+			// lblProofreadingPrompt
+			// 
+			lblProofreadingPrompt.AutoSize = true;
+			lblProofreadingPrompt.Location = new Point(18, 403);
+			lblProofreadingPrompt.Margin = new Padding(4, 0, 4, 0);
+			lblProofreadingPrompt.Name = "lblProofreadingPrompt";
+			lblProofreadingPrompt.Size = new Size(119, 15);
+			lblProofreadingPrompt.TabIndex = 13;
+			lblProofreadingPrompt.Text = "Proofreading prompt";
+			// 
+			// txtProofreadingPrompt
+			// 
+			txtProofreadingPrompt.AcceptsReturn = true;
+			txtProofreadingPrompt.AccessibleDescription = "The speech-to-text prompt for potentially improving accuracy.";
+			txtProofreadingPrompt.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			txtProofreadingPrompt.Location = new Point(252, 403);
+			txtProofreadingPrompt.Margin = new Padding(4, 3, 4, 3);
+			txtProofreadingPrompt.Multiline = true;
+			txtProofreadingPrompt.Name = "txtProofreadingPrompt";
+			txtProofreadingPrompt.Size = new Size(927, 66);
+			txtProofreadingPrompt.TabIndex = 14;
+			// 
+			// btnProofreadingReviewAndCorrect
+			// 
+			btnProofreadingReviewAndCorrect.Location = new Point(18, 504);
+			btnProofreadingReviewAndCorrect.Name = "btnProofreadingReviewAndCorrect";
+			btnProofreadingReviewAndCorrect.Size = new Size(110, 23);
+			btnProofreadingReviewAndCorrect.TabIndex = 16;
+			btnProofreadingReviewAndCorrect.Text = "Review && &Correct";
+			btnProofreadingReviewAndCorrect.UseVisualStyleBackColor = true;
+			// 
+			// txtProofreadingResponse
+			// 
+			txtProofreadingResponse.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+			txtProofreadingResponse.Location = new Point(252, 475);
+			txtProofreadingResponse.Margin = new Padding(4, 3, 4, 3);
+			txtProofreadingResponse.Multiline = true;
+			txtProofreadingResponse.Name = "txtProofreadingResponse";
+			txtProofreadingResponse.ReadOnly = true;
+			txtProofreadingResponse.Size = new Size(927, 234);
+			txtProofreadingResponse.TabIndex = 17;
+			// 
+			// lblProofreadingResponse
+			// 
+			lblProofreadingResponse.AutoSize = true;
+			lblProofreadingResponse.Location = new Point(18, 475);
+			lblProofreadingResponse.Margin = new Padding(4, 0, 4, 0);
+			lblProofreadingResponse.Name = "lblProofreadingResponse";
+			lblProofreadingResponse.Size = new Size(16, 15);
+			lblProofreadingResponse.TabIndex = 15;
+			lblProofreadingResponse.Text = "...";
+			// 
+			// chkAutoReviewAndCorrectAfterTranscription
+			// 
+			chkAutoReviewAndCorrectAfterTranscription.Location = new Point(18, 533);
+			chkAutoReviewAndCorrectAfterTranscription.Name = "chkAutoReviewAndCorrectAfterTranscription";
+			chkAutoReviewAndCorrectAfterTranscription.Size = new Size(185, 38);
+			chkAutoReviewAndCorrectAfterTranscription.TabIndex = 16;
+			chkAutoReviewAndCorrectAfterTranscription.Text = "Auto review && correct after transcription.";
+			chkAutoReviewAndCorrectAfterTranscription.UseVisualStyleBackColor = true;
+			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
-			ClientSize = new Size(1155, 530);
+			ClientSize = new Size(1184, 711);
+			Controls.Add(chkAutoReviewAndCorrectAfterTranscription);
+			Controls.Add(btnProofreadingReviewAndCorrect);
+			Controls.Add(txtProofreadingResponse);
+			Controls.Add(lblProofreadingResponse);
+			Controls.Add(lblProofreadingPrompt);
+			Controls.Add(txtProofreadingPrompt);
 			Controls.Add(btnSpeechToTextRecord);
 			Controls.Add(lblSpeechToTextPrompt);
 			Controls.Add(txtSpeechToTextPrompt);
@@ -232,6 +305,12 @@
 		private Label lblSpeechToTextPrompt;
 		private ToolTip toolTip;
 		private Button btnSpeechToTextRecord;
+		private Label lblProofreadingPrompt;
+		private TextBox txtProofreadingPrompt;
+		private Button btnProofreadingReviewAndCorrect;
+		private TextBox txtProofreadingResponse;
+		private Label lblProofreadingResponse;
+		private CheckBox chkAutoReviewAndCorrectAfterTranscription;
 	}
 }
 
