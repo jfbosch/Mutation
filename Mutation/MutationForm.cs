@@ -1,9 +1,12 @@
 ﻿using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
+using CognitiveSupport.Extensions;
 using NAudio.Wave;
+using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
 using System.Drawing.Imaging;
+using System.Windows.Forms;
 
 namespace Mutation
 {
@@ -25,6 +28,7 @@ namespace Mutation
 		private bool RecordingAudio => AudioRecorder != null;
 
 		private SpeechToTextService SpeechToTextService { get; set; }
+		private LlmService LlmService { get; set; }
 		private Hotkey _hkSpeechToText { get; set; }
 
 		private int _defaultCaptureDeviceIndex = -1;
@@ -47,12 +51,40 @@ namespace Mutation
 			SpeechToTextService = new SpeechToTextService(
 				Settings.OpenAiSettings.ApiKey
 				, Settings.OpenAiSettings.Endpoint);
+			LlmService = new LlmService(
+				Settings.OpenAiSettings.ApiKey
+				, Settings.OpenAiSettings.Endpoint);
 
 			txtSpeechToTextPrompt.Text = Settings.OpenAiSettings.SpeechToTextPrompt;
 
 			HookupTooltips();
 
 			HookupHotkeys();
+
+
+			txtProofreadingPrompt.Text = @"You are a helpful proofreader and editor. When you are asked to format a transcript, apply the following rules to improve the formatting of the text:
+Replace the words ""new line"" with an actual new line character, and replace the words ""new paragraph"" with 2 new line characters, and replace the words ""new bullet"" with a newline character and a bullet, and end the preceding sentence with a full stop, and start the new sentence with a capital letter, and do not make any other changes.
+
+Here is an example of a raw transcript and the reformatted text:
+
+----- Transcript:
+The radiology report - the written analysis by the radiologist interpreting your imaging study - is transmitted to the requesting physician or medical specialist new line the doctor or specialist will then relay the full analysis to you, along with recommendations and/or prescriptions. New paragraph Depending on the results, this might include new bullet scheduling further diagnostic tests new bullet initiating a new medication regimen new bullet recommending physical therapy new bullet or possibly even planning for a surgical intervention. New paragraph. Collaboration among various healthcare professionals ensures that the information gleaned from the radiology report is utilized to provide the most effective and individualized care tailored to your specific condition and needs. New line end of summary.
+
+
+----- Reformatted Text:
+The radiology report - the written analysis by the radiologist interpreting your imaging study - is transmitted to the requesting physician or medical specialist.
+The doctor or specialist will then relay the full analysis to you, along with recommendations and/or prescriptions.
+
+Depending on the results, this might include:
+- scheduling further diagnostic tests,
+- initiating a new medication regimen,
+- recommending physical therapy,
+- or possibly even planning for a surgical intervention.
+
+Collaboration among various healthcare professionals ensures that the information gleaned from the radiology report is utilized to provide the most effective and individualized care tailored to your specific condition and needs.
+End of summary.
+";
+
 		}
 
 		private void HookupTooltips()
@@ -389,13 +421,15 @@ The model may also leave out common filler words in the audio. If you want to ke
 						string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
 
 						SetTextToClipboard(text);
-						txtSpeechToText.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
+						txtSpeechToText.Text = $"{text}";
+
+						if (chkAutoReviewAndCorrectAfterTranscription.Checked)
+							await FormatSpeechToTextOutputWithLlm();
 
 						btnSpeechToTextRecord.Text = "&Record";
 						btnSpeechToTextRecord.Enabled = true;
 
-						Console.Beep(1050, 40);
-						Console.Beep(1150, 40);
+						BeepCompletedSuccessfully();
 					}
 				}
 
@@ -420,6 +454,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 		}
 
+		private static void BeepCompletedSuccessfully()
+		{
+			Console.Beep(1050, 40);
+			Console.Beep(1150, 40);
+		}
 
 		private static Hotkey MapHotKey(string hotKeyStringRepresentation)
 		{
@@ -479,9 +518,28 @@ The model may also leave out common filler words in the audio. If you want to ke
 			await SpeechToText();
 		}
 
-		private void btnProofreadingReviewAndCorrect_Click(object sender, EventArgs e)
+		private async void btnProofreadingReviewAndCorrect_Click(object sender, EventArgs e)
 		{
+			await FormatSpeechToTextOutputWithLlm();
 
 		}
+
+		private async Task FormatSpeechToTextOutputWithLlm()
+		{
+			txtProofreadingResponse.Text = string.Empty;
+
+			string rawTranscript = txtSpeechToText.Text;
+			string proofreadingPrompt = txtProofreadingPrompt.Text;
+
+			var messages = new List<ChatMessage>
+			{
+				ChatMessage.FromSystem($"You are a helpful assistant proofreader and editor. {proofreadingPrompt}"),
+				ChatMessage.FromUser($"Reformat the following transcript: {rawTranscript}"),
+			};
+
+			string formattedText = await LlmService.ConvertAudioToText(messages);
+			txtProofreadingResponse.Text = formattedText.FixNewLines();
+		}
+
 	}
 }

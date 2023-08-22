@@ -89,6 +89,7 @@
 			txtAllMics.Multiline = true;
 			txtAllMics.Name = "txtAllMics";
 			txtAllMics.ReadOnly = true;
+			txtAllMics.ScrollBars = ScrollBars.Vertical;
 			txtAllMics.Size = new Size(927, 66);
 			txtAllMics.TabIndex = 3;
 			// 
@@ -119,7 +120,7 @@
 			txtSpeechToText.Margin = new Padding(4, 3, 4, 3);
 			txtSpeechToText.Multiline = true;
 			txtSpeechToText.Name = "txtSpeechToText";
-			txtSpeechToText.ReadOnly = true;
+			txtSpeechToText.ScrollBars = ScrollBars.Vertical;
 			txtSpeechToText.Size = new Size(927, 126);
 			txtSpeechToText.TabIndex = 12;
 			// 
@@ -131,6 +132,7 @@
 			txtOcr.Multiline = true;
 			txtOcr.Name = "txtOcr";
 			txtOcr.ReadOnly = true;
+			txtOcr.ScrollBars = ScrollBars.Vertical;
 			txtOcr.Size = new Size(927, 79);
 			txtOcr.TabIndex = 7;
 			// 
@@ -163,6 +165,7 @@
 			txtSpeechToTextPrompt.Margin = new Padding(4, 3, 4, 3);
 			txtSpeechToTextPrompt.Multiline = true;
 			txtSpeechToTextPrompt.Name = "txtSpeechToTextPrompt";
+			txtSpeechToTextPrompt.ScrollBars = ScrollBars.Vertical;
 			txtSpeechToTextPrompt.Size = new Size(927, 66);
 			txtSpeechToTextPrompt.TabIndex = 9;
 			// 
@@ -213,6 +216,7 @@
 			txtProofreadingPrompt.Margin = new Padding(4, 3, 4, 3);
 			txtProofreadingPrompt.Multiline = true;
 			txtProofreadingPrompt.Name = "txtProofreadingPrompt";
+			txtProofreadingPrompt.ScrollBars = ScrollBars.Vertical;
 			txtProofreadingPrompt.Size = new Size(927, 66);
 			txtProofreadingPrompt.TabIndex = 14;
 			// 
@@ -233,7 +237,7 @@
 			txtProofreadingResponse.Margin = new Padding(4, 3, 4, 3);
 			txtProofreadingResponse.Multiline = true;
 			txtProofreadingResponse.Name = "txtProofreadingResponse";
-			txtProofreadingResponse.ReadOnly = true;
+			txtProofreadingResponse.ScrollBars = ScrollBars.Vertical;
 			txtProofreadingResponse.Size = new Size(927, 234);
 			txtProofreadingResponse.TabIndex = 17;
 			// 

@@ -3,10 +3,11 @@ using OpenAI.ObjectModels;
 using OpenAI.Interfaces;
 using OpenAI.Managers;
 using OpenAI;
+using static OpenAI.ObjectModels.Models;
 
 namespace CognitiveSupport
 {
-	public class SpeechToTextService
+	public class LlmService
 	{
 		private readonly string ApiKey;
 		private readonly string Endpoint;
@@ -14,7 +15,7 @@ namespace CognitiveSupport
 		private readonly IOpenAIService _openAIService;
 
 
-		public SpeechToTextService(
+		public LlmService(
 			string apiKey,
 			string endpoint)
 		{
@@ -24,28 +25,24 @@ namespace CognitiveSupport
 			OpenAiOptions options = new OpenAiOptions
 			{
 				ApiKey = apiKey,
+
 			};
 			HttpClient httpClient = new HttpClient();
-			httpClient.Timeout = TimeSpan.FromSeconds(30);
+			httpClient.Timeout = TimeSpan.FromSeconds(60);
 			_openAIService = new OpenAIService(options, httpClient);
 		}
 
 		public async Task<string> ConvertAudioToText(
-			string speechToTextPrompt,
-			string audioffilePath)
+			IList<ChatMessage>  messages)
 		{
-			var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
-			var response = await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
+			var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
 			{
-				Prompt = speechToTextPrompt,
-				FileName = Path.GetFileName(audioffilePath),
-				File = audioBytes,
-				Model = Models.WhisperV1,
-				ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson
+				Messages = messages,
+				Model = Models.Gpt_3_5_Turbo
 			});
 			if (response.Successful)
 			{
-				return response.Text;
+				return response.Choices.First().Message.Content;
 			}
 			else
 			{
