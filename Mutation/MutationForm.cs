@@ -478,5 +478,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			await SpeechToText();
 		}
+
+		private void btnProofreadingReviewAndCorrect_Click(object sender, EventArgs e)
+		{
+
+		}
 	}
 }

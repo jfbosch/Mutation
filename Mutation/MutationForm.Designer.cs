@@ -224,6 +224,7 @@
 			btnProofreadingReviewAndCorrect.TabIndex = 16;
 			btnProofreadingReviewAndCorrect.Text = "Review && &Correct";
 			btnProofreadingReviewAndCorrect.UseVisualStyleBackColor = true;
+			btnProofreadingReviewAndCorrect.Click += btnProofreadingReviewAndCorrect_Click;
 			// 
 			// txtProofreadingResponse
 			// 
