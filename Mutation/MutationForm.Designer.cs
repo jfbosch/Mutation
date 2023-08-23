@@ -45,10 +45,10 @@
 			btnSpeechToTextRecord = new Button();
 			lblProofreadingPrompt = new Label();
 			txtFormatTranscriptPrompt = new TextBox();
-			btnProofreadingReviewAndCorrect = new Button();
+			btnFormatTranscript = new Button();
 			txtFormatTranscriptResponse = new TextBox();
 			lblProofreadingResponse = new Label();
-			chkAutoFormatTranscription = new CheckBox();
+			chkAutoFormatTranscript = new CheckBox();
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -207,7 +207,7 @@
 			lblProofreadingPrompt.TabIndex = 13;
 			lblProofreadingPrompt.Text = "Proofreading prompt";
 			// 
-			// txtProofreadingPrompt
+			// txtFormatTranscriptPrompt
 			// 
 			txtFormatTranscriptPrompt.AcceptsReturn = true;
 			txtFormatTranscriptPrompt.AccessibleDescription = "The speech-to-text prompt for potentially improving accuracy.";
@@ -215,28 +215,28 @@
 			txtFormatTranscriptPrompt.Location = new Point(252, 403);
 			txtFormatTranscriptPrompt.Margin = new Padding(4, 3, 4, 3);
 			txtFormatTranscriptPrompt.Multiline = true;
-			txtFormatTranscriptPrompt.Name = "txtProofreadingPrompt";
+			txtFormatTranscriptPrompt.Name = "txtFormatTranscriptPrompt";
 			txtFormatTranscriptPrompt.ScrollBars = ScrollBars.Vertical;
 			txtFormatTranscriptPrompt.Size = new Size(927, 66);
 			txtFormatTranscriptPrompt.TabIndex = 14;
 			// 
-			// btnProofreadingReviewAndCorrect
+			// btnFormatTranscription
 			// 
-			btnProofreadingReviewAndCorrect.Location = new Point(18, 504);
-			btnProofreadingReviewAndCorrect.Name = "btnProofreadingReviewAndCorrect";
-			btnProofreadingReviewAndCorrect.Size = new Size(110, 23);
-			btnProofreadingReviewAndCorrect.TabIndex = 16;
-			btnProofreadingReviewAndCorrect.Text = "Review && &Correct";
-			btnProofreadingReviewAndCorrect.UseVisualStyleBackColor = true;
-			btnProofreadingReviewAndCorrect.Click += btnProofreadingReviewAndCorrect_Click;
+			btnFormatTranscript.Location = new Point(18, 504);
+			btnFormatTranscript.Name = "btnFormatTranscription";
+			btnFormatTranscript.Size = new Size(149, 23);
+			btnFormatTranscript.TabIndex = 16;
+			btnFormatTranscript.Text = "&Format Transcription";
+			btnFormatTranscript.UseVisualStyleBackColor = true;
+			btnFormatTranscript.Click += btnFormatTranscript_Click;
 			// 
-			// txtProofreadingResponse
+			// txtFormatTranscriptResponse
 			// 
 			txtFormatTranscriptResponse.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 			txtFormatTranscriptResponse.Location = new Point(252, 475);
 			txtFormatTranscriptResponse.Margin = new Padding(4, 3, 4, 3);
 			txtFormatTranscriptResponse.Multiline = true;
-			txtFormatTranscriptResponse.Name = "txtProofreadingResponse";
+			txtFormatTranscriptResponse.Name = "txtFormatTranscriptResponse";
 			txtFormatTranscriptResponse.ScrollBars = ScrollBars.Vertical;
 			txtFormatTranscriptResponse.Size = new Size(927, 234);
 			txtFormatTranscriptResponse.TabIndex = 17;
@@ -251,22 +251,22 @@
 			lblProofreadingResponse.TabIndex = 15;
 			lblProofreadingResponse.Text = "...";
 			// 
-			// chkAutoReviewAndCorrectAfterTranscription
+			// chkAutoFormatTranscription
 			// 
-			chkAutoFormatTranscription.Location = new Point(18, 533);
-			chkAutoFormatTranscription.Name = "chkAutoReviewAndCorrectAfterTranscription";
-			chkAutoFormatTranscription.Size = new Size(185, 38);
-			chkAutoFormatTranscription.TabIndex = 16;
-			chkAutoFormatTranscription.Text = "Auto review && correct after transcription.";
-			chkAutoFormatTranscription.UseVisualStyleBackColor = true;
+			chkAutoFormatTranscript.Location = new Point(18, 533);
+			chkAutoFormatTranscript.Name = "chkAutoFormatTranscription";
+			chkAutoFormatTranscript.Size = new Size(185, 25);
+			chkAutoFormatTranscript.TabIndex = 16;
+			chkAutoFormatTranscript.Text = "&Auto format transcription.";
+			chkAutoFormatTranscript.UseVisualStyleBackColor = true;
 			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1184, 711);
-			Controls.Add(chkAutoFormatTranscription);
-			Controls.Add(btnProofreadingReviewAndCorrect);
+			Controls.Add(chkAutoFormatTranscript);
+			Controls.Add(btnFormatTranscript);
 			Controls.Add(txtFormatTranscriptResponse);
 			Controls.Add(lblProofreadingResponse);
 			Controls.Add(lblProofreadingPrompt);
@@ -312,10 +312,10 @@
 		private Button btnSpeechToTextRecord;
 		private Label lblProofreadingPrompt;
 		private TextBox txtFormatTranscriptPrompt;
-		private Button btnProofreadingReviewAndCorrect;
+		private Button btnFormatTranscript;
 		private TextBox txtFormatTranscriptResponse;
 		private Label lblProofreadingResponse;
-		private CheckBox chkAutoFormatTranscription;
+		private CheckBox chkAutoFormatTranscript;
 	}
 }
 

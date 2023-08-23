@@ -401,8 +401,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 						btnSpeechToTextRecord.Text = "&Record";
 						btnSpeechToTextRecord.Enabled = true;
 
-						if (chkAutoFormatTranscription.Checked)
-							await FormatSpeechToTextOutputWithLlm();
+						if (chkAutoFormatTranscript.Checked)
+							await FormatSpeechToTextTranscriptWithLlm();
 						else
 							BeepSuccess();
 					}
@@ -487,23 +487,23 @@ The model may also leave out common filler words in the audio. If you want to ke
 			await SpeechToText();
 		}
 
-		private async void btnProofreadingReviewAndCorrect_Click(object sender, EventArgs e)
+		private async void btnFormatTranscript_Click(object sender, EventArgs e)
 		{
-			await FormatSpeechToTextOutputWithLlm();
+			await FormatSpeechToTextTranscriptWithLlm();
 
 		}
 
-		private async Task FormatSpeechToTextOutputWithLlm()
+		private async Task FormatSpeechToTextTranscriptWithLlm()
 		{
 			txtFormatTranscriptResponse.Text = "Formatting...";
 			BeepStart();
 
 			string rawTranscript = txtSpeechToText.Text;
-			string proofreadingPrompt = txtFormatTranscriptPrompt.Text;
+			string formatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
 
 			var messages = new List<ChatMessage>
 			{
-				ChatMessage.FromSystem($"You are a helpful assistant proofreader and editor. {proofreadingPrompt}"),
+				ChatMessage.FromSystem($"You are a helpful assistant proofreader and editor. {formatTranscriptPrompt}"),
 				ChatMessage.FromUser($"Reformat the following transcript: {rawTranscript}"),
 			};
 
