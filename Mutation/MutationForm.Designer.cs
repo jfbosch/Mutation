@@ -342,6 +342,7 @@
 			btnReviewTranscript.TabIndex = 22;
 			btnReviewTranscript.Text = "Re&view Transcript";
 			btnReviewTranscript.UseVisualStyleBackColor = true;
+			btnReviewTranscript.Click += btnReviewTranscript_Click;
 			// 
 			// lblTranscriptReview
 			// 

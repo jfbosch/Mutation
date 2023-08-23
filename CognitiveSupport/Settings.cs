@@ -39,6 +39,7 @@ public class LlmSettings
 	public string ResourceName { get; set; }
 	public List<ModelDeploymentIdMap> ModelDeploymentIdMaps { get; set; }
 	public string FormatTranscriptPrompt { get; set; }
+	public string ReviewTranscriptPrompt { get; set; }
 
 	public class ModelDeploymentIdMap
 	{

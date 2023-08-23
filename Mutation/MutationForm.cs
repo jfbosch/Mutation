@@ -63,6 +63,7 @@ namespace Mutation
 
 
 			txtFormatTranscriptPrompt.Text = this.Settings.LlmSettings.FormatTranscriptPrompt;
+			txtReviewTranscriptPrompt.Text = this.Settings.LlmSettings.ReviewTranscriptPrompt;
 
 		}
 
@@ -465,6 +466,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			Settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
 			Settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
+			Settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 			this.SettingsManager.SaveSettingsToFile(Settings);
 
 			UnregisterHotkey(_hkToggleMicMute);
@@ -490,7 +492,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private async void btnFormatTranscript_Click(object sender, EventArgs e)
 		{
 			await FormatSpeechToTextTranscriptWithLlm();
-
 		}
 
 		private async Task FormatSpeechToTextTranscriptWithLlm()
@@ -503,7 +504,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			var messages = new List<ChatMessage>
 			{
-				ChatMessage.FromSystem($"You are a helpful assistant proofreader and editor. {formatTranscriptPrompt}"),
+				ChatMessage.FromSystem($"{formatTranscriptPrompt}"),
 				ChatMessage.FromUser($"Reformat the following transcript: {rawTranscript}"),
 			};
 
@@ -512,6 +513,27 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			BeepSuccess();
 		}
+
+		private async Task ReviewSpeechToTextTranscriptWithLlm()
+		{
+			txtTranscriptReviewResponse.Text = "Reviewing...";
+			BeepStart();
+
+			string transcript = txtFormatTranscriptResponse.Text;
+			string reviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
+
+			var messages = new List<ChatMessage>
+			{
+				ChatMessage.FromSystem($"{reviewTranscriptPrompt}"),
+				ChatMessage.FromUser($"Review the following transcript: {Environment.NewLine}{Environment.NewLine}{transcript}"),
+			};
+
+			string review = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
+			txtTranscriptReviewResponse.Text = review.FixNewLines();
+
+			BeepSuccess();
+		}
+
 
 		private void BeepMuted()
 		{
@@ -540,6 +562,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 				Console.Beep(300, 100);
 		}
 
-
+		private async void btnReviewTranscript_Click(object sender, EventArgs e)
+		{
+			await ReviewSpeechToTextTranscriptWithLlm();
+		}
 	}
 }
