@@ -38,7 +38,8 @@ namespace CognitiveSupport
 			var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
 			{
 				Messages = messages,
-				Model = Models.Gpt_3_5_Turbo
+				//Model = Models.Gpt_3_5_Turbo
+				Model = Models.Gpt_4,
 			});
 			if (response.Successful)
 			{

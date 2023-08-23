@@ -287,7 +287,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 					_activeScreenCaptureForm = null;
 
-					ExtractText(screenshot);
+					ExtractText(GetClipboardImage());
 				}
 			}
 		}
