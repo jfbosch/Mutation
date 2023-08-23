@@ -364,10 +364,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
-				if (!Directory.Exists(Settings.SpeetchToTextSettings.TempDirectory))
-					Directory.CreateDirectory(Settings.SpeetchToTextSettings.TempDirectory);
+				string sessionsDirectory = Path.Combine(Settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
+				if (!Directory.Exists(sessionsDirectory))
+					Directory.CreateDirectory(sessionsDirectory);
 
-				string audioFilePath = Path.Combine(Settings.SpeetchToTextSettings.TempDirectory, "mutation_recording.mp3");
+				string audioFilePath = Path.Combine(sessionsDirectory, "mutation_recording.mp3");
 
 				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
