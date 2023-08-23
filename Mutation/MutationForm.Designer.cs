@@ -49,6 +49,10 @@
 			txtFormatTranscriptResponse = new TextBox();
 			lblFormatTranscriptResponse = new Label();
 			chkAutoFormatTranscript = new CheckBox();
+			splitContainerLlmProcessing = new SplitContainer();
+			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).BeginInit();
+			splitContainerLlmProcessing.Panel1.SuspendLayout();
+			splitContainerLlmProcessing.SuspendLayout();
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -200,7 +204,7 @@
 			// lblFormatTranscriptPrompt
 			// 
 			lblFormatTranscriptPrompt.AutoSize = true;
-			lblFormatTranscriptPrompt.Location = new Point(18, 385);
+			lblFormatTranscriptPrompt.Location = new Point(7, 2);
 			lblFormatTranscriptPrompt.Margin = new Padding(4, 0, 4, 0);
 			lblFormatTranscriptPrompt.Name = "lblFormatTranscriptPrompt";
 			lblFormatTranscriptPrompt.Size = new Size(142, 15);
@@ -212,17 +216,17 @@
 			txtFormatTranscriptPrompt.AcceptsReturn = true;
 			txtFormatTranscriptPrompt.AccessibleDescription = "The speech-to-text prompt for potentially improving accuracy.";
 			txtFormatTranscriptPrompt.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-			txtFormatTranscriptPrompt.Location = new Point(18, 403);
+			txtFormatTranscriptPrompt.Location = new Point(7, 20);
 			txtFormatTranscriptPrompt.Margin = new Padding(4, 3, 4, 3);
 			txtFormatTranscriptPrompt.Multiline = true;
 			txtFormatTranscriptPrompt.Name = "txtFormatTranscriptPrompt";
 			txtFormatTranscriptPrompt.ScrollBars = ScrollBars.Vertical;
-			txtFormatTranscriptPrompt.Size = new Size(519, 66);
+			txtFormatTranscriptPrompt.Size = new Size(516, 64);
 			txtFormatTranscriptPrompt.TabIndex = 14;
 			// 
 			// btnFormatTranscript
 			// 
-			btnFormatTranscript.Location = new Point(197, 475);
+			btnFormatTranscript.Location = new Point(183, 90);
 			btnFormatTranscript.Name = "btnFormatTranscript";
 			btnFormatTranscript.Size = new Size(149, 23);
 			btnFormatTranscript.TabIndex = 16;
@@ -233,44 +237,57 @@
 			// txtFormatTranscriptResponse
 			// 
 			txtFormatTranscriptResponse.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-			txtFormatTranscriptResponse.Location = new Point(18, 503);
+			txtFormatTranscriptResponse.Location = new Point(7, 118);
 			txtFormatTranscriptResponse.Margin = new Padding(4, 3, 4, 3);
 			txtFormatTranscriptResponse.Multiline = true;
 			txtFormatTranscriptResponse.Name = "txtFormatTranscriptResponse";
 			txtFormatTranscriptResponse.ScrollBars = ScrollBars.Vertical;
-			txtFormatTranscriptResponse.Size = new Size(519, 196);
+			txtFormatTranscriptResponse.Size = new Size(516, 196);
 			txtFormatTranscriptResponse.TabIndex = 17;
 			// 
 			// lblFormatTranscriptResponse
 			// 
 			lblFormatTranscriptResponse.AutoSize = true;
-			lblFormatTranscriptResponse.Location = new Point(18, 474);
+			lblFormatTranscriptResponse.Location = new Point(7, 94);
 			lblFormatTranscriptResponse.Margin = new Padding(4, 0, 4, 0);
 			lblFormatTranscriptResponse.Name = "lblFormatTranscriptResponse";
-			lblFormatTranscriptResponse.Size = new Size(16, 15);
+			lblFormatTranscriptResponse.Size = new Size(116, 15);
 			lblFormatTranscriptResponse.TabIndex = 15;
-			lblFormatTranscriptResponse.Text = "...";
+			lblFormatTranscriptResponse.Text = "Formatted Transcript";
 			// 
 			// chkAutoFormatTranscript
 			// 
-			chkAutoFormatTranscript.Location = new Point(352, 475);
+			chkAutoFormatTranscript.Location = new Point(338, 90);
 			chkAutoFormatTranscript.Name = "chkAutoFormatTranscript";
 			chkAutoFormatTranscript.Size = new Size(185, 25);
 			chkAutoFormatTranscript.TabIndex = 16;
 			chkAutoFormatTranscript.Text = "&Auto format transcription.";
 			chkAutoFormatTranscript.UseVisualStyleBackColor = true;
 			// 
+			// splitContainerLlmProcessing
+			// 
+			splitContainerLlmProcessing.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+			splitContainerLlmProcessing.Location = new Point(4, 369);
+			splitContainerLlmProcessing.Name = "splitContainerLlmProcessing";
+			// 
+			// splitContainerLlmProcessing.Panel1
+			// 
+			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptPrompt);
+			splitContainerLlmProcessing.Panel1.Controls.Add(chkAutoFormatTranscript);
+			splitContainerLlmProcessing.Panel1.Controls.Add(txtFormatTranscriptPrompt);
+			splitContainerLlmProcessing.Panel1.Controls.Add(btnFormatTranscript);
+			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptResponse);
+			splitContainerLlmProcessing.Panel1.Controls.Add(txtFormatTranscriptResponse);
+			splitContainerLlmProcessing.Size = new Size(1175, 342);
+			splitContainerLlmProcessing.SplitterDistance = 534;
+			splitContainerLlmProcessing.TabIndex = 18;
+			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1184, 711);
-			Controls.Add(chkAutoFormatTranscript);
-			Controls.Add(btnFormatTranscript);
-			Controls.Add(txtFormatTranscriptResponse);
-			Controls.Add(lblFormatTranscriptResponse);
-			Controls.Add(lblFormatTranscriptPrompt);
-			Controls.Add(txtFormatTranscriptPrompt);
+			Controls.Add(splitContainerLlmProcessing);
 			Controls.Add(btnSpeechToTextRecord);
 			Controls.Add(lblSpeechToTextPrompt);
 			Controls.Add(txtSpeechToTextPrompt);
@@ -290,6 +307,10 @@
 			Text = "Mutation";
 			FormClosing += MutationForm_FormClosing;
 			Load += MutationForm_Load;
+			splitContainerLlmProcessing.Panel1.ResumeLayout(false);
+			splitContainerLlmProcessing.Panel1.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).EndInit();
+			splitContainerLlmProcessing.ResumeLayout(false);
 			ResumeLayout(false);
 			PerformLayout();
 		}
@@ -316,6 +337,7 @@
 		private TextBox txtFormatTranscriptResponse;
 		private Label lblFormatTranscriptResponse;
 		private CheckBox chkAutoFormatTranscript;
+		private SplitContainer splitContainerLlmProcessing;
 	}
 }
 
