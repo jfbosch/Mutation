@@ -3,6 +3,7 @@ using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
 using NAudio.Wave;
+using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
 using System.Drawing.Imaging;
@@ -47,15 +48,15 @@ namespace Mutation
 			InitializeComponent();
 			InitializeAudioControls();
 
-			OcrService = new OcrService(Settings.AzureComputerVisionSettings.SubscriptionKey, Settings.AzureComputerVisionSettings.Endpoint);
+			OcrService = new OcrService(Settings.AzureComputerVisionSettings.ApiKey, Settings.AzureComputerVisionSettings.Endpoint);
 			SpeechToTextService = new SpeechToTextService(
-				Settings.OpenAiSettings.ApiKey
-				, Settings.OpenAiSettings.Endpoint);
+				Settings.SpeetchToTextSettings.ApiKey);
 			LlmService = new LlmService(
-				Settings.OpenAiSettings.ApiKey
-				, Settings.OpenAiSettings.Endpoint);
+				Settings.LlmSettings.ApiKey,
+				Settings.LlmSettings.ResourceName,
+				Settings.LlmSettings.ModelDeploymentIdMaps);
 
-			txtSpeechToTextPrompt.Text = Settings.OpenAiSettings.SpeechToTextPrompt;
+			txtSpeechToTextPrompt.Text = Settings.SpeetchToTextSettings.SpeechToTextPrompt;
 
 			HookupTooltips();
 
@@ -63,7 +64,7 @@ namespace Mutation
 
 
 			txtProofreadingPrompt.Text = @"You are a helpful proofreader and editor. When you are asked to format a transcript, apply the following rules to improve the formatting of the text:
-Replace the words ""new line"" with an actual new line character, and replace the words ""new paragraph"" with 2 new line characters, and replace the words ""new bullet"" with a newline character and a bullet, and end the preceding sentence with a full stop, and start the new sentence with a capital letter, and do not make any other changes.
+Replace the words 'new line' (case insensitive) with an actual new line character, and replace the words 'new paragraph' (case insensitive) with 2 new line characters, and replace the words 'new bullet' (case insensitive) with a newline character and a bullet character, eg. '- ', and end the preceding sentence with a full stop '.', and start the new sentence with a capital letter, and do not make any other changes.
 
 Here is an example of a raw transcript and the reformatted text:
 
@@ -379,7 +380,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotKeySpeechToText()
 		{
-			_hkSpeechToText = MapHotKey(Settings.OpenAiSettings.SpeechToTextHotKey);
+			_hkSpeechToText = MapHotKey(Settings.SpeetchToTextSettings.SpeechToTextHotKey);
 			_hkSpeechToText.Pressed += delegate { SpeechToText(); };
 			TryRegisterHotkey(_hkSpeechToText);
 
@@ -390,10 +391,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
-				if (!Directory.Exists(Settings.OpenAiSettings.TempDirectory))
-					Directory.CreateDirectory(Settings.OpenAiSettings.TempDirectory);
+				if (!Directory.Exists(Settings.SpeetchToTextSettings.TempDirectory))
+					Directory.CreateDirectory(Settings.SpeetchToTextSettings.TempDirectory);
 
-				string audioFilePath = Path.Combine(Settings.OpenAiSettings.TempDirectory, "mutation_recording.mp3");
+				string audioFilePath = Path.Combine(Settings.SpeetchToTextSettings.TempDirectory, "mutation_recording.mp3");
 
 				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
@@ -495,7 +496,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
-			Settings.OpenAiSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			Settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
 			this.SettingsManager.SaveSettingsToFile(Settings);
 
 			UnregisterHotkey(_hkToggleMicMute);
@@ -537,7 +538,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				ChatMessage.FromUser($"Reformat the following transcript: {rawTranscript}"),
 			};
 
-			string formattedText = await LlmService.ConvertAudioToText(messages);
+			string formattedText = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
 			txtProofreadingResponse.Text = formattedText.FixNewLines();
 		}
 

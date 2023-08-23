@@ -15,11 +15,9 @@ namespace CognitiveSupport
 
 
 		public SpeechToTextService(
-			string apiKey,
-			string endpoint)
+			string apiKey)
 		{
 			ApiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-			Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
 
 			OpenAiOptions options = new OpenAiOptions
 			{

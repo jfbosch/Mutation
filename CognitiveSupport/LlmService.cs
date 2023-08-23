@@ -1,9 +1,8 @@
-﻿using OpenAI.ObjectModels.RequestModels;
-using OpenAI.ObjectModels;
+﻿using OpenAI;
 using OpenAI.Interfaces;
 using OpenAI.Managers;
-using OpenAI;
-using static OpenAI.ObjectModels.Models;
+using OpenAI.ObjectModels;
+using OpenAI.ObjectModels.RequestModels;
 
 namespace CognitiveSupport
 {
@@ -12,34 +11,46 @@ namespace CognitiveSupport
 		private readonly string ApiKey;
 		private readonly string Endpoint;
 		private readonly object _lock = new object();
-		private readonly IOpenAIService _openAIService;
+		private readonly Dictionary<string, IOpenAIService> _openAIServices;
 
 
 		public LlmService(
 			string apiKey,
-			string endpoint)
+			string azureResourceName,
+			List<LlmSettings.ModelDeploymentIdMap> modelDeploymentIdMaps)
 		{
 			ApiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-			Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
+			if (modelDeploymentIdMaps is null || !modelDeploymentIdMaps.Any())
+				throw new ArgumentNullException(nameof(modelDeploymentIdMaps));
 
-			OpenAiOptions options = new OpenAiOptions
+			_openAIServices = new Dictionary<string, IOpenAIService>();
+			foreach (var map in modelDeploymentIdMaps)
 			{
-				ApiKey = apiKey,
-
-			};
-			HttpClient httpClient = new HttpClient();
-			httpClient.Timeout = TimeSpan.FromSeconds(60);
-			_openAIService = new OpenAIService(options, httpClient);
+				OpenAiOptions options = new OpenAiOptions
+				{
+					ApiKey = apiKey,
+					ResourceName = azureResourceName,
+					ProviderType = ProviderType.Azure,
+					DeploymentId = map.DeploymentId,
+				};
+				HttpClient httpClient = new HttpClient();
+				httpClient.Timeout = TimeSpan.FromSeconds(60);
+				_openAIServices[map.ModelName] = new OpenAIService(options, httpClient);
+			}
 		}
 
-		public async Task<string> ConvertAudioToText(
-			IList<ChatMessage>  messages)
+		public async Task<string> CreateChatCompletion(
+			IList<ChatMessage> messages,
+			string llmModelName)
 		{
-			var response = await _openAIService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+			if (!_openAIServices.ContainsKey(llmModelName))
+				throw new ArgumentException($"{llmModelName} is not one of the configured models. The following are the available, configured models: {string.Join(",", _openAIServices.Keys)}", nameof(llmModelName));
+
+			var service = _openAIServices[llmModelName];
+			var response = await service.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
 			{
 				Messages = messages,
-				//Model = Models.Gpt_3_5_Turbo
-				Model = Models.Gpt_4,
+				Model = llmModelName,
 			});
 			if (response.Successful)
 			{

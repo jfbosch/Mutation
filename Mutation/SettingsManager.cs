@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using CognitiveSupport;
+using Newtonsoft.Json;
+using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
 
@@ -48,8 +50,7 @@ internal class SettingsManager
 
 		bool somethingWasMissing = false;
 
-		settings.UserInstructions = "Change the values of the settings below to your preferences, save the file, and restart Mutation.exe";
-
+		settings.UserInstructions = "Change the values of the settings below to your preferences, save the file, and restart Mutation.exe. DeploymentId in the LlmSettings should be set to your Azure model Deployment Name.";
 
 		if (settings.AzureComputerVisionSettings is null)
 		{
@@ -74,9 +75,9 @@ internal class SettingsManager
 			azureComputerVisionSettings.ScreenshotOcrHotKey = "SHIFT+ALT+J";
 			somethingWasMissing = true;
 		}
-		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.SubscriptionKey))
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ApiKey))
 		{
-			azureComputerVisionSettings.SubscriptionKey = Placeholder;
+			azureComputerVisionSettings.ApiKey = Placeholder;
 			somethingWasMissing = true;
 		}
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.Endpoint))
@@ -86,6 +87,7 @@ internal class SettingsManager
 		}
 
 
+		//--------------------------------------
 		if (settings.AudioSettings is null)
 		{
 			settings.AudioSettings = new AudioSettings();
@@ -99,37 +101,99 @@ internal class SettingsManager
 		}
 
 
-		if (settings.OpenAiSettings is null)
+		//----------------------------------
+		if (settings.SpeetchToTextSettings is null)
 		{
-			settings.OpenAiSettings = new OpenAiSettings();
+			settings.SpeetchToTextSettings = new SpeetchToTextSettings();
 			somethingWasMissing = true;
 		}
-		var openAiSettings = settings.OpenAiSettings;
-		if (string.IsNullOrWhiteSpace(openAiSettings.SpeechToTextHotKey))
+		var speechToTextSettings = settings.SpeetchToTextSettings;
+		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextHotKey))
 		{
-			openAiSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
+			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
 			somethingWasMissing = true;
 		}
-		if (string.IsNullOrWhiteSpace(openAiSettings.ApiKey))
+		if (string.IsNullOrWhiteSpace(speechToTextSettings.ApiKey))
 		{
-			openAiSettings.ApiKey = Placeholder;
+			speechToTextSettings.ApiKey = Placeholder;
 			somethingWasMissing = true;
 		}
-		if (string.IsNullOrWhiteSpace(openAiSettings.Endpoint))
+		if (string.IsNullOrWhiteSpace(speechToTextSettings.TempDirectory))
 		{
-			openAiSettings.Endpoint = Placeholder;
-			somethingWasMissing = true;
-		}
-		if (string.IsNullOrWhiteSpace(openAiSettings.TempDirectory))
-		{
-			openAiSettings.TempDirectory = @"C:\Temp\Mutation";
+			speechToTextSettings.TempDirectory = @"C:\Temp\Mutation";
 			somethingWasMissing = true;
 		}
 
-		if (string.IsNullOrWhiteSpace(openAiSettings.SpeechToTextPrompt))
+		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextPrompt))
 		{
-			openAiSettings.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro."; 
+			speechToTextSettings.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro.";
 			// This is optional, so we don't need to flag that something was missing.
+		}
+
+
+		//-------------------------------
+		if (settings.LlmSettings is null)
+		{
+			settings.LlmSettings = new LlmSettings();
+			somethingWasMissing = true;
+		}
+		var llmSettings = settings.LlmSettings;
+		if (string.IsNullOrWhiteSpace(llmSettings.ApiKey))
+		{
+			llmSettings.ApiKey = Placeholder;
+			somethingWasMissing = true;
+		}
+
+		if (string.IsNullOrWhiteSpace(llmSettings.ResourceName))
+		{
+			llmSettings.ResourceName = "<The Azure resource name for your OpenAI service.>"; // Replace with your default value
+			somethingWasMissing = true;
+		}
+
+		if (string.IsNullOrWhiteSpace(llmSettings.FormatTranscriptPrompt))
+		{
+			llmSettings.FormatTranscriptPrompt = @"You are a helpful proofreader and editor. When you are asked to format a transcript, apply the following rules to improve the formatting of the text:
+Replace the words 'new line' (case insensitive) with an actual new line character, and replace the words 'new paragraph' (case insensitive) with 2 new line characters, and replace the words 'new bullet' (case insensitive) with a newline character and a bullet character, eg. '- ', and end the preceding sentence with a full stop '.', and start the new sentence with a capital letter, and do not make any other changes.
+
+Here is an example of a raw transcript and the reformatted text:
+
+----- Transcript:
+The radiology report - the written analysis by the radiologist interpreting your imaging study - is transmitted to the requesting physician or medical specialist new line the doctor or specialist will then relay the full analysis to you, along with recommendations and/or prescriptions. New paragraph Depending on the results, this might include new bullet scheduling further diagnostic tests new bullet initiating a new medication regimen new bullet recommending physical therapy new bullet or possibly even planning for a surgical intervention. New paragraph. Collaboration among various healthcare professionals ensures that the information gleaned from the radiology report is utilized to provide the most effective and individualized care tailored to your specific condition and needs. New line end of summary.
+
+
+----- Reformatted Text:
+The radiology report - the written analysis by the radiologist interpreting your imaging study - is transmitted to the requesting physician or medical specialist.
+The doctor or specialist will then relay the full analysis to you, along with recommendations and/or prescriptions.
+
+Depending on the results, this might include:
+- scheduling further diagnostic tests,
+- initiating a new medication regimen,
+- recommending physical therapy,
+- or possibly even planning for a surgical intervention.
+
+Collaboration among various healthcare professionals ensures that the information gleaned from the radiology report is utilized to provide the most effective and individualized care tailored to your specific condition and needs.
+End of summary.
+";
+			// No need to mark something as missing.
+			//somethingWasMissing = true;
+		}
+
+		if (llmSettings.ModelDeploymentIdMaps == null || !llmSettings.ModelDeploymentIdMaps.Any())
+		{
+			llmSettings.ModelDeploymentIdMaps = new List<LlmSettings.ModelDeploymentIdMap>
+			{
+				new LlmSettings.ModelDeploymentIdMap
+				{
+					ModelName = Models.Gpt_3_5_Turbo,
+					DeploymentId = "gpt-35-turbo"
+				},
+				new LlmSettings.ModelDeploymentIdMap
+				{
+					ModelName = Models.Gpt_4,
+					DeploymentId = "gpt-4"
+				},
+			};
+			somethingWasMissing = true;
 		}
 
 		return somethingWasMissing;
