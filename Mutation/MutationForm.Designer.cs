@@ -233,7 +233,8 @@
 			// 
 			// btnFormatTranscript
 			// 
-			btnFormatTranscript.Location = new Point(209, 90);
+			btnFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			btnFormatTranscript.Location = new Point(261, 90);
 			btnFormatTranscript.Name = "btnFormatTranscript";
 			btnFormatTranscript.Size = new Size(149, 23);
 			btnFormatTranscript.TabIndex = 16;
@@ -264,7 +265,8 @@
 			// 
 			// chkAutoFormatTranscript
 			// 
-			chkAutoFormatTranscript.Location = new Point(364, 90);
+			chkAutoFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			chkAutoFormatTranscript.Location = new Point(416, 90);
 			chkAutoFormatTranscript.Name = "chkAutoFormatTranscript";
 			chkAutoFormatTranscript.Size = new Size(149, 25);
 			chkAutoFormatTranscript.TabIndex = 16;
@@ -310,7 +312,8 @@
 			// 
 			// chkAutoReviewTranscript
 			// 
-			chkAutoReviewTranscript.Location = new Point(470, 91);
+			chkAutoReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			chkAutoReviewTranscript.Location = new Point(421, 91);
 			chkAutoReviewTranscript.Name = "chkAutoReviewTranscript";
 			chkAutoReviewTranscript.Size = new Size(153, 25);
 			chkAutoReviewTranscript.TabIndex = 21;
@@ -332,7 +335,8 @@
 			// 
 			// btnReviewTranscript
 			// 
-			btnReviewTranscript.Location = new Point(315, 91);
+			btnReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			btnReviewTranscript.Location = new Point(266, 91);
 			btnReviewTranscript.Name = "btnReviewTranscript";
 			btnReviewTranscript.Size = new Size(149, 23);
 			btnReviewTranscript.TabIndex = 22;
