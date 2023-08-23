@@ -7,7 +7,6 @@ using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
 using System.Drawing.Imaging;
-using System.Windows.Forms;
 
 namespace Mutation
 {
@@ -63,28 +62,7 @@ namespace Mutation
 			HookupHotkeys();
 
 
-			txtProofreadingPrompt.Text = @"You are a helpful proofreader and editor. When you are asked to format a transcript, apply the following rules to improve the formatting of the text:
-Replace the words 'new line' (case insensitive) with an actual new line character, and replace the words 'new paragraph' (case insensitive) with 2 new line characters, and replace the words 'new bullet' (case insensitive) with a newline character and a bullet character, eg. '- ', and end the preceding sentence with a full stop '.', and start the new sentence with a capital letter, and do not make any other changes.
-
-Here is an example of a raw transcript and the reformatted text:
-
------ Transcript:
-The radiology report - the written analysis by the radiologist interpreting your imaging study - is transmitted to the requesting physician or medical specialist new line the doctor or specialist will then relay the full analysis to you, along with recommendations and/or prescriptions. New paragraph Depending on the results, this might include new bullet scheduling further diagnostic tests new bullet initiating a new medication regimen new bullet recommending physical therapy new bullet or possibly even planning for a surgical intervention. New paragraph. Collaboration among various healthcare professionals ensures that the information gleaned from the radiology report is utilized to provide the most effective and individualized care tailored to your specific condition and needs. New line end of summary.
-
-
------ Reformatted Text:
-The radiology report - the written analysis by the radiologist interpreting your imaging study - is transmitted to the requesting physician or medical specialist.
-The doctor or specialist will then relay the full analysis to you, along with recommendations and/or prescriptions.
-
-Depending on the results, this might include:
-- scheduling further diagnostic tests,
-- initiating a new medication regimen,
-- recommending physical therapy,
-- or possibly even planning for a surgical intervention.
-
-Collaboration among various healthcare professionals ensures that the information gleaned from the radiology report is utilized to provide the most effective and individualized care tailored to your specific condition and needs.
-End of summary.
-";
+			txtFormatTranscriptPrompt.Text = this.Settings.LlmSettings.FormatTranscriptPrompt;
 
 		}
 
@@ -169,9 +147,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			else
 			{
 				txtActiveMic.Text = "(Unable to find device)";
-				Console.Beep(300, 100);
-				Console.Beep(300, 100);
-				Console.Beep(300, 100);
+				BeepFail();
 			}
 		}
 
@@ -195,13 +171,13 @@ The model may also leave out common filler words in the audio. If you want to ke
 				{
 					this.Text = "Muted Microphone";
 					this.BackColor = Color.LightGray;
-					Console.Beep(500, 200);
+					BeepMuted();
 				}
-				else
+				else // unmuted
 				{
 					this.Text = "Unuted Microphone";
 					this.BackColor = Color.White;
-					Console.Beep(1300, 50);
+					BeepUnmuted();
 				}
 
 				txtActiveMic.Text = this.Microphone.Name;
@@ -306,7 +282,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
-				Console.Beep(970, 80);
+				BeepStart();
 
 				txtOcr.Text = "Running OCR on image";
 
@@ -322,8 +298,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					SetTextToClipboard(text);
 					txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
 
-					Console.Beep(1050, 40);
-					Console.Beep(1050, 40);
+					BeepSuccess();
 
 					//using MessageForm msgForm = new MessageForm();
 					//msgForm.Show();
@@ -331,8 +306,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				}
 				else
 				{
-					Console.Beep(550, 40);
-					Console.Beep(400, 40);
+					BeepFail();
 
 					txtOcr.Text = "No image found on the clipboard.";
 					this.Activate();
@@ -344,8 +318,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
 				txtOcr.Text = msg;
 
-				Console.Beep(550, 80);
-				Console.Beep(400, 80);
+				BeepFail();
 
 				this.Activate();
 				//MessageBox.Show(this, msg, "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -405,7 +378,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
 						btnSpeechToTextRecord.Text = "Stop &Recording";
 
-						Console.Beep(970, 80);
+						BeepStart();
 					}
 					else // Busy recording, so we want to stop it.
 					{
@@ -413,7 +386,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						AudioRecorder.Dispose();
 						AudioRecorder = null;
 
-						Console.Beep(1050, 40);
+						BeepStart();
 
 						txtSpeechToText.Text = "Converting speech to text...";
 						btnSpeechToTextRecord.Text = "Processing";
@@ -424,21 +397,20 @@ The model may also leave out common filler words in the audio. If you want to ke
 						SetTextToClipboard(text);
 						txtSpeechToText.Text = $"{text}";
 
-						if (chkAutoReviewAndCorrectAfterTranscription.Checked)
-							await FormatSpeechToTextOutputWithLlm();
-
 						btnSpeechToTextRecord.Text = "&Record";
 						btnSpeechToTextRecord.Enabled = true;
 
-						BeepCompletedSuccessfully();
+						if (chkAutoFormatTranscription.Checked)
+							await FormatSpeechToTextOutputWithLlm();
+						else
+							BeepSuccess();
 					}
 				}
 
 			}
 			catch (Exception ex)
 			{
-				Console.Beep(550, 40);
-				Console.Beep(550, 40);
+				BeepFail();
 
 				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
 				txtSpeechToText.Text = msg;
@@ -453,12 +425,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 			{
 				_audioRecorderLock.Release();
 			}
-		}
-
-		private static void BeepCompletedSuccessfully()
-		{
-			Console.Beep(1050, 40);
-			Console.Beep(1150, 40);
 		}
 
 		private static Hotkey MapHotKey(string hotKeyStringRepresentation)
@@ -497,6 +463,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
 			Settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			Settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
 			this.SettingsManager.SaveSettingsToFile(Settings);
 
 			UnregisterHotkey(_hkToggleMicMute);
@@ -527,10 +494,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private async Task FormatSpeechToTextOutputWithLlm()
 		{
-			txtProofreadingResponse.Text = string.Empty;
+			txtFormatTranscriptResponse.Text = "Formatting...";
+			BeepStart();
 
 			string rawTranscript = txtSpeechToText.Text;
-			string proofreadingPrompt = txtProofreadingPrompt.Text;
+			string proofreadingPrompt = txtFormatTranscriptPrompt.Text;
 
 			var messages = new List<ChatMessage>
 			{
@@ -539,8 +507,38 @@ The model may also leave out common filler words in the audio. If you want to ke
 			};
 
 			string formattedText = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
-			txtProofreadingResponse.Text = formattedText.FixNewLines();
+			txtFormatTranscriptResponse.Text = formattedText.FixNewLines();
+
+			BeepSuccess();
 		}
+
+		private void BeepMuted()
+		{
+			Console.Beep(500, 200);
+		}
+
+		private void BeepUnmuted()
+		{
+			Console.Beep(1300, 50);
+		}
+
+		private static void BeepStart()
+		{
+			Console.Beep(970, 80);
+		}
+
+		private static void BeepSuccess()
+		{
+			Console.Beep(1050, 40);
+			Console.Beep(1150, 40);
+		}
+
+		private static void BeepFail()
+		{
+			for (int i = 0; i < 3; i++)
+				Console.Beep(300, 100);
+		}
+
 
 	}
 }

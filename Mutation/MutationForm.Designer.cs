@@ -44,11 +44,11 @@
 			toolTip = new ToolTip(components);
 			btnSpeechToTextRecord = new Button();
 			lblProofreadingPrompt = new Label();
-			txtProofreadingPrompt = new TextBox();
+			txtFormatTranscriptPrompt = new TextBox();
 			btnProofreadingReviewAndCorrect = new Button();
-			txtProofreadingResponse = new TextBox();
+			txtFormatTranscriptResponse = new TextBox();
 			lblProofreadingResponse = new Label();
-			chkAutoReviewAndCorrectAfterTranscription = new CheckBox();
+			chkAutoFormatTranscription = new CheckBox();
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -209,16 +209,16 @@
 			// 
 			// txtProofreadingPrompt
 			// 
-			txtProofreadingPrompt.AcceptsReturn = true;
-			txtProofreadingPrompt.AccessibleDescription = "The speech-to-text prompt for potentially improving accuracy.";
-			txtProofreadingPrompt.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-			txtProofreadingPrompt.Location = new Point(252, 403);
-			txtProofreadingPrompt.Margin = new Padding(4, 3, 4, 3);
-			txtProofreadingPrompt.Multiline = true;
-			txtProofreadingPrompt.Name = "txtProofreadingPrompt";
-			txtProofreadingPrompt.ScrollBars = ScrollBars.Vertical;
-			txtProofreadingPrompt.Size = new Size(927, 66);
-			txtProofreadingPrompt.TabIndex = 14;
+			txtFormatTranscriptPrompt.AcceptsReturn = true;
+			txtFormatTranscriptPrompt.AccessibleDescription = "The speech-to-text prompt for potentially improving accuracy.";
+			txtFormatTranscriptPrompt.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			txtFormatTranscriptPrompt.Location = new Point(252, 403);
+			txtFormatTranscriptPrompt.Margin = new Padding(4, 3, 4, 3);
+			txtFormatTranscriptPrompt.Multiline = true;
+			txtFormatTranscriptPrompt.Name = "txtProofreadingPrompt";
+			txtFormatTranscriptPrompt.ScrollBars = ScrollBars.Vertical;
+			txtFormatTranscriptPrompt.Size = new Size(927, 66);
+			txtFormatTranscriptPrompt.TabIndex = 14;
 			// 
 			// btnProofreadingReviewAndCorrect
 			// 
@@ -232,14 +232,14 @@
 			// 
 			// txtProofreadingResponse
 			// 
-			txtProofreadingResponse.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-			txtProofreadingResponse.Location = new Point(252, 475);
-			txtProofreadingResponse.Margin = new Padding(4, 3, 4, 3);
-			txtProofreadingResponse.Multiline = true;
-			txtProofreadingResponse.Name = "txtProofreadingResponse";
-			txtProofreadingResponse.ScrollBars = ScrollBars.Vertical;
-			txtProofreadingResponse.Size = new Size(927, 234);
-			txtProofreadingResponse.TabIndex = 17;
+			txtFormatTranscriptResponse.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+			txtFormatTranscriptResponse.Location = new Point(252, 475);
+			txtFormatTranscriptResponse.Margin = new Padding(4, 3, 4, 3);
+			txtFormatTranscriptResponse.Multiline = true;
+			txtFormatTranscriptResponse.Name = "txtProofreadingResponse";
+			txtFormatTranscriptResponse.ScrollBars = ScrollBars.Vertical;
+			txtFormatTranscriptResponse.Size = new Size(927, 234);
+			txtFormatTranscriptResponse.TabIndex = 17;
 			// 
 			// lblProofreadingResponse
 			// 
@@ -253,24 +253,24 @@
 			// 
 			// chkAutoReviewAndCorrectAfterTranscription
 			// 
-			chkAutoReviewAndCorrectAfterTranscription.Location = new Point(18, 533);
-			chkAutoReviewAndCorrectAfterTranscription.Name = "chkAutoReviewAndCorrectAfterTranscription";
-			chkAutoReviewAndCorrectAfterTranscription.Size = new Size(185, 38);
-			chkAutoReviewAndCorrectAfterTranscription.TabIndex = 16;
-			chkAutoReviewAndCorrectAfterTranscription.Text = "Auto review && correct after transcription.";
-			chkAutoReviewAndCorrectAfterTranscription.UseVisualStyleBackColor = true;
+			chkAutoFormatTranscription.Location = new Point(18, 533);
+			chkAutoFormatTranscription.Name = "chkAutoReviewAndCorrectAfterTranscription";
+			chkAutoFormatTranscription.Size = new Size(185, 38);
+			chkAutoFormatTranscription.TabIndex = 16;
+			chkAutoFormatTranscription.Text = "Auto review && correct after transcription.";
+			chkAutoFormatTranscription.UseVisualStyleBackColor = true;
 			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1184, 711);
-			Controls.Add(chkAutoReviewAndCorrectAfterTranscription);
+			Controls.Add(chkAutoFormatTranscription);
 			Controls.Add(btnProofreadingReviewAndCorrect);
-			Controls.Add(txtProofreadingResponse);
+			Controls.Add(txtFormatTranscriptResponse);
 			Controls.Add(lblProofreadingResponse);
 			Controls.Add(lblProofreadingPrompt);
-			Controls.Add(txtProofreadingPrompt);
+			Controls.Add(txtFormatTranscriptPrompt);
 			Controls.Add(btnSpeechToTextRecord);
 			Controls.Add(lblSpeechToTextPrompt);
 			Controls.Add(txtSpeechToTextPrompt);
@@ -311,11 +311,11 @@
 		private ToolTip toolTip;
 		private Button btnSpeechToTextRecord;
 		private Label lblProofreadingPrompt;
-		private TextBox txtProofreadingPrompt;
+		private TextBox txtFormatTranscriptPrompt;
 		private Button btnProofreadingReviewAndCorrect;
-		private TextBox txtProofreadingResponse;
+		private TextBox txtFormatTranscriptResponse;
 		private Label lblProofreadingResponse;
-		private CheckBox chkAutoReviewAndCorrectAfterTranscription;
+		private CheckBox chkAutoFormatTranscription;
 	}
 }
 
