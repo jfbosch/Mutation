@@ -180,8 +180,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 				}
 				else // unmuted
 				{
-					this.Text = "Unuted Microphone";
-					this.BackColor = Color.White;
+					this.Text = "Unmuted Microphone";
+					this.BackColor = Color.WhiteSmoke;
 					BeepUnmuted();
 				}
 
