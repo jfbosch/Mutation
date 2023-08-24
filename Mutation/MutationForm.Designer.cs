@@ -217,6 +217,7 @@
 			lblFormatTranscriptPrompt.Size = new Size(142, 15);
 			lblFormatTranscriptPrompt.TabIndex = 13;
 			lblFormatTranscriptPrompt.Text = "Format Transcript prompt";
+			lblFormatTranscriptPrompt.Click += lblFormatTranscriptPrompt_Click;
 			// 
 			// txtFormatTranscriptPrompt
 			// 
@@ -230,11 +231,12 @@
 			txtFormatTranscriptPrompt.ScrollBars = ScrollBars.Vertical;
 			txtFormatTranscriptPrompt.Size = new Size(564, 64);
 			txtFormatTranscriptPrompt.TabIndex = 14;
+			txtFormatTranscriptPrompt.Visible = false;
 			// 
 			// btnFormatTranscript
 			// 
 			btnFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnFormatTranscript.Location = new Point(261, 90);
+			btnFormatTranscript.Location = new Point(404, 90);
 			btnFormatTranscript.Name = "btnFormatTranscript";
 			btnFormatTranscript.Size = new Size(149, 23);
 			btnFormatTranscript.TabIndex = 16;
@@ -266,7 +268,9 @@
 			// chkAutoFormatTranscript
 			// 
 			chkAutoFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			chkAutoFormatTranscript.Location = new Point(416, 90);
+			chkAutoFormatTranscript.Checked = true;
+			chkAutoFormatTranscript.CheckState = CheckState.Checked;
+			chkAutoFormatTranscript.Location = new Point(254, 90);
 			chkAutoFormatTranscript.Name = "chkAutoFormatTranscript";
 			chkAutoFormatTranscript.Size = new Size(149, 25);
 			chkAutoFormatTranscript.TabIndex = 16;
@@ -309,16 +313,18 @@
 			lblReviewTranscriptPrompt.Size = new Size(141, 15);
 			lblReviewTranscriptPrompt.TabIndex = 18;
 			lblReviewTranscriptPrompt.Text = "Review Transcript prompt";
+			lblReviewTranscriptPrompt.Click += lblReviewTranscriptPrompt_Click;
 			// 
 			// chkAutoReviewTranscript
 			// 
 			chkAutoReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			chkAutoReviewTranscript.Location = new Point(421, 91);
+			chkAutoReviewTranscript.Location = new Point(254, 91);
 			chkAutoReviewTranscript.Name = "chkAutoReviewTranscript";
 			chkAutoReviewTranscript.Size = new Size(153, 25);
 			chkAutoReviewTranscript.TabIndex = 21;
 			chkAutoReviewTranscript.Text = "A&uto review transcript";
 			chkAutoReviewTranscript.UseVisualStyleBackColor = true;
+			chkAutoReviewTranscript.Visible = false;
 			// 
 			// txtReviewTranscriptPrompt
 			// 
@@ -336,7 +342,7 @@
 			// btnReviewTranscript
 			// 
 			btnReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnReviewTranscript.Location = new Point(266, 91);
+			btnReviewTranscript.Location = new Point(414, 91);
 			btnReviewTranscript.Name = "btnReviewTranscript";
 			btnReviewTranscript.Size = new Size(149, 23);
 			btnReviewTranscript.TabIndex = 22;

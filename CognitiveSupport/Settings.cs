@@ -38,6 +38,7 @@ public class LlmSettings
 	public string ApiKey { get; set; }
 	public string ResourceName { get; set; }
 	public List<ModelDeploymentIdMap> ModelDeploymentIdMaps { get; set; }
+	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
 	public string FormatTranscriptPrompt { get; set; }
 	public string ReviewTranscriptPrompt { get; set; }
 
@@ -45,5 +46,13 @@ public class LlmSettings
 	{
 		public string ModelName { get; set; }
 		public string DeploymentId { get; set; }
+	}
+
+	public class TranscriptFormatRule
+	{
+		public string Find { get; set; }
+		public string ReplaceWith { get; set; }
+		public bool CaseSensitive { get; set; }
+		public bool UseRegEx { get; set; }
 	}
 }

@@ -3,10 +3,14 @@ using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
 using NAudio.Wave;
+using Newtonsoft.Json;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
+using System;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices.JavaScript;
+using System.Text.Json.Serialization;
 
 namespace Mutation
 {
@@ -403,7 +407,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 						btnSpeechToTextRecord.Enabled = true;
 
 						if (chkAutoFormatTranscript.Checked)
-							await FormatSpeechToTextTranscriptWithLlm();
+							//await FormatSpeechToTextTranscriptWithLlm();
+							FormatSpeechToTextTranscriptWithRules();
 						else
 							BeepSuccess();
 					}
@@ -491,7 +496,19 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private async void btnFormatTranscript_Click(object sender, EventArgs e)
 		{
-			await FormatSpeechToTextTranscriptWithLlm();
+			//await FormatSpeechToTextTranscriptWithLlm();
+			FormatSpeechToTextTranscriptWithRules();
+		}
+
+		private async Task FormatSpeechToTextTranscriptWithRules()
+		{
+			txtFormatTranscriptResponse.Text = "Formatting...";
+
+			string rawTranscript = txtSpeechToText.Text;
+
+			txtFormatTranscriptResponse.Text = TextFormatter.Format(rawTranscript, Settings.LlmSettings.TranscriptFormatRules);
+
+			BeepSuccess();
 		}
 
 		private async Task FormatSpeechToTextTranscriptWithLlm()
@@ -565,6 +582,16 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private async void btnReviewTranscript_Click(object sender, EventArgs e)
 		{
 			await ReviewSpeechToTextTranscriptWithLlm();
+		}
+
+		private void lblFormatTranscriptPrompt_Click(object sender, EventArgs e)
+		{
+			txtFormatTranscriptPrompt.Visible = !txtFormatTranscriptPrompt.Visible;
+		}
+
+		private void lblReviewTranscriptPrompt_Click(object sender, EventArgs e)
+		{
+			txtReviewTranscriptPrompt.Visible = !txtReviewTranscriptPrompt.Visible;
 		}
 	}
 }

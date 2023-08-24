@@ -195,6 +195,8 @@ Additionally, specifically look out for mistakes common to audio transcriptions.
 - Contradictory statements (normal heart in the body of the report with cardiomegaly in the comment or conclusion)
 
 You should provide your feedback without preamble, in bullet form, where each finding or problem is listed as a bullet point. If you find no issues or concerns, just say, ‘Review did not detect any issues.’
+
+Also provide the most likely radiological diagnosis from the findings or body.
 ";
 			// No need to mark something as missing.
 			//somethingWasMissing = true;
@@ -216,8 +218,49 @@ You should provide your feedback without preamble, in bullet form, where each fi
 					DeploymentId = "gpt-4"
 				},
 			};
-			somethingWasMissing = true;
+
+			// no need to flag as we set defaults.
+			//somethingWasMissing = true;
 		}
+
+		if (llmSettings.TranscriptFormatRules == null || !llmSettings.TranscriptFormatRules.Any())
+		{
+			llmSettings.TranscriptFormatRules = new List<LlmSettings.TranscriptFormatRule>
+			{
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "new line",
+					ReplaceWith= $"{Environment.NewLine}",
+					CaseSensitive = false,
+					UseRegEx = false,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "new paragraph",
+					ReplaceWith= $"{Environment.NewLine}{Environment.NewLine}",
+					CaseSensitive = false,
+					UseRegEx = false,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "new bullet",
+					ReplaceWith= $"{Environment.NewLine}- ",
+					CaseSensitive = false,
+					UseRegEx = false,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "new colon",
+					ReplaceWith= $": ",
+					CaseSensitive = false,
+					UseRegEx = false,
+				},
+			};
+
+			// No need to flag something as missing as we set defaults.
+			//somethingWasMissing = true;
+		}
+
 
 		return somethingWasMissing;
 	}

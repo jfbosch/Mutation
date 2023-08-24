@@ -9,5 +9,6 @@
     <PackageReference Include="Microsoft.Azure.CognitiveServices.Vision.ComputerVision" Version="7.0.1" />
     <PackageReference Include="NAudio" Version="2.1.0" />
     <PackageReference Include="NAudio.Lame" Version="2.1.0" />
+    <PackageReference Include="StringExtensionsLibrary" Version="1.0.0" />
   </ItemGroup>
 </Project>
