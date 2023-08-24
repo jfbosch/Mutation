@@ -181,18 +181,20 @@ End of summary.
 		if (string.IsNullOrWhiteSpace(llmSettings.ReviewTranscriptPrompt))
 		{
 			llmSettings.ReviewTranscriptPrompt = @"You are an expert medical doctor specialising in radiology.
-When you are asked to review a transcript of a radiological report that was produced by an audio transcription, you should do the following:
+When you are asked to review a radiological report, you should do the following:
+
+Check for spelling mistakes, and Grammer mistakes.
+
 
 Check for logical consistency through out the report, and specifically between the body and the conclusion or comment. E.g. if the report body indicates a tumour was present, the conclusion or comment should not contradict that. Likewise, measurements in the body of the report and the comment or conclusion should be consistent.
+
 Additionally, specifically look out for mistakes common to audio transcriptions.
 - Similar sounding words (Hypointense vs hyperintense, hypo- vs hyperdense, etc)
 - Leaving out short vital words (eg. ‘no nodules’ transcribed as 'nodules')
 - Using left and right incorrectly/interchangeably.
 - Contradictory statements (normal heart in the body of the report with cardiomegaly in the comment or conclusion)
 
-Further, check for spelling mistakes, and Grammer mistakes where they could impact the intended meaning.
-
-You should provide your feedback without preamble, in bullet form (where each finding or problem is listed as a bullet point). If you find no issues or concerns, just say, ‘Review did not detect any issues.’
+You should provide your feedback without preamble, in bullet form, where each finding or problem is listed as a bullet point. If you find no issues or concerns, just say, ‘Review did not detect any issues.’
 ";
 			// No need to mark something as missing.
 			//somethingWasMissing = true;
