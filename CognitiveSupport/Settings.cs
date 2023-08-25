@@ -53,6 +53,13 @@ public class LlmSettings
 		public string Find { get; set; }
 		public string ReplaceWith { get; set; }
 		public bool CaseSensitive { get; set; }
-		public bool UseRegEx { get; set; }
+		public MatchTypeEnum MatchType { get; set; }
+
+		public enum MatchTypeEnum
+		{
+			Plain = 1,
+			RegEx = 2,
+			Smart = 3,
+		}
 	}
 }

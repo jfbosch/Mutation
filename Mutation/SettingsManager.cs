@@ -1,5 +1,6 @@
 ﻿using CognitiveSupport;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
@@ -8,6 +9,11 @@ namespace Mutation;
 
 internal class SettingsManager
 {
+	private static readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
+	{
+		Converters = new List<JsonConverter> { new StringEnumConverter() }
+	};
+
 	private string SettingsFilePath { get; set; }
 	private string SettingsFileFullPath => Path.GetFullPath(SettingsFilePath);
 
@@ -15,21 +21,6 @@ internal class SettingsManager
 		string settingsFilePath)
 	{
 		SettingsFilePath = settingsFilePath;
-	}
-
-	internal Settings LoadAndEnsureSettings()
-	{
-		CreateSettingsFileOfNotExists(SettingsFileFullPath);
-
-		string json = File.ReadAllText(SettingsFileFullPath);
-		Settings settings = JsonConvert.DeserializeObject<Settings>(json);
-
-		if (EnsureSettings(settings))
-		{
-			SaveSettingsToFile(settings);
-		}
-
-		return settings;
 	}
 
 	private void CreateSettingsFileOfNotExists(string fullPath)
@@ -232,42 +223,146 @@ Also provide the most likely radiological diagnosis from the findings or body.
 					Find= "new line",
 					ReplaceWith= $"{Environment.NewLine}",
 					CaseSensitive = false,
-					UseRegEx = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "next line",
+					ReplaceWith= $"{Environment.NewLine}",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
 				},
 				new LlmSettings.TranscriptFormatRule
 				{
 					Find= "new paragraph",
 					ReplaceWith= $"{Environment.NewLine}{Environment.NewLine}",
 					CaseSensitive = false,
-					UseRegEx = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "next paragraph",
+					ReplaceWith= $"{Environment.NewLine}{Environment.NewLine}",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
 				},
 				new LlmSettings.TranscriptFormatRule
 				{
 					Find= "new bullet",
 					ReplaceWith= $"{Environment.NewLine}- ",
 					CaseSensitive = false,
-					UseRegEx = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "next bullet",
+					ReplaceWith= $"{Environment.NewLine}- ",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
 				},
 				new LlmSettings.TranscriptFormatRule
 				{
 					Find= "new colon",
 					ReplaceWith= $": ",
 					CaseSensitive = false,
-					UseRegEx = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
 				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "semicolon",
+					ReplaceWith= $"; ",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "full stop",
+					ReplaceWith= $". ",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "comma",
+					ReplaceWith= $", ",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "exclamation mark",
+					ReplaceWith= $"! ",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "question mark",
+					ReplaceWith= $"? ",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "elipsis",
+					ReplaceWith= $"... ",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "dot dot dot",
+					ReplaceWith= $"... ",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+
+
 			};
 
 			// No need to flag something as missing as we set defaults.
 			//somethingWasMissing = true;
 		}
 
-
 		return somethingWasMissing;
+	}
+
+	public void UpgradeSettings()
+	{
+		string json = File.ReadAllText(SettingsFileFullPath);
+
+		Settings settings = JsonConvert.DeserializeObject<Settings>(json, _jsonSerializerSettings);
+
+		if (settings.LlmSettings.TranscriptFormatRules.Count == 4)
+		{
+			// Get rid of the old defaults.
+			settings.LlmSettings.TranscriptFormatRules.Clear();
+		}
+
+		SaveSettingsToFile(settings);
 	}
 
 	public void SaveSettingsToFile(Settings settings)
 	{
-		string json = JsonConvert.SerializeObject(settings, Formatting.Indented);
+		string json = JsonConvert.SerializeObject(settings, Formatting.Indented, _jsonSerializerSettings);
 		File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
 	}
+
+	internal Settings LoadAndEnsureSettings()
+	{
+		CreateSettingsFileOfNotExists(SettingsFileFullPath);
+
+		UpgradeSettings();
+
+		string json = File.ReadAllText(SettingsFileFullPath);
+		Settings settings = JsonConvert.DeserializeObject<Settings>(json, _jsonSerializerSettings);
+
+		if (EnsureSettings(settings))
+		{
+			SaveSettingsToFile(settings);
+		}
+
+		return settings;
+	}
+
 }

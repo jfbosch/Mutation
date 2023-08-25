@@ -134,6 +134,7 @@
 			txtSpeechToText.ScrollBars = ScrollBars.Vertical;
 			txtSpeechToText.Size = new Size(927, 93);
 			txtSpeechToText.TabIndex = 12;
+			txtSpeechToText.TextChanged += txtSpeechToText_TextChanged;
 			// 
 			// txtOcr
 			// 

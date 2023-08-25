@@ -1,7 +1,10 @@
 ﻿using CognitiveSupport.Extensions;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using StringExtensionLibrary;
+using System.IO;
+using System.Text.RegularExpressions;
 using static CognitiveSupport.LlmSettings;
+using static CognitiveSupport.LlmSettings.TranscriptFormatRule;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace CognitiveSupport
@@ -42,19 +45,19 @@ namespace CognitiveSupport
 		private static string CleanLine(
 			string line)
 		{
-			line = line.RemovePrefix(", ");
-			line = line.RemovePrefix(". ");
-			line = line.RemovePrefix("; ");
+			//line = line.RemovePrefix(", ");
+			//line = line.RemovePrefix(". ");
+			//line = line.RemovePrefix("; ");
 
-			
-			line = line.Replace("- , ", "- ");
-			line = line.Replace("- . ", "- ");
-			line = line.Replace("- ; ", "- ");
 
-			line = line.Replace(", : ,", ":");
-			line = line.Replace(". : .", ":");
-			line = line.Replace(". : ,", ":");
-			line = line.Replace(", : .", ":");
+			//line = line.Replace("- , ", "- ");
+			//line = line.Replace("- . ", "- ");
+			//line = line.Replace("- ; ", "- ");
+
+			//line = line.Replace(", : ,", ":");
+			//line = line.Replace(". : .", ":");
+			//line = line.Replace(". : ,", ":");
+			//line = line.Replace(", : .", ":");
 
 			return line;
 		}
@@ -66,17 +69,30 @@ namespace CognitiveSupport
 			if (text is null) return text;
 			if (rule is null) throw new ArgumentNullException(nameof(rule));
 
-			if (rule.UseRegEx)
-			{
-				throw new NotImplementedException("RegEx support still to be implemented");
-			}
-			else
-			{
-				var comparison = StringComparison.InvariantCultureIgnoreCase;
-				if (rule.CaseSensitive)
-					comparison = StringComparison.InvariantCulture;
+			RegexOptions regexOptions = RegexOptions.None;
+			if (!rule.CaseSensitive)
+				regexOptions = RegexOptions.IgnoreCase;
 
-				text = text.Replace(rule.Find, rule.ReplaceWith, comparison);
+			switch (rule.MatchType)
+			{
+				case MatchTypeEnum.Plain:
+					var comparison = StringComparison.InvariantCultureIgnoreCase;
+					if (rule.CaseSensitive)
+						comparison = StringComparison.InvariantCulture;
+
+					text = text.Replace(rule.Find, rule.ReplaceWith, comparison);
+					break;
+				case MatchTypeEnum.RegEx:
+					text = Regex.Replace(text, rule.Find, rule.ReplaceWith, regexOptions);
+					break;
+				case MatchTypeEnum.Smart:
+					string pattern = $@"(\b|^)([.,]?)(\s*{rule.Find}[.,]?\s*)(\b|$)";
+					string replacement = $"$1$2{rule.ReplaceWith}$4";
+					text = Regex.Replace(text, pattern, replacement, regexOptions);
+
+					break;
+				default:
+					throw new NotImplementedException($"The MatchType {rule.MatchType}: {(int)rule.MatchType} is not implemented.");
 			}
 
 			return text;

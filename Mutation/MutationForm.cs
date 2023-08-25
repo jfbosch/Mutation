@@ -379,7 +379,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 				{
 					if (!RecordingAudio)
 					{
+						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Recording microphone...";
+
 						AudioRecorder = new AudioRecorder();
 						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
 						btnSpeechToTextRecord.Text = "Stop &Recording";
@@ -394,23 +396,24 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 						BeepStart();
 
+						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Converting speech to text...";
+
 						btnSpeechToTextRecord.Text = "Processing";
 						btnSpeechToTextRecord.Enabled = false;
 
 						string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
 
 						SetTextToClipboard(text);
+						txtSpeechToText.ReadOnly = false;
 						txtSpeechToText.Text = $"{text}";
 
 						btnSpeechToTextRecord.Text = "&Record";
 						btnSpeechToTextRecord.Enabled = true;
 
-						if (chkAutoFormatTranscript.Checked)
-							//await FormatSpeechToTextTranscriptWithLlm();
-							FormatSpeechToTextTranscriptWithRules();
-						else
+						if (!chkAutoFormatTranscript.Checked)
 							BeepSuccess();
+
 					}
 				}
 
@@ -420,6 +423,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				BeepFail();
 
 				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
+				txtSpeechToText.ReadOnly = true;
 				txtSpeechToText.Text = msg;
 
 				btnSpeechToTextRecord.Text = "&Record";
@@ -592,6 +596,15 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void lblReviewTranscriptPrompt_Click(object sender, EventArgs e)
 		{
 			txtReviewTranscriptPrompt.Visible = !txtReviewTranscriptPrompt.Visible;
+		}
+
+		private async void txtSpeechToText_TextChanged(object sender, EventArgs e)
+		{
+			if (chkAutoFormatTranscript.Checked
+				&& !txtSpeechToText.ReadOnly)
+			{
+				await FormatSpeechToTextTranscriptWithRules();
+			}
 		}
 	}
 }
