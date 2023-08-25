@@ -86,6 +86,29 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			toolTip.SetToolTip(txtSpeechToTextPrompt, speechToTextPromptToolTipMsg);
 			toolTip.SetToolTip(lblSpeechToTextPrompt, speechToTextPromptToolTipMsg);
+
+			var voiceCommands = this.Settings.LlmSettings.TranscriptFormatRules
+				.Select(x => new
+				{
+					x.Find,
+					ReplaceWith = x.ReplaceWith
+							.Replace(Environment.NewLine, @"<new line>")
+							.Replace(@"\t", @"<tab>"),
+					x.MatchType,
+					x.CaseSensitive
+				})
+				.Select(x => new
+				{
+					Rule = x,
+					Spacing = string.Concat(Enumerable.Repeat(
+						" ",
+						Math.Abs(75 - $"{x.Find} = {x.ReplaceWith}".Length)))
+				})
+				.Select(x => $"{x.Rule.Find} = {x.Rule.ReplaceWith}{x.Spacing}(Match: {x.Rule.MatchType}, Case Sensitive: {x.Rule.CaseSensitive})")
+				.ToArray();
+			string formattingCommandsPromptToolTipMsg = $"You can use the following voice commands while dictating: {Environment.NewLine}{Environment.NewLine}{string.Join(Environment.NewLine, voiceCommands)}";
+			toolTip.SetToolTip(lblSpeechToText, formattingCommandsPromptToolTipMsg);
+			toolTip.SetToolTip(lblFormatTranscriptResponse, formattingCommandsPromptToolTipMsg);
 		}
 
 		private void LoadSettings()

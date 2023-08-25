@@ -193,10 +193,11 @@
 			// 
 			// toolTip
 			// 
-			toolTip.AutomaticDelay = 300;
-			toolTip.AutoPopDelay = 2000;
-			toolTip.InitialDelay = 300;
-			toolTip.ReshowDelay = 60;
+			toolTip.AutomaticDelay = 400;
+			toolTip.AutoPopDelay = 30000;
+			toolTip.InitialDelay = 400;
+			toolTip.IsBalloon = true;
+			toolTip.ReshowDelay = 80;
 			toolTip.ToolTipTitle = "Whisper Speech To Text Prompt";
 			// 
 			// btnSpeechToTextRecord
