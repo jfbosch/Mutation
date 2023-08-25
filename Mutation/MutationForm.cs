@@ -11,6 +11,7 @@ using System;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices.JavaScript;
 using System.Text.Json.Serialization;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace Mutation
 {
@@ -69,6 +70,37 @@ namespace Mutation
 			txtFormatTranscriptPrompt.Text = this.Settings.LlmSettings.FormatTranscriptPrompt;
 			txtReviewTranscriptPrompt.Text = this.Settings.LlmSettings.ReviewTranscriptPrompt;
 
+			InitializeLlmReviewListView();
+		}
+
+		private void InitializeLlmReviewListView()
+		{
+			txtTranscriptReviewResponse.Visible = false;
+
+			lvReview.Location = txtTranscriptReviewResponse.Location;
+			lvReview.Height = txtTranscriptReviewResponse.Height;
+			lvReview.Width = txtTranscriptReviewResponse.Width;
+			lvReview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+
+
+
+			lvReview.CheckBoxes = true;
+			lvReview.View = View.List;
+			lvReview.FullRowSelect = true;
+
+			var col = lvReview.Columns.Add("Issue", -2, HorizontalAlignment.Left);
+			//lvReview.Columns.Add("Category", -2, HorizontalAlignment.Left);
+
+
+			// Add sample data during dev time
+			ListViewItem item1 = new ListViewItem("Long text item 1");
+			lvReview.Items.Add(item1);
+
+			ListViewItem item2 = new ListViewItem("Long text item 2...............................bla bla");
+			lvReview.Items.Add(item2);
+
+			ListViewItem item3 = new ListViewItem("By setting the Anchor property to AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, the ListView will be anchored to all four sides of its parent  ontainer. This means that it will resize itself appropriately when the parent container is resized, maintaining the specified distance to each edge.");
+			lvReview.Items.Add(item3);
 		}
 
 		private void HookupTooltips()

@@ -50,6 +50,7 @@
 			lblFormatTranscriptResponse = new Label();
 			chkAutoFormatTranscript = new CheckBox();
 			splitContainerLlmProcessing = new SplitContainer();
+			lvReview = new ListView();
 			lblReviewTranscriptPrompt = new Label();
 			chkAutoReviewTranscript = new CheckBox();
 			txtReviewTranscriptPrompt = new TextBox();
@@ -231,14 +232,14 @@
 			txtFormatTranscriptPrompt.Multiline = true;
 			txtFormatTranscriptPrompt.Name = "txtFormatTranscriptPrompt";
 			txtFormatTranscriptPrompt.ScrollBars = ScrollBars.Vertical;
-			txtFormatTranscriptPrompt.Size = new Size(564, 64);
+			txtFormatTranscriptPrompt.Size = new Size(509, 64);
 			txtFormatTranscriptPrompt.TabIndex = 14;
 			txtFormatTranscriptPrompt.Visible = false;
 			// 
 			// btnFormatTranscript
 			// 
 			btnFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnFormatTranscript.Location = new Point(404, 90);
+			btnFormatTranscript.Location = new Point(349, 90);
 			btnFormatTranscript.Name = "btnFormatTranscript";
 			btnFormatTranscript.Size = new Size(149, 23);
 			btnFormatTranscript.TabIndex = 16;
@@ -254,7 +255,7 @@
 			txtFormatTranscriptResponse.Multiline = true;
 			txtFormatTranscriptResponse.Name = "txtFormatTranscriptResponse";
 			txtFormatTranscriptResponse.ScrollBars = ScrollBars.Vertical;
-			txtFormatTranscriptResponse.Size = new Size(564, 217);
+			txtFormatTranscriptResponse.Size = new Size(509, 217);
 			txtFormatTranscriptResponse.TabIndex = 17;
 			// 
 			// lblFormatTranscriptResponse
@@ -272,7 +273,7 @@
 			chkAutoFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 			chkAutoFormatTranscript.Checked = true;
 			chkAutoFormatTranscript.CheckState = CheckState.Checked;
-			chkAutoFormatTranscript.Location = new Point(254, 90);
+			chkAutoFormatTranscript.Location = new Point(199, 90);
 			chkAutoFormatTranscript.Name = "chkAutoFormatTranscript";
 			chkAutoFormatTranscript.Size = new Size(149, 25);
 			chkAutoFormatTranscript.TabIndex = 16;
@@ -296,6 +297,7 @@
 			// 
 			// splitContainerLlmProcessing.Panel2
 			// 
+			splitContainerLlmProcessing.Panel2.Controls.Add(lvReview);
 			splitContainerLlmProcessing.Panel2.Controls.Add(lblReviewTranscriptPrompt);
 			splitContainerLlmProcessing.Panel2.Controls.Add(chkAutoReviewTranscript);
 			splitContainerLlmProcessing.Panel2.Controls.Add(txtReviewTranscriptPrompt);
@@ -303,8 +305,19 @@
 			splitContainerLlmProcessing.Panel2.Controls.Add(lblTranscriptReview);
 			splitContainerLlmProcessing.Panel2.Controls.Add(txtTranscriptReviewResponse);
 			splitContainerLlmProcessing.Size = new Size(1175, 342);
-			splitContainerLlmProcessing.SplitterDistance = 582;
+			splitContainerLlmProcessing.SplitterDistance = 527;
 			splitContainerLlmProcessing.TabIndex = 18;
+			// 
+			// lvReview
+			// 
+			lvReview.AccessibleName = "Review Actions List View";
+			lvReview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+			lvReview.CheckBoxes = true;
+			lvReview.Location = new Point(68, 106);
+			lvReview.Name = "lvReview";
+			lvReview.Size = new Size(279, 131);
+			lvReview.TabIndex = 18;
+			lvReview.UseCompatibleStateImageBehavior = false;
 			// 
 			// lblReviewTranscriptPrompt
 			// 
@@ -320,7 +333,7 @@
 			// chkAutoReviewTranscript
 			// 
 			chkAutoReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			chkAutoReviewTranscript.Location = new Point(254, 91);
+			chkAutoReviewTranscript.Location = new Point(309, 91);
 			chkAutoReviewTranscript.Name = "chkAutoReviewTranscript";
 			chkAutoReviewTranscript.Size = new Size(153, 25);
 			chkAutoReviewTranscript.TabIndex = 21;
@@ -338,13 +351,13 @@
 			txtReviewTranscriptPrompt.Multiline = true;
 			txtReviewTranscriptPrompt.Name = "txtReviewTranscriptPrompt";
 			txtReviewTranscriptPrompt.ScrollBars = ScrollBars.Vertical;
-			txtReviewTranscriptPrompt.Size = new Size(578, 64);
+			txtReviewTranscriptPrompt.Size = new Size(633, 64);
 			txtReviewTranscriptPrompt.TabIndex = 19;
 			// 
 			// btnReviewTranscript
 			// 
 			btnReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnReviewTranscript.Location = new Point(414, 91);
+			btnReviewTranscript.Location = new Point(469, 91);
 			btnReviewTranscript.Name = "btnReviewTranscript";
 			btnReviewTranscript.Size = new Size(149, 23);
 			btnReviewTranscript.TabIndex = 22;
@@ -370,7 +383,7 @@
 			txtTranscriptReviewResponse.Multiline = true;
 			txtTranscriptReviewResponse.Name = "txtTranscriptReviewResponse";
 			txtTranscriptReviewResponse.ScrollBars = ScrollBars.Vertical;
-			txtTranscriptReviewResponse.Size = new Size(578, 217);
+			txtTranscriptReviewResponse.Size = new Size(633, 217);
 			txtTranscriptReviewResponse.TabIndex = 23;
 			// 
 			// MutationForm
@@ -437,6 +450,7 @@
 		private Button btnReviewTranscript;
 		private Label lblTranscriptReview;
 		private TextBox txtTranscriptReviewResponse;
+		private ListView lvReview;
 	}
 }
 
