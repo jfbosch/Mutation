@@ -50,6 +50,7 @@
 			lblFormatTranscriptResponse = new Label();
 			chkAutoFormatTranscript = new CheckBox();
 			splitContainerLlmProcessing = new SplitContainer();
+			btnApplySelectedReviewIssues = new Button();
 			dgvReview = new DataGridView();
 			lblReviewTranscriptPrompt = new Label();
 			chkAutoReviewTranscript = new CheckBox();
@@ -57,12 +58,15 @@
 			btnReviewTranscript = new Button();
 			lblTranscriptReview = new Label();
 			txtTranscriptReviewResponse = new TextBox();
-			btnApplySelectedReviewIssues = new Button();
+			radAutoPunctuation = new RadioButton();
+			gbPunctuation = new GroupBox();
+			radManualPunctuation = new RadioButton();
 			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).BeginInit();
 			splitContainerLlmProcessing.Panel1.SuspendLayout();
 			splitContainerLlmProcessing.Panel2.SuspendLayout();
 			splitContainerLlmProcessing.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)dgvReview).BeginInit();
+			gbPunctuation.SuspendLayout();
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -205,9 +209,9 @@
 			// 
 			// btnSpeechToTextRecord
 			// 
-			btnSpeechToTextRecord.Location = new Point(18, 300);
+			btnSpeechToTextRecord.Location = new Point(18, 292);
 			btnSpeechToTextRecord.Name = "btnSpeechToTextRecord";
-			btnSpeechToTextRecord.Size = new Size(110, 23);
+			btnSpeechToTextRecord.Size = new Size(69, 23);
 			btnSpeechToTextRecord.TabIndex = 11;
 			btnSpeechToTextRecord.Text = "&Record";
 			btnSpeechToTextRecord.UseVisualStyleBackColor = true;
@@ -311,6 +315,17 @@
 			splitContainerLlmProcessing.SplitterDistance = 527;
 			splitContainerLlmProcessing.TabIndex = 18;
 			// 
+			// btnApplySelectedReviewIssues
+			// 
+			btnApplySelectedReviewIssues.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			btnApplySelectedReviewIssues.Location = new Point(481, 91);
+			btnApplySelectedReviewIssues.Name = "btnApplySelectedReviewIssues";
+			btnApplySelectedReviewIssues.Size = new Size(149, 23);
+			btnApplySelectedReviewIssues.TabIndex = 27;
+			btnApplySelectedReviewIssues.Text = "&Apply Selected";
+			btnApplySelectedReviewIssues.UseVisualStyleBackColor = true;
+			btnApplySelectedReviewIssues.Click += btnApplySelectedReviewIssues_Click;
+			// 
 			// dgvReview
 			// 
 			dgvReview.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -390,22 +405,47 @@
 			txtTranscriptReviewResponse.Size = new Size(633, 217);
 			txtTranscriptReviewResponse.TabIndex = 23;
 			// 
-			// btnApplySelectedReviewIssues
+			// radAutoPunctuation
 			// 
-			btnApplySelectedReviewIssues.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnApplySelectedReviewIssues.Location = new Point(481, 91);
-			btnApplySelectedReviewIssues.Name = "btnApplySelectedReviewIssues";
-			btnApplySelectedReviewIssues.Size = new Size(149, 23);
-			btnApplySelectedReviewIssues.TabIndex = 27;
-			btnApplySelectedReviewIssues.Text = "&Apply Selected";
-			btnApplySelectedReviewIssues.UseVisualStyleBackColor = true;
-			btnApplySelectedReviewIssues.Click += btnApplySelectedReviewIssues_Click;
+			radAutoPunctuation.AutoSize = true;
+			radAutoPunctuation.Location = new Point(6, 19);
+			radAutoPunctuation.Name = "radAutoPunctuation";
+			radAutoPunctuation.Size = new Size(119, 19);
+			radAutoPunctuation.TabIndex = 19;
+			radAutoPunctuation.TabStop = true;
+			radAutoPunctuation.Text = "Auto Punctuation";
+			radAutoPunctuation.UseVisualStyleBackColor = true;
+			radAutoPunctuation.CheckedChanged += radAutoPunctuation_CheckedChanged;
+			// 
+			// gbPunctuation
+			// 
+			gbPunctuation.Controls.Add(radManualPunctuation);
+			gbPunctuation.Controls.Add(radAutoPunctuation);
+			gbPunctuation.Location = new Point(88, 282);
+			gbPunctuation.Name = "gbPunctuation";
+			gbPunctuation.Size = new Size(157, 71);
+			gbPunctuation.TabIndex = 20;
+			gbPunctuation.TabStop = false;
+			gbPunctuation.Visible = false;
+			// 
+			// radManualPunctuation
+			// 
+			radManualPunctuation.AutoSize = true;
+			radManualPunctuation.Location = new Point(6, 44);
+			radManualPunctuation.Name = "radManualPunctuation";
+			radManualPunctuation.Size = new Size(133, 19);
+			radManualPunctuation.TabIndex = 20;
+			radManualPunctuation.TabStop = true;
+			radManualPunctuation.Text = "Manual Punctuation";
+			radManualPunctuation.UseVisualStyleBackColor = true;
+			radManualPunctuation.CheckedChanged += radManualPunctuation_CheckedChanged;
 			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1184, 711);
+			Controls.Add(gbPunctuation);
 			Controls.Add(splitContainerLlmProcessing);
 			Controls.Add(btnSpeechToTextRecord);
 			Controls.Add(lblSpeechToTextPrompt);
@@ -433,6 +473,8 @@
 			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).EndInit();
 			splitContainerLlmProcessing.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)dgvReview).EndInit();
+			gbPunctuation.ResumeLayout(false);
+			gbPunctuation.PerformLayout();
 			ResumeLayout(false);
 			PerformLayout();
 		}
@@ -468,6 +510,9 @@
 		private TextBox txtTranscriptReviewResponse;
 		private DataGridView dgvReview;
 		private Button btnApplySelectedReviewIssues;
+		private RadioButton radAutoPunctuation;
+		private GroupBox gbPunctuation;
+		private RadioButton radManualPunctuation;
 	}
 }
 

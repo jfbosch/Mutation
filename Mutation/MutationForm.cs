@@ -741,6 +741,16 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 
 		}
+
+		private void radAutoPunctuation_CheckedChanged(object sender, EventArgs e)
+		{
+			txtSpeechToTextPrompt.Text = "Hello, how are you? Let's use punctuation today.";
+		}
+
+		private void radManualPunctuation_CheckedChanged(object sender, EventArgs e)
+		{
+			txtSpeechToTextPrompt.Text = "Hello how are you Let's not use punctuation today";
+		}
 	}
 }
 
