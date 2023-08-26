@@ -50,7 +50,7 @@
 			lblFormatTranscriptResponse = new Label();
 			chkAutoFormatTranscript = new CheckBox();
 			splitContainerLlmProcessing = new SplitContainer();
-			lvReview = new ListView();
+			dgvReview = new DataGridView();
 			lblReviewTranscriptPrompt = new Label();
 			chkAutoReviewTranscript = new CheckBox();
 			txtReviewTranscriptPrompt = new TextBox();
@@ -61,6 +61,7 @@
 			splitContainerLlmProcessing.Panel1.SuspendLayout();
 			splitContainerLlmProcessing.Panel2.SuspendLayout();
 			splitContainerLlmProcessing.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)dgvReview).BeginInit();
 			SuspendLayout();
 			// 
 			// lblActiveMic
@@ -297,7 +298,7 @@
 			// 
 			// splitContainerLlmProcessing.Panel2
 			// 
-			splitContainerLlmProcessing.Panel2.Controls.Add(lvReview);
+			splitContainerLlmProcessing.Panel2.Controls.Add(dgvReview);
 			splitContainerLlmProcessing.Panel2.Controls.Add(lblReviewTranscriptPrompt);
 			splitContainerLlmProcessing.Panel2.Controls.Add(chkAutoReviewTranscript);
 			splitContainerLlmProcessing.Panel2.Controls.Add(txtReviewTranscriptPrompt);
@@ -308,16 +309,14 @@
 			splitContainerLlmProcessing.SplitterDistance = 527;
 			splitContainerLlmProcessing.TabIndex = 18;
 			// 
-			// lvReview
+			// dgvReview
 			// 
-			lvReview.AccessibleName = "Review Actions List View";
-			lvReview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-			lvReview.CheckBoxes = true;
-			lvReview.Location = new Point(68, 106);
-			lvReview.Name = "lvReview";
-			lvReview.Size = new Size(279, 131);
-			lvReview.TabIndex = 18;
-			lvReview.UseCompatibleStateImageBehavior = false;
+			dgvReview.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			dgvReview.Location = new Point(114, 106);
+			dgvReview.Name = "dgvReview";
+			dgvReview.RowTemplate.Height = 25;
+			dgvReview.Size = new Size(240, 150);
+			dgvReview.TabIndex = 25;
 			// 
 			// lblReviewTranscriptPrompt
 			// 
@@ -374,6 +373,7 @@
 			lblTranscriptReview.Size = new Size(44, 15);
 			lblTranscriptReview.TabIndex = 20;
 			lblTranscriptReview.Text = "Review";
+			lblTranscriptReview.Click += lblTranscriptReview_Click;
 			// 
 			// txtTranscriptReviewResponse
 			// 
@@ -417,6 +417,7 @@
 			splitContainerLlmProcessing.Panel2.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).EndInit();
 			splitContainerLlmProcessing.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)dgvReview).EndInit();
 			ResumeLayout(false);
 			PerformLayout();
 		}
@@ -450,7 +451,7 @@
 		private Button btnReviewTranscript;
 		private Label lblTranscriptReview;
 		private TextBox txtTranscriptReviewResponse;
-		private ListView lvReview;
+		private DataGridView dgvReview;
 	}
 }
 

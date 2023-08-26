@@ -77,30 +77,37 @@ namespace Mutation
 		{
 			txtTranscriptReviewResponse.Visible = false;
 
-			lvReview.Location = txtTranscriptReviewResponse.Location;
-			lvReview.Height = txtTranscriptReviewResponse.Height;
-			lvReview.Width = txtTranscriptReviewResponse.Width;
-			lvReview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+			dgvReview.Location = txtTranscriptReviewResponse.Location;
+			dgvReview.Height = txtTranscriptReviewResponse.Height;
+			dgvReview.Width = txtTranscriptReviewResponse.Width;
+			dgvReview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+			dgvReview.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+			dgvReview.AutoGenerateColumns = false;
+			dgvReview.RowHeadersVisible = false;
+			dgvReview.MultiSelect = false;
+			dgvReview.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
 
 
-			lvReview.CheckBoxes = true;
-			lvReview.View = View.List;
-			lvReview.FullRowSelect = true;
+			// Adding a CheckBoxColumn for checkboxes
+			DataGridViewCheckBoxColumn checkBoxColumn = new DataGridViewCheckBoxColumn();
+			checkBoxColumn.HeaderText = "Select";
+			checkBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
+			dgvReview.Columns.Add(checkBoxColumn);
 
-			var col = lvReview.Columns.Add("Issue", -2, HorizontalAlignment.Left);
-			//lvReview.Columns.Add("Category", -2, HorizontalAlignment.Left);
+			// Adding a TextColumn for text content
+			DataGridViewTextBoxColumn textColumn = new DataGridViewTextBoxColumn();
+			textColumn.HeaderText = "Issue";
+			textColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+			textColumn.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
 
+			dgvReview.Columns.Add(textColumn);
 
 			// Add sample data during dev time
-			ListViewItem item1 = new ListViewItem("Long text item 1");
-			lvReview.Items.Add(item1);
+			dgvReview.Rows.Add(new object[] { false, "Long text item 1" });  // Adding an unchecked row
+			dgvReview.Rows.Add(new object[] { false, "Long text item 2...............................bla bla" });
+			dgvReview.Rows.Add(new object[] { false, "By setting the Anchor property to AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, the DataGridView will be anchored to all four sides of its parent container. This means that it will resize itself appropriately when the parent container is resized, maintaining the specified distance to each edge." });
 
-			ListViewItem item2 = new ListViewItem("Long text item 2...............................bla bla");
-			lvReview.Items.Add(item2);
-
-			ListViewItem item3 = new ListViewItem("By setting the Anchor property to AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, the ListView will be anchored to all four sides of its parent  ontainer. This means that it will resize itself appropriately when the parent container is resized, maintaining the specified distance to each edge.");
-			lvReview.Items.Add(item3);
 		}
 
 		private void HookupTooltips()
@@ -660,6 +667,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 			{
 				await FormatSpeechToTextTranscriptWithRules();
 			}
+		}
+
+		private void lblTranscriptReview_Click(object sender, EventArgs e)
+		{
+			dgvReview.Visible = txtTranscriptReviewResponse.Visible;
+			txtTranscriptReviewResponse.Visible = !dgvReview.Visible;
 		}
 	}
 }
