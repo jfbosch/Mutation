@@ -57,6 +57,7 @@
 			btnReviewTranscript = new Button();
 			lblTranscriptReview = new Label();
 			txtTranscriptReviewResponse = new TextBox();
+			btnApplySelectedReviewIssues = new Button();
 			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).BeginInit();
 			splitContainerLlmProcessing.Panel1.SuspendLayout();
 			splitContainerLlmProcessing.Panel2.SuspendLayout();
@@ -298,6 +299,7 @@
 			// 
 			// splitContainerLlmProcessing.Panel2
 			// 
+			splitContainerLlmProcessing.Panel2.Controls.Add(btnApplySelectedReviewIssues);
 			splitContainerLlmProcessing.Panel2.Controls.Add(dgvReview);
 			splitContainerLlmProcessing.Panel2.Controls.Add(lblReviewTranscriptPrompt);
 			splitContainerLlmProcessing.Panel2.Controls.Add(chkAutoReviewTranscript);
@@ -317,6 +319,8 @@
 			dgvReview.RowTemplate.Height = 25;
 			dgvReview.Size = new Size(240, 150);
 			dgvReview.TabIndex = 25;
+			dgvReview.RowsAdded += dgvReview_RowsAdded;
+			dgvReview.RowsRemoved += dgvReview_RowsRemoved;
 			// 
 			// lblReviewTranscriptPrompt
 			// 
@@ -332,7 +336,7 @@
 			// chkAutoReviewTranscript
 			// 
 			chkAutoReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			chkAutoReviewTranscript.Location = new Point(309, 91);
+			chkAutoReviewTranscript.Location = new Point(166, 91);
 			chkAutoReviewTranscript.Name = "chkAutoReviewTranscript";
 			chkAutoReviewTranscript.Size = new Size(153, 25);
 			chkAutoReviewTranscript.TabIndex = 21;
@@ -356,7 +360,7 @@
 			// btnReviewTranscript
 			// 
 			btnReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnReviewTranscript.Location = new Point(469, 91);
+			btnReviewTranscript.Location = new Point(326, 91);
 			btnReviewTranscript.Name = "btnReviewTranscript";
 			btnReviewTranscript.Size = new Size(149, 23);
 			btnReviewTranscript.TabIndex = 22;
@@ -385,6 +389,17 @@
 			txtTranscriptReviewResponse.ScrollBars = ScrollBars.Vertical;
 			txtTranscriptReviewResponse.Size = new Size(633, 217);
 			txtTranscriptReviewResponse.TabIndex = 23;
+			// 
+			// btnApplySelectedReviewIssues
+			// 
+			btnApplySelectedReviewIssues.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			btnApplySelectedReviewIssues.Location = new Point(481, 91);
+			btnApplySelectedReviewIssues.Name = "btnApplySelectedReviewIssues";
+			btnApplySelectedReviewIssues.Size = new Size(149, 23);
+			btnApplySelectedReviewIssues.TabIndex = 27;
+			btnApplySelectedReviewIssues.Text = "&Apply Selected";
+			btnApplySelectedReviewIssues.UseVisualStyleBackColor = true;
+			btnApplySelectedReviewIssues.Click += btnApplySelectedReviewIssues_Click;
 			// 
 			// MutationForm
 			// 
@@ -452,6 +467,7 @@
 		private Label lblTranscriptReview;
 		private TextBox txtTranscriptReviewResponse;
 		private DataGridView dgvReview;
+		private Button btnApplySelectedReviewIssues;
 	}
 }
 

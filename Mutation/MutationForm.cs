@@ -3,15 +3,11 @@ using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
 using NAudio.Wave;
-using Newtonsoft.Json;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
-using System;
+using StringExtensionLibrary;
 using System.Drawing.Imaging;
-using System.Runtime.InteropServices.JavaScript;
-using System.Text.Json.Serialization;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace Mutation
 {
@@ -87,27 +83,21 @@ namespace Mutation
 			dgvReview.MultiSelect = false;
 			dgvReview.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
-
-
-			// Adding a CheckBoxColumn for checkboxes
 			DataGridViewCheckBoxColumn checkBoxColumn = new DataGridViewCheckBoxColumn();
 			checkBoxColumn.HeaderText = "Select";
 			checkBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
 			dgvReview.Columns.Add(checkBoxColumn);
 
-			// Adding a TextColumn for text content
 			DataGridViewTextBoxColumn textColumn = new DataGridViewTextBoxColumn();
 			textColumn.HeaderText = "Issue";
 			textColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
 			textColumn.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
-
 			dgvReview.Columns.Add(textColumn);
 
 			// Add sample data during dev time
-			dgvReview.Rows.Add(new object[] { false, "Long text item 1" });  // Adding an unchecked row
-			dgvReview.Rows.Add(new object[] { false, "Long text item 2...............................bla bla" });
-			dgvReview.Rows.Add(new object[] { false, "By setting the Anchor property to AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, the DataGridView will be anchored to all four sides of its parent container. This means that it will resize itself appropriately when the parent container is resized, maintaining the specified distance to each edge." });
-
+			//dgvReview.Rows.Add(new object[] { false, "Long text item 1" });  // Adding an unchecked row
+			//dgvReview.Rows.Add(new object[] { false, "Long text item 2...............................bla bla" });
+			//dgvReview.Rows.Add(new object[] { false, "By setting the Anchor property to AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, the DataGridView will be anchored to all four sides of its parent container. This means that it will resize itself appropriately when the parent container is resized, maintaining the specified distance to each edge." });
 		}
 
 		private void HookupTooltips()
@@ -599,7 +589,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private async Task ReviewSpeechToTextTranscriptWithLlm()
 		{
+			txtTranscriptReviewResponse.ReadOnly = true;
 			txtTranscriptReviewResponse.Text = "Reviewing...";
+			dgvReview.Enabled = false;
+			SetReviewGridCaption("Reviewing...");
+
+			dgvReview.Rows.Clear();
 			BeepStart();
 
 			string transcript = txtFormatTranscriptResponse.Text;
@@ -613,10 +608,24 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			string review = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
 			txtTranscriptReviewResponse.Text = review.FixNewLines();
+			txtTranscriptReviewResponse.ReadOnly = false;
+
+			var lines = txtTranscriptReviewResponse.Text.Split(Environment.NewLine, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+			foreach (var line in lines)
+			{
+				string issue = line.RemovePrefix("- ");
+				dgvReview.Rows.Add(new object[] { false, issue });
+			}
+			dgvReview.Enabled = true;
+			SetReviewGridCaption("Issue");
 
 			BeepSuccess();
 		}
 
+		private void SetReviewGridCaption(string text)
+		{
+			dgvReview.Columns[1].HeaderCell.Value = text;
+		}
 
 		private void BeepMuted()
 		{
@@ -673,6 +682,45 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			dgvReview.Visible = txtTranscriptReviewResponse.Visible;
 			txtTranscriptReviewResponse.Visible = !dgvReview.Visible;
+		}
+
+		private async void btnApplySelectedReviewIssues_Click(object sender, EventArgs e)
+		{
+			await ApplyReviewActionsToFormattedTranscript();
+		}
+
+		private async Task ApplyReviewActionsToFormattedTranscript()
+		{
+			List<(DataGridViewRow row, string instruction)> selectedRows = new();
+			foreach (DataGridViewRow row in dgvReview.Rows)
+			{
+				if (row.Cells[0].Value != null && (bool)row.Cells[0].Value == true)
+					selectedRows.Add((row, row.Cells[1].Value.ToString()));
+			}
+
+			if (selectedRows.Any())
+			{
+				dgvReview.Enabled = false;
+				SetReviewGridCaption("Applying corrections...");
+
+
+
+
+				foreach (var (row, instruction) in selectedRows)
+					dgvReview.Rows.Remove(row);
+				dgvReview.Enabled = true;
+				SetReviewGridCaption("Issue");
+			}
+		}
+
+		private void dgvReview_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+		{
+
+		}
+
+		private void dgvReview_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
+		{
+
 		}
 	}
 }
