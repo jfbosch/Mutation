@@ -686,10 +686,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private async void btnApplySelectedReviewIssues_Click(object sender, EventArgs e)
 		{
-			await ApplyReviewActionsToFormattedTranscript();
+			await ApplyReviewActionsToFormattedTranscriptWithLlm();
 		}
 
-		private async Task ApplyReviewActionsToFormattedTranscript()
+		private async Task ApplyReviewActionsToFormattedTranscriptWithLlm()
 		{
 			List<(DataGridViewRow row, string instruction)> selectedRows = new();
 			foreach (DataGridViewRow row in dgvReview.Rows)
@@ -700,16 +700,35 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			if (selectedRows.Any())
 			{
+				txtFormatTranscriptResponse.ReadOnly = true;
 				dgvReview.Enabled = false;
 				SetReviewGridCaption("Applying corrections...");
 
+				BeepStart();
 
+				string transcript = txtFormatTranscriptResponse.Text;
+				string systemPrompt = txtReviewTranscriptPrompt.Text;
+				string[] instructions = selectedRows
+					.Select(x => $"- {x.instruction}")
+					.ToArray();
+				string combinedInstructions = string.Join(Environment.NewLine, instructions);
 
+				var messages = new List<ChatMessage>
+				{
+					ChatMessage.FromSystem($"{systemPrompt}"),
+					ChatMessage.FromUser($"Apply the corrections and respond only with the corrected transcript.{Environment.NewLine}{Environment.NewLine}Correction Instructions:{Environment.NewLine}{combinedInstructions }{Environment.NewLine}{Environment.NewLine}Transcript:{Environment.NewLine}{transcript}"),
+				};
+
+				string revision = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
+				txtFormatTranscriptResponse.Text = revision.FixNewLines();
+				txtFormatTranscriptResponse.ReadOnly = false;
 
 				foreach (var (row, instruction) in selectedRows)
 					dgvReview.Rows.Remove(row);
 				dgvReview.Enabled = true;
 				SetReviewGridCaption("Issue");
+
+				BeepSuccess();
 			}
 		}
 
@@ -724,3 +743,4 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 	}
 }
+
