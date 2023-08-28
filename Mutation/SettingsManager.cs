@@ -343,7 +343,7 @@ When you are asked to apply revision corrections, you should do the following:
 
 		Settings settings = JsonConvert.DeserializeObject<Settings>(json, _jsonSerializerSettings);
 
-		if (settings.LlmSettings.TranscriptFormatRules.Count == 4)
+		if (settings.LlmSettings?.TranscriptFormatRules?.Count == 4)
 		{
 			// Get rid of the old defaults.
 			settings.LlmSettings.TranscriptFormatRules.Clear();
