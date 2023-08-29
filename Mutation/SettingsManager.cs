@@ -37,7 +37,8 @@ internal class SettingsManager
 
 	private bool EnsureSettings(Settings settings)
 	{
-		const string Placeholder = "<placeholder>";
+		const string PlaceholderValue = "<placeholder>";
+		const string PlaceholderUrl = "https://placeholder.com";
 
 		bool somethingWasMissing = false;
 
@@ -68,12 +69,12 @@ internal class SettingsManager
 		}
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ApiKey))
 		{
-			azureComputerVisionSettings.ApiKey = Placeholder;
+			azureComputerVisionSettings.ApiKey = PlaceholderValue;
 			somethingWasMissing = true;
 		}
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.Endpoint))
 		{
-			azureComputerVisionSettings.Endpoint = Placeholder;
+			azureComputerVisionSettings.Endpoint = PlaceholderUrl;
 			somethingWasMissing = true;
 		}
 
@@ -106,7 +107,7 @@ internal class SettingsManager
 		}
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.ApiKey))
 		{
-			speechToTextSettings.ApiKey = Placeholder;
+			speechToTextSettings.ApiKey = PlaceholderValue;
 			somethingWasMissing = true;
 		}
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.TempDirectory))
@@ -131,13 +132,13 @@ internal class SettingsManager
 		var llmSettings = settings.LlmSettings;
 		if (string.IsNullOrWhiteSpace(llmSettings.ApiKey))
 		{
-			llmSettings.ApiKey = Placeholder;
+			llmSettings.ApiKey = PlaceholderValue;
 			somethingWasMissing = true;
 		}
 
 		if (string.IsNullOrWhiteSpace(llmSettings.ResourceName))
 		{
-			llmSettings.ResourceName = "<The Azure resource name for your OpenAI service.>"; // Replace with your default value
+			llmSettings.ResourceName = "The-Azure-resource-name-for-your-OpenAI-service";
 			somethingWasMissing = true;
 		}
 
