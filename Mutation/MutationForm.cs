@@ -226,13 +226,13 @@ The model may also leave out common filler words in the audio. If you want to ke
 			{
 				if (Microphone.IsMuted)
 				{
-					this.Text = "Muted Microphone";
+					this.Text = "Mutation - Muted Microphone";
 					this.BackColor = Color.LightGray;
 					BeepMuted();
 				}
 				else // unmuted
 				{
-					this.Text = "Unmuted Microphone";
+					this.Text = "Mutation - Unmuted Microphone";
 					this.BackColor = Color.WhiteSmoke;
 					BeepUnmuted();
 				}
@@ -456,16 +456,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 						string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
 
-						SetTextToClipboard(text);
 						txtSpeechToText.ReadOnly = false;
 						txtSpeechToText.Text = $"{text}";
 
 						btnSpeechToTextRecord.Text = "&Record";
 						btnSpeechToTextRecord.Enabled = true;
-
-						if (!chkAutoFormatTranscript.Checked)
-							BeepSuccess();
-
 					}
 				}
 
@@ -553,7 +548,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private async void btnFormatTranscript_Click(object sender, EventArgs e)
 		{
 			//await FormatSpeechToTextTranscriptWithLlm();
-			FormatSpeechToTextTranscriptWithRules();
+			await FormatSpeechToTextTranscriptWithRules();
 		}
 
 		private async Task FormatSpeechToTextTranscriptWithRules()
@@ -562,7 +557,16 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			string rawTranscript = txtSpeechToText.Text;
 
-			txtFormatTranscriptResponse.Text = TextFormatter.Format(rawTranscript, Settings.LlmSettings.TranscriptFormatRules);
+			string formattedText = TextFormatter.Format(rawTranscript, Settings.LlmSettings.TranscriptFormatRules);
+			txtFormatTranscriptResponse.Text = formattedText;
+			SetTextToClipboard(formattedText);
+
+			if (chkAutoInsertInto3rdPartyApplication.Checked
+				&& !this.ContainsFocus)
+			{
+				BeepStart();
+				SendKeys.SendWait(formattedText);
+			}
 
 			BeepSuccess();
 		}
@@ -671,8 +675,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private async void txtSpeechToText_TextChanged(object sender, EventArgs e)
 		{
-			if (chkAutoFormatTranscript.Checked
-				&& !txtSpeechToText.ReadOnly)
+			if (!txtSpeechToText.ReadOnly)
 			{
 				await FormatSpeechToTextTranscriptWithRules();
 			}

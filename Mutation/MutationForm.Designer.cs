@@ -48,7 +48,7 @@
 			btnFormatTranscript = new Button();
 			txtFormatTranscriptResponse = new TextBox();
 			lblFormatTranscriptResponse = new Label();
-			chkAutoFormatTranscript = new CheckBox();
+			chkAutoInsertInto3rdPartyApplication = new CheckBox();
 			splitContainerLlmProcessing = new SplitContainer();
 			btnApplySelectedReviewIssues = new Button();
 			dgvReview = new DataGridView();
@@ -245,12 +245,13 @@
 			// btnFormatTranscript
 			// 
 			btnFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnFormatTranscript.Location = new Point(349, 90);
+			btnFormatTranscript.Location = new Point(204, 90);
 			btnFormatTranscript.Name = "btnFormatTranscript";
-			btnFormatTranscript.Size = new Size(149, 23);
+			btnFormatTranscript.Size = new Size(63, 23);
 			btnFormatTranscript.TabIndex = 16;
-			btnFormatTranscript.Text = "&Format Transcription";
+			btnFormatTranscript.Text = "&Format";
 			btnFormatTranscript.UseVisualStyleBackColor = true;
+			btnFormatTranscript.Visible = false;
 			btnFormatTranscript.Click += btnFormatTranscript_Click;
 			// 
 			// txtFormatTranscriptResponse
@@ -274,17 +275,17 @@
 			lblFormatTranscriptResponse.TabIndex = 15;
 			lblFormatTranscriptResponse.Text = "Formatted Transcript";
 			// 
-			// chkAutoFormatTranscript
+			// chkAutoInsertInto3rdPartyApplication
 			// 
-			chkAutoFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			chkAutoFormatTranscript.Checked = true;
-			chkAutoFormatTranscript.CheckState = CheckState.Checked;
-			chkAutoFormatTranscript.Location = new Point(199, 90);
-			chkAutoFormatTranscript.Name = "chkAutoFormatTranscript";
-			chkAutoFormatTranscript.Size = new Size(149, 25);
-			chkAutoFormatTranscript.TabIndex = 16;
-			chkAutoFormatTranscript.Text = "&Auto format transcript";
-			chkAutoFormatTranscript.UseVisualStyleBackColor = true;
+			chkAutoInsertInto3rdPartyApplication.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			chkAutoInsertInto3rdPartyApplication.Checked = true;
+			chkAutoInsertInto3rdPartyApplication.CheckState = CheckState.Checked;
+			chkAutoInsertInto3rdPartyApplication.Location = new Point(278, 90);
+			chkAutoInsertInto3rdPartyApplication.Name = "chkAutoInsertInto3rdPartyApplication";
+			chkAutoInsertInto3rdPartyApplication.Size = new Size(231, 25);
+			chkAutoInsertInto3rdPartyApplication.TabIndex = 16;
+			chkAutoInsertInto3rdPartyApplication.Text = "Auto &insert into 3rd party application";
+			chkAutoInsertInto3rdPartyApplication.UseVisualStyleBackColor = true;
 			// 
 			// splitContainerLlmProcessing
 			// 
@@ -295,7 +296,7 @@
 			// splitContainerLlmProcessing.Panel1
 			// 
 			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptPrompt);
-			splitContainerLlmProcessing.Panel1.Controls.Add(chkAutoFormatTranscript);
+			splitContainerLlmProcessing.Panel1.Controls.Add(chkAutoInsertInto3rdPartyApplication);
 			splitContainerLlmProcessing.Panel1.Controls.Add(txtFormatTranscriptPrompt);
 			splitContainerLlmProcessing.Panel1.Controls.Add(btnFormatTranscript);
 			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptResponse);
@@ -500,7 +501,7 @@
 		private Button btnFormatTranscript;
 		private TextBox txtFormatTranscriptResponse;
 		private Label lblFormatTranscriptResponse;
-		private CheckBox chkAutoFormatTranscript;
+		private CheckBox chkAutoInsertInto3rdPartyApplication;
 		private SplitContainer splitContainerLlmProcessing;
 		private Label lblReviewTranscriptPrompt;
 		private CheckBox chkAutoReviewTranscript;
