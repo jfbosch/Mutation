@@ -584,20 +584,22 @@ The model may also leave out common filler words in the audio. If you want to ke
 			await SpeechToText();
 		}
 
-		private async void btnFormatTranscript_Click(object sender, EventArgs e)
+		private void btnClearFormattedTranscript_Click(object sender, EventArgs e)
 		{
-			//await FormatSpeechToTextTranscriptWithLlm();
-			await FormatSpeechToTextTranscriptWithRules();
+			txtFormatTranscriptResponse.Text = string.Empty;
 		}
 
 		private async Task FormatSpeechToTextTranscriptWithRules()
 		{
-			txtFormatTranscriptResponse.Text = "Formatting...";
-
 			string rawTranscript = txtSpeechToText.Text;
 
 			string formattedText = TextFormatter.Format(rawTranscript, Settings.LlmSettings.TranscriptFormatRules);
-			txtFormatTranscriptResponse.Text = formattedText;
+
+			if (chkFormattedTranscriptAppend.Checked)
+				txtFormatTranscriptResponse.Text += formattedText;
+			else
+				txtFormatTranscriptResponse.Text = formattedText;
+
 			SetTextToClipboard(formattedText);
 
 

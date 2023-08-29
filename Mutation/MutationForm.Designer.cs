@@ -45,10 +45,11 @@
 			btnSpeechToTextRecord = new Button();
 			lblFormatTranscriptPrompt = new Label();
 			txtFormatTranscriptPrompt = new TextBox();
-			btnFormatTranscript = new Button();
+			btnClearFormattedTranscript = new Button();
 			txtFormatTranscriptResponse = new TextBox();
 			lblFormatTranscriptResponse = new Label();
 			splitContainerLlmProcessing = new SplitContainer();
+			chkFormattedTranscriptAppend = new CheckBox();
 			cmbInsertInto3rdPartyApplication = new ComboBox();
 			btnApplySelectedReviewIssues = new Button();
 			dgvReview = new DataGridView();
@@ -242,17 +243,16 @@
 			txtFormatTranscriptPrompt.TabIndex = 14;
 			txtFormatTranscriptPrompt.Visible = false;
 			// 
-			// btnFormatTranscript
+			// btnClearFormattedTranscript
 			// 
-			btnFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnFormatTranscript.Location = new Point(125, 90);
-			btnFormatTranscript.Name = "btnFormatTranscript";
-			btnFormatTranscript.Size = new Size(63, 23);
-			btnFormatTranscript.TabIndex = 16;
-			btnFormatTranscript.Text = "&Format";
-			btnFormatTranscript.UseVisualStyleBackColor = true;
-			btnFormatTranscript.Visible = false;
-			btnFormatTranscript.Click += btnFormatTranscript_Click;
+			btnClearFormattedTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			btnClearFormattedTranscript.Location = new Point(130, 90);
+			btnClearFormattedTranscript.Name = "btnClearFormattedTranscript";
+			btnClearFormattedTranscript.Size = new Size(52, 23);
+			btnClearFormattedTranscript.TabIndex = 16;
+			btnClearFormattedTranscript.Text = "&Clear";
+			btnClearFormattedTranscript.UseVisualStyleBackColor = true;
+			btnClearFormattedTranscript.Click += btnClearFormattedTranscript_Click;
 			// 
 			// txtFormatTranscriptResponse
 			// 
@@ -263,7 +263,7 @@
 			txtFormatTranscriptResponse.Name = "txtFormatTranscriptResponse";
 			txtFormatTranscriptResponse.ScrollBars = ScrollBars.Vertical;
 			txtFormatTranscriptResponse.Size = new Size(509, 217);
-			txtFormatTranscriptResponse.TabIndex = 17;
+			txtFormatTranscriptResponse.TabIndex = 18;
 			// 
 			// lblFormatTranscriptResponse
 			// 
@@ -283,10 +283,11 @@
 			// 
 			// splitContainerLlmProcessing.Panel1
 			// 
+			splitContainerLlmProcessing.Panel1.Controls.Add(chkFormattedTranscriptAppend);
 			splitContainerLlmProcessing.Panel1.Controls.Add(cmbInsertInto3rdPartyApplication);
 			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptPrompt);
 			splitContainerLlmProcessing.Panel1.Controls.Add(txtFormatTranscriptPrompt);
-			splitContainerLlmProcessing.Panel1.Controls.Add(btnFormatTranscript);
+			splitContainerLlmProcessing.Panel1.Controls.Add(btnClearFormattedTranscript);
 			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptResponse);
 			splitContainerLlmProcessing.Panel1.Controls.Add(txtFormatTranscriptResponse);
 			// 
@@ -304,14 +305,26 @@
 			splitContainerLlmProcessing.SplitterDistance = 527;
 			splitContainerLlmProcessing.TabIndex = 18;
 			// 
+			// chkFormattedTranscriptAppend
+			// 
+			chkFormattedTranscriptAppend.AutoSize = true;
+			chkFormattedTranscriptAppend.Checked = true;
+			chkFormattedTranscriptAppend.CheckState = CheckState.Checked;
+			chkFormattedTranscriptAppend.Location = new Point(189, 93);
+			chkFormattedTranscriptAppend.Name = "chkFormattedTranscriptAppend";
+			chkFormattedTranscriptAppend.Size = new Size(68, 19);
+			chkFormattedTranscriptAppend.TabIndex = 17;
+			chkFormattedTranscriptAppend.Text = "&Append";
+			chkFormattedTranscriptAppend.UseVisualStyleBackColor = true;
+			// 
 			// cmbInsertInto3rdPartyApplication
 			// 
 			cmbInsertInto3rdPartyApplication.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 			cmbInsertInto3rdPartyApplication.FormattingEnabled = true;
-			cmbInsertInto3rdPartyApplication.Location = new Point(194, 92);
+			cmbInsertInto3rdPartyApplication.Location = new Point(262, 92);
 			cmbInsertInto3rdPartyApplication.Name = "cmbInsertInto3rdPartyApplication";
-			cmbInsertInto3rdPartyApplication.Size = new Size(304, 23);
-			cmbInsertInto3rdPartyApplication.TabIndex = 16;
+			cmbInsertInto3rdPartyApplication.Size = new Size(254, 23);
+			cmbInsertInto3rdPartyApplication.TabIndex = 18;
 			// 
 			// btnApplySelectedReviewIssues
 			// 
@@ -319,7 +332,7 @@
 			btnApplySelectedReviewIssues.Location = new Point(481, 91);
 			btnApplySelectedReviewIssues.Name = "btnApplySelectedReviewIssues";
 			btnApplySelectedReviewIssues.Size = new Size(149, 23);
-			btnApplySelectedReviewIssues.TabIndex = 27;
+			btnApplySelectedReviewIssues.TabIndex = 22;
 			btnApplySelectedReviewIssues.Text = "&Apply Selected";
 			btnApplySelectedReviewIssues.UseVisualStyleBackColor = true;
 			btnApplySelectedReviewIssues.Click += btnApplySelectedReviewIssues_Click;
@@ -331,7 +344,7 @@
 			dgvReview.Name = "dgvReview";
 			dgvReview.RowTemplate.Height = 25;
 			dgvReview.Size = new Size(240, 150);
-			dgvReview.TabIndex = 25;
+			dgvReview.TabIndex = 20;
 			dgvReview.RowsAdded += dgvReview_RowsAdded;
 			dgvReview.RowsRemoved += dgvReview_RowsRemoved;
 			// 
@@ -376,7 +389,7 @@
 			btnReviewTranscript.Location = new Point(326, 91);
 			btnReviewTranscript.Name = "btnReviewTranscript";
 			btnReviewTranscript.Size = new Size(149, 23);
-			btnReviewTranscript.TabIndex = 22;
+			btnReviewTranscript.TabIndex = 21;
 			btnReviewTranscript.Text = "Re&view Transcript";
 			btnReviewTranscript.UseVisualStyleBackColor = true;
 			btnReviewTranscript.Click += btnReviewTranscript_Click;
@@ -401,7 +414,7 @@
 			txtTranscriptReviewResponse.Name = "txtTranscriptReviewResponse";
 			txtTranscriptReviewResponse.ScrollBars = ScrollBars.Vertical;
 			txtTranscriptReviewResponse.Size = new Size(633, 217);
-			txtTranscriptReviewResponse.TabIndex = 23;
+			txtTranscriptReviewResponse.TabIndex = 20;
 			// 
 			// radAutoPunctuation
 			// 
@@ -495,7 +508,7 @@
 		private Button btnSpeechToTextRecord;
 		private Label lblFormatTranscriptPrompt;
 		private TextBox txtFormatTranscriptPrompt;
-		private Button btnFormatTranscript;
+		private Button btnClearFormattedTranscript;
 		private TextBox txtFormatTranscriptResponse;
 		private Label lblFormatTranscriptResponse;
 		private SplitContainer splitContainerLlmProcessing;
@@ -511,6 +524,7 @@
 		private GroupBox gbPunctuation;
 		private RadioButton radManualPunctuation;
 		private ComboBox cmbInsertInto3rdPartyApplication;
+		private CheckBox chkFormattedTranscriptAppend;
 	}
 }
 
