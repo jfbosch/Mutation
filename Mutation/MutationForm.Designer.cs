@@ -48,7 +48,6 @@
 			btnFormatTranscript = new Button();
 			txtFormatTranscriptResponse = new TextBox();
 			lblFormatTranscriptResponse = new Label();
-			chkAutoInsertInto3rdPartyApplication = new CheckBox();
 			splitContainerLlmProcessing = new SplitContainer();
 			cmbInsertInto3rdPartyApplication = new ComboBox();
 			btnApplySelectedReviewIssues = new Button();
@@ -276,18 +275,6 @@
 			lblFormatTranscriptResponse.TabIndex = 15;
 			lblFormatTranscriptResponse.Text = "Formatted Transcript";
 			// 
-			// chkAutoInsertInto3rdPartyApplication
-			// 
-			chkAutoInsertInto3rdPartyApplication.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			chkAutoInsertInto3rdPartyApplication.Checked = true;
-			chkAutoInsertInto3rdPartyApplication.CheckState = CheckState.Checked;
-			chkAutoInsertInto3rdPartyApplication.Location = new Point(117, 105);
-			chkAutoInsertInto3rdPartyApplication.Name = "chkAutoInsertInto3rdPartyApplication";
-			chkAutoInsertInto3rdPartyApplication.Size = new Size(231, 25);
-			chkAutoInsertInto3rdPartyApplication.TabIndex = 16;
-			chkAutoInsertInto3rdPartyApplication.Text = "Auto &insert into 3rd party application";
-			chkAutoInsertInto3rdPartyApplication.UseVisualStyleBackColor = true;
-			// 
 			// splitContainerLlmProcessing
 			// 
 			splitContainerLlmProcessing.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
@@ -298,7 +285,6 @@
 			// 
 			splitContainerLlmProcessing.Panel1.Controls.Add(cmbInsertInto3rdPartyApplication);
 			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptPrompt);
-			splitContainerLlmProcessing.Panel1.Controls.Add(chkAutoInsertInto3rdPartyApplication);
 			splitContainerLlmProcessing.Panel1.Controls.Add(txtFormatTranscriptPrompt);
 			splitContainerLlmProcessing.Panel1.Controls.Add(btnFormatTranscript);
 			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptResponse);
@@ -512,7 +498,6 @@
 		private Button btnFormatTranscript;
 		private TextBox txtFormatTranscriptResponse;
 		private Label lblFormatTranscriptResponse;
-		private CheckBox chkAutoInsertInto3rdPartyApplication;
 		private SplitContainer splitContainerLlmProcessing;
 		private Label lblReviewTranscriptPrompt;
 		private CheckBox chkAutoReviewTranscript;

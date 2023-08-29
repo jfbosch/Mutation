@@ -86,8 +86,9 @@ namespace Mutation
 				string description = GetEnumDescription(option);
 				cmbInsertInto3rdPartyApplication.Items.Add(new { Text = description, Value = option });
 			}
-			cmbInsertInto3rdPartyApplication.SelectedIndex = 0;
-
+			cmbInsertInto3rdPartyApplication.DisplayMember = "Text";
+			cmbInsertInto3rdPartyApplication.ValueMember = "Value";
+			cmbInsertInto3rdPartyApplication.SelectedIndex = 2;
 		}
 
 		public static string GetEnumDescription(Enum value)
