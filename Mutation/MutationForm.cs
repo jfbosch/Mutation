@@ -7,12 +7,25 @@ using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
 using StringExtensionLibrary;
+using System.ComponentModel;
 using System.Drawing.Imaging;
 
 namespace Mutation
 {
 	public partial class MutationForm : Form
 	{
+		public enum InsertOption
+		{
+			[Description("Don't insert into 3rd party application")]
+			DoNotInsert,
+
+			[Description("Send keys to 3rd party application")]
+			SendKeys,
+
+			[Description("Paste into 3rd party application")]
+			Paste
+		}
+
 		private ScreenCaptureForm _activeScreenCaptureForm = null;
 
 		private Settings Settings { get; set; }
@@ -62,12 +75,37 @@ namespace Mutation
 
 			HookupHotkeys();
 
-
 			txtFormatTranscriptPrompt.Text = this.Settings.LlmSettings.FormatTranscriptPrompt;
 			txtReviewTranscriptPrompt.Text = this.Settings.LlmSettings.ReviewTranscriptPrompt;
 
 			InitializeLlmReviewListView();
+
+			cmbInsertInto3rdPartyApplication.DropDownStyle = ComboBoxStyle.DropDownList;
+			foreach (InsertOption option in Enum.GetValues(typeof(InsertOption)))
+			{
+				string description = GetEnumDescription(option);
+				cmbInsertInto3rdPartyApplication.Items.Add(new { Text = description, Value = option });
+			}
+			cmbInsertInto3rdPartyApplication.SelectedIndex = 0;
+
 		}
+
+		public static string GetEnumDescription(Enum value)
+		{
+			var fieldInfo = value.GetType().GetField(value.ToString());
+			var attributes = (DescriptionAttribute[])fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false);
+
+			if (attributes != null && attributes.Length > 0)
+			{
+				return attributes[0].Description;
+			}
+			else
+			{
+				return value.ToString();
+			}
+		}
+
+
 
 		private void InitializeLlmReviewListView()
 		{
@@ -561,11 +599,28 @@ The model may also leave out common filler words in the audio. If you want to ke
 			txtFormatTranscriptResponse.Text = formattedText;
 			SetTextToClipboard(formattedText);
 
-			if (chkAutoInsertInto3rdPartyApplication.Checked
-				&& !this.ContainsFocus)
+
+			if (!this.ContainsFocus)
 			{
-				BeepStart();
-				SendKeys.SendWait(formattedText);
+				var selectedInsertOptionValue = cmbInsertInto3rdPartyApplication.SelectedItem;
+
+				if (selectedInsertOptionValue is not null)
+				{
+					InsertOption selectedOption = (InsertOption)((dynamic)selectedInsertOptionValue).Value;
+
+					switch (selectedOption)
+					{
+						case InsertOption.SendKeys:
+							BeepStart();
+							SendKeys.Send(formattedText);
+							break;
+						case InsertOption.Paste:
+							Thread.Sleep(200); // Wait for text to arrive on clipboard.
+							BeepStart();
+							SendKeys.SendWait("^v");
+							break;
+					}
+				}
 			}
 
 			BeepSuccess();

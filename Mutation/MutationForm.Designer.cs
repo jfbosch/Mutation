@@ -50,6 +50,7 @@
 			lblFormatTranscriptResponse = new Label();
 			chkAutoInsertInto3rdPartyApplication = new CheckBox();
 			splitContainerLlmProcessing = new SplitContainer();
+			cmbInsertInto3rdPartyApplication = new ComboBox();
 			btnApplySelectedReviewIssues = new Button();
 			dgvReview = new DataGridView();
 			lblReviewTranscriptPrompt = new Label();
@@ -245,7 +246,7 @@
 			// btnFormatTranscript
 			// 
 			btnFormatTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			btnFormatTranscript.Location = new Point(204, 90);
+			btnFormatTranscript.Location = new Point(125, 90);
 			btnFormatTranscript.Name = "btnFormatTranscript";
 			btnFormatTranscript.Size = new Size(63, 23);
 			btnFormatTranscript.TabIndex = 16;
@@ -280,7 +281,7 @@
 			chkAutoInsertInto3rdPartyApplication.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 			chkAutoInsertInto3rdPartyApplication.Checked = true;
 			chkAutoInsertInto3rdPartyApplication.CheckState = CheckState.Checked;
-			chkAutoInsertInto3rdPartyApplication.Location = new Point(278, 90);
+			chkAutoInsertInto3rdPartyApplication.Location = new Point(117, 105);
 			chkAutoInsertInto3rdPartyApplication.Name = "chkAutoInsertInto3rdPartyApplication";
 			chkAutoInsertInto3rdPartyApplication.Size = new Size(231, 25);
 			chkAutoInsertInto3rdPartyApplication.TabIndex = 16;
@@ -295,6 +296,7 @@
 			// 
 			// splitContainerLlmProcessing.Panel1
 			// 
+			splitContainerLlmProcessing.Panel1.Controls.Add(cmbInsertInto3rdPartyApplication);
 			splitContainerLlmProcessing.Panel1.Controls.Add(lblFormatTranscriptPrompt);
 			splitContainerLlmProcessing.Panel1.Controls.Add(chkAutoInsertInto3rdPartyApplication);
 			splitContainerLlmProcessing.Panel1.Controls.Add(txtFormatTranscriptPrompt);
@@ -315,6 +317,15 @@
 			splitContainerLlmProcessing.Size = new Size(1175, 342);
 			splitContainerLlmProcessing.SplitterDistance = 527;
 			splitContainerLlmProcessing.TabIndex = 18;
+			// 
+			// cmbInsertInto3rdPartyApplication
+			// 
+			cmbInsertInto3rdPartyApplication.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			cmbInsertInto3rdPartyApplication.FormattingEnabled = true;
+			cmbInsertInto3rdPartyApplication.Location = new Point(194, 92);
+			cmbInsertInto3rdPartyApplication.Name = "cmbInsertInto3rdPartyApplication";
+			cmbInsertInto3rdPartyApplication.Size = new Size(304, 23);
+			cmbInsertInto3rdPartyApplication.TabIndex = 16;
 			// 
 			// btnApplySelectedReviewIssues
 			// 
@@ -514,6 +525,7 @@
 		private RadioButton radAutoPunctuation;
 		private GroupBox gbPunctuation;
 		private RadioButton radManualPunctuation;
+		private ComboBox cmbInsertInto3rdPartyApplication;
 	}
 }
 
