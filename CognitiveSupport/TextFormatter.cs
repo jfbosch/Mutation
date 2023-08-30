@@ -1,18 +1,14 @@
 ﻿using CognitiveSupport.Extensions;
-using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
-using StringExtensionLibrary;
-using System.IO;
 using System.Text.RegularExpressions;
 using static CognitiveSupport.LlmSettings;
 using static CognitiveSupport.LlmSettings.TranscriptFormatRule;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace CognitiveSupport
 {
-	public class TextFormatter
+	public static class TextFormatter
 	{
-		public static string Format(
-			string text,
+		public static string FormatWithRules(
+			this string text,
 			List<LlmSettings.TranscriptFormatRule> rules)
 		{
 			if (text is null) return text;
@@ -21,7 +17,7 @@ namespace CognitiveSupport
 			text = text.FixNewLines();
 
 			foreach (var rule in rules)
-				text = Format(text, rule);
+				text = FormatWithRule(text, rule);
 
 			string[] lines = text.Split(Environment.NewLine, StringSplitOptions.TrimEntries);
 			lines = CleanLines(lines);
@@ -31,7 +27,7 @@ namespace CognitiveSupport
 		}
 
 		public static string[] CleanLines(
-			string[] input)
+			this string[] input)
 		{
 			List<string> output = new(input.Length);
 			foreach (string inLine in input)
@@ -62,7 +58,7 @@ namespace CognitiveSupport
 			return line;
 		}
 
-		public static string Format(
+		public static string FormatWithRule(
 			string text,
 			TranscriptFormatRule rule)
 		{
@@ -93,6 +89,22 @@ namespace CognitiveSupport
 					break;
 				default:
 					throw new NotImplementedException($"The MatchType {rule.MatchType}: {(int)rule.MatchType} is not implemented.");
+			}
+
+			return text;
+		}
+
+		public static string RemoveSubstrings(
+			this string text,
+			params string[] substringsToRemove)
+		{
+			if (text is null) return text;
+			if (substringsToRemove is null || !substringsToRemove.Any())
+				throw new ArgumentNullException(nameof(substringsToRemove));
+
+			foreach (var substring in substringsToRemove)
+			{
+				text = text.Replace(substring, "");
 			}
 
 			return text;

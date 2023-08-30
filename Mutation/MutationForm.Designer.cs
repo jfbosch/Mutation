@@ -210,7 +210,7 @@
 			// 
 			// btnSpeechToTextRecord
 			// 
-			btnSpeechToTextRecord.Location = new Point(18, 292);
+			btnSpeechToTextRecord.Location = new Point(167, 299);
 			btnSpeechToTextRecord.Name = "btnSpeechToTextRecord";
 			btnSpeechToTextRecord.Size = new Size(69, 23);
 			btnSpeechToTextRecord.TabIndex = 11;
@@ -419,6 +419,7 @@
 			// radAutoPunctuation
 			// 
 			radAutoPunctuation.AutoSize = true;
+			radAutoPunctuation.Checked = true;
 			radAutoPunctuation.Location = new Point(6, 19);
 			radAutoPunctuation.Name = "radAutoPunctuation";
 			radAutoPunctuation.Size = new Size(119, 19);
@@ -432,12 +433,11 @@
 			// 
 			gbPunctuation.Controls.Add(radManualPunctuation);
 			gbPunctuation.Controls.Add(radAutoPunctuation);
-			gbPunctuation.Location = new Point(88, 282);
+			gbPunctuation.Location = new Point(4, 282);
 			gbPunctuation.Name = "gbPunctuation";
-			gbPunctuation.Size = new Size(157, 71);
+			gbPunctuation.Size = new Size(152, 71);
 			gbPunctuation.TabIndex = 20;
 			gbPunctuation.TabStop = false;
-			gbPunctuation.Visible = false;
 			// 
 			// radManualPunctuation
 			// 
@@ -446,7 +446,6 @@
 			radManualPunctuation.Name = "radManualPunctuation";
 			radManualPunctuation.Size = new Size(133, 19);
 			radManualPunctuation.TabIndex = 20;
-			radManualPunctuation.TabStop = true;
 			radManualPunctuation.Text = "Manual Punctuation";
 			radManualPunctuation.UseVisualStyleBackColor = true;
 			radManualPunctuation.CheckedChanged += radManualPunctuation_CheckedChanged;

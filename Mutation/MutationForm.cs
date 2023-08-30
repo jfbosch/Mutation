@@ -593,14 +593,21 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			string rawTranscript = txtSpeechToText.Text;
 
-			string formattedText = TextFormatter.Format(rawTranscript, Settings.LlmSettings.TranscriptFormatRules);
+			string text = rawTranscript;
+			if (radManualPunctuation.Checked)
+			{
+				text = text.RemoveSubstrings(",", ".", ";", ":", "?", "!", "...", "…");
+				text = text.Replace("  ", " ");
+			}
+
+			text = TextFormatter.FormatWithRules(text, Settings.LlmSettings.TranscriptFormatRules);
 
 			if (chkFormattedTranscriptAppend.Checked)
-				txtFormatTranscriptResponse.Text += formattedText;
+				txtFormatTranscriptResponse.Text += text;
 			else
-				txtFormatTranscriptResponse.Text = formattedText;
+				txtFormatTranscriptResponse.Text = text;
 
-			SetTextToClipboard(formattedText);
+			SetTextToClipboard(text);
 
 
 			if (!this.ContainsFocus)
@@ -615,7 +622,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					{
 						case InsertOption.SendKeys:
 							BeepStart();
-							SendKeys.Send(formattedText);
+							SendKeys.Send(text);
 							break;
 						case InsertOption.Paste:
 							Thread.Sleep(200); // Wait for text to arrive on clipboard.
@@ -803,14 +810,14 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		}
 
-		private void radAutoPunctuation_CheckedChanged(object sender, EventArgs e)
-		{
-			txtSpeechToTextPrompt.Text = "Hello, how are you? Let's use punctuation today.";
-		}
-
 		private void radManualPunctuation_CheckedChanged(object sender, EventArgs e)
 		{
-			txtSpeechToTextPrompt.Text = "Hello how are you Let's not use punctuation today";
+			txtSpeechToTextPrompt.Text = "Hello let us not use any punctuation is that ok";
+		}
+
+		private void radAutoPunctuation_CheckedChanged(object sender, EventArgs e)
+		{
+			txtSpeechToTextPrompt.Text = "Hello, let us use punctuation. Is that ok?";
 		}
 	}
 }
