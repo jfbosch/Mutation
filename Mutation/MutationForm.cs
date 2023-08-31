@@ -601,8 +601,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 				text = text.RemoveSubstrings(",", ".", ";", ":", "?", "!", "...", "…");
 				text = text.Replace("  ", " ");
 			}
-
-			text = TextFormatter.FormatWithRules(text, Settings.LlmSettings.TranscriptFormatRules);
+			text = text.FormatWithRules(Settings.LlmSettings.TranscriptFormatRules);
+			text = text.CleanupPunctuation();
 
 			if (chkFormattedTranscriptAppend.Checked)
 				txtFormatTranscriptResponse.Text += text;

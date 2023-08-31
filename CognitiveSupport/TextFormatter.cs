@@ -26,6 +26,43 @@ namespace CognitiveSupport
 			return text;
 		}
 
+		public static string CleanupPunctuation(
+			this string text)
+		{
+			if (text is null) return text;
+
+			string[] deduplications = new[]
+			{
+				".",
+				",",
+				"?",
+				"!",
+				":",
+				";",
+			};
+
+			text = text.FixNewLines();
+			int counter = 0;
+			var lines = text.Split(Environment.NewLine, StringSplitOptions.TrimEntries)
+				.ToDictionary(k => counter++, v => v);
+
+			foreach (var dup in deduplications)
+			{
+				// this will replace the pattern with a single instance of the char in "dup".
+				// Eg. If the dup char is ".", then ".." and ". ." wil be replaced with a single ".", but only if it is after a word, and before a word or end of line.
+				string pattern = @$"(?<=\w)[.,]?[{dup}][ ,.]?[{dup}]?(?=\w|$)";
+
+				foreach (int key in lines.Keys)
+				{
+					lines[key]  = Regex.Replace(lines[key], pattern, $"{dup} ");
+				}
+			}
+
+			text = string.Join(Environment.NewLine, lines.Values);
+
+			return text;
+		}
+
 		public static string[] CleanLines(
 			this string[] input)
 		{

@@ -51,6 +51,7 @@ namespace CognitiveSupport
 			{
 				Messages = messages,
 				Model = llmModelName,
+				Temperature = 0.3f,
 			});
 			if (response.Successful)
 			{
