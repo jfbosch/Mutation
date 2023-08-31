@@ -3,12 +3,14 @@ using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
 using NAudio.Wave;
+using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
 using StringExtensionLibrary;
 using System.ComponentModel;
 using System.Drawing.Imaging;
+using static OpenAI.ObjectModels.SharedModels.IOpenAiModels;
 
 namespace Mutation
 {
@@ -89,6 +91,17 @@ namespace Mutation
 			cmbInsertInto3rdPartyApplication.DisplayMember = "Text";
 			cmbInsertInto3rdPartyApplication.ValueMember = "Value";
 			cmbInsertInto3rdPartyApplication.SelectedIndex = 2;
+
+
+			cmbReviewTemperature.DropDownStyle = ComboBoxStyle.DropDownList;
+			for (decimal d = 0.0m; d < 1.9m; d = d + 0.1m)
+			{
+				cmbReviewTemperature.Items.Add(new { Text = $"{d}", Value = d });
+			}
+			cmbReviewTemperature.DisplayMember = "Text";
+			cmbReviewTemperature.ValueMember = "Value";
+			cmbReviewTemperature.SelectedIndex = 4;
+
 		}
 
 		public static string GetEnumDescription(Enum value)
@@ -677,7 +690,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 				ChatMessage.FromUser($"Review the following transcript: {Environment.NewLine}{Environment.NewLine}{transcript}"),
 			};
 
-			string review = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
+			var selectedTemperature = cmbReviewTemperature.SelectedItem;
+			decimal temperature = ((dynamic)selectedTemperature).Value;
+			string review = await LlmService.CreateChatCompletion(messages, Models.Gpt_4, temperature);
 			txtTranscriptReviewResponse.Text = review.FixNewLines();
 			txtTranscriptReviewResponse.ReadOnly = false;
 

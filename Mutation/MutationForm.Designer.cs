@@ -62,6 +62,8 @@
 			radAutoPunctuation = new RadioButton();
 			gbPunctuation = new GroupBox();
 			radManualPunctuation = new RadioButton();
+			cmbReviewTemperature = new ComboBox();
+			lblReviewTemperature = new Label();
 			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).BeginInit();
 			splitContainerLlmProcessing.Panel1.SuspendLayout();
 			splitContainerLlmProcessing.Panel2.SuspendLayout();
@@ -293,6 +295,8 @@
 			// 
 			// splitContainerLlmProcessing.Panel2
 			// 
+			splitContainerLlmProcessing.Panel2.Controls.Add(lblReviewTemperature);
+			splitContainerLlmProcessing.Panel2.Controls.Add(cmbReviewTemperature);
 			splitContainerLlmProcessing.Panel2.Controls.Add(btnApplySelectedReviewIssues);
 			splitContainerLlmProcessing.Panel2.Controls.Add(dgvReview);
 			splitContainerLlmProcessing.Panel2.Controls.Add(lblReviewTranscriptPrompt);
@@ -362,7 +366,7 @@
 			// chkAutoReviewTranscript
 			// 
 			chkAutoReviewTranscript.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			chkAutoReviewTranscript.Location = new Point(166, 91);
+			chkAutoReviewTranscript.Location = new Point(55, 91);
 			chkAutoReviewTranscript.Name = "chkAutoReviewTranscript";
 			chkAutoReviewTranscript.Size = new Size(153, 25);
 			chkAutoReviewTranscript.TabIndex = 21;
@@ -448,6 +452,25 @@
 			radManualPunctuation.Text = "Manual Punctuation";
 			radManualPunctuation.UseVisualStyleBackColor = true;
 			// 
+			// cmbReviewTemperature
+			// 
+			cmbReviewTemperature.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			cmbReviewTemperature.FormattingEnabled = true;
+			cmbReviewTemperature.Location = new Point(277, 92);
+			cmbReviewTemperature.Name = "cmbReviewTemperature";
+			cmbReviewTemperature.Size = new Size(43, 23);
+			cmbReviewTemperature.TabIndex = 21;
+			// 
+			// lblReviewTemperature
+			// 
+			lblReviewTemperature.AutoSize = true;
+			lblReviewTemperature.Location = new Point(197, 95);
+			lblReviewTemperature.Margin = new Padding(4, 0, 4, 0);
+			lblReviewTemperature.Name = "lblReviewTemperature";
+			lblReviewTemperature.Size = new Size(73, 15);
+			lblReviewTemperature.TabIndex = 24;
+			lblReviewTemperature.Text = "Temperature";
+			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
@@ -522,6 +545,8 @@
 		private RadioButton radManualPunctuation;
 		private ComboBox cmbInsertInto3rdPartyApplication;
 		private CheckBox chkFormattedTranscriptAppend;
+		private Label lblReviewTemperature;
+		private ComboBox cmbReviewTemperature;
 	}
 }
 

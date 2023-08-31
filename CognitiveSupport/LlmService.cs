@@ -3,6 +3,7 @@ using OpenAI.Interfaces;
 using OpenAI.Managers;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
+using static OpenAI.ObjectModels.SharedModels.IOpenAiModels;
 
 namespace CognitiveSupport
 {
@@ -41,7 +42,8 @@ namespace CognitiveSupport
 
 		public async Task<string> CreateChatCompletion(
 			IList<ChatMessage> messages,
-			string llmModelName)
+			string llmModelName,
+			decimal temperature = 0.7m)
 		{
 			if (!_openAIServices.ContainsKey(llmModelName))
 				throw new ArgumentException($"{llmModelName} is not one of the configured models. The following are the available, configured models: {string.Join(",", _openAIServices.Keys)}", nameof(llmModelName));
@@ -51,7 +53,7 @@ namespace CognitiveSupport
 			{
 				Messages = messages,
 				Model = llmModelName,
-				Temperature = 0.3f,
+				Temperature = (float)temperature,
 			});
 			if (response.Successful)
 			{
