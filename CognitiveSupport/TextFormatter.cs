@@ -82,7 +82,7 @@ namespace CognitiveSupport
 					text = Regex.Replace(text, rule.Find, rule.ReplaceWith, regexOptions);
 					break;
 				case MatchTypeEnum.Smart:
-					string pattern = $@"(\b|^)([.,]?)(\s*{rule.Find}[.,]?\s*)(\b|$)";
+					string pattern = $@"(\b|^)([.,]?)([ ]*{rule.Find}[.,]?[ ]*)(\b|$)";
 					string replacement = $"$1$2{rule.ReplaceWith}$4";
 					text = Regex.Replace(text, pattern, replacement, regexOptions);
 

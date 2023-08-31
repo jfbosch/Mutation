@@ -427,7 +427,6 @@
 			radAutoPunctuation.TabStop = true;
 			radAutoPunctuation.Text = "Auto Punctuation";
 			radAutoPunctuation.UseVisualStyleBackColor = true;
-			radAutoPunctuation.CheckedChanged += radAutoPunctuation_CheckedChanged;
 			// 
 			// gbPunctuation
 			// 
@@ -448,7 +447,6 @@
 			radManualPunctuation.TabIndex = 20;
 			radManualPunctuation.Text = "Manual Punctuation";
 			radManualPunctuation.UseVisualStyleBackColor = true;
-			radManualPunctuation.CheckedChanged += radManualPunctuation_CheckedChanged;
 			// 
 			// MutationForm
 			// 

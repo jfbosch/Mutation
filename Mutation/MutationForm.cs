@@ -432,9 +432,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 
 		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
-		public void SetTextToClipboard(string text)
+		public void SetTextToClipboard(
+			string text)
 		{
-			Clipboard.SetText(text, TextDataFormat.Text);
+			if (!string.IsNullOrWhiteSpace(text))
+				Clipboard.SetText(text, TextDataFormat.UnicodeText);
 		}
 
 
@@ -607,8 +609,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 			else
 				txtFormatTranscriptResponse.Text = text;
 
+			await Task.Delay(100);
 			SetTextToClipboard(text);
-
 
 			if (!this.ContainsFocus)
 			{
@@ -808,16 +810,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void dgvReview_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
 		{
 
-		}
-
-		private void radManualPunctuation_CheckedChanged(object sender, EventArgs e)
-		{
-			txtSpeechToTextPrompt.Text = "Hello let us not use any punctuation is that ok";
-		}
-
-		private void radAutoPunctuation_CheckedChanged(object sender, EventArgs e)
-		{
-			txtSpeechToTextPrompt.Text = "Hello, let us use punctuation. Is that ok?";
 		}
 	}
 }
