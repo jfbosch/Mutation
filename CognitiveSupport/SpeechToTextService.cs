@@ -15,11 +15,9 @@ namespace CognitiveSupport
 
 
 		public SpeechToTextService(
-			string apiKey,
-			string endpoint)
+			string apiKey)
 		{
 			ApiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-			Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
 
 			OpenAiOptions options = new OpenAiOptions
 			{
@@ -35,7 +33,7 @@ namespace CognitiveSupport
 			string audioffilePath)
 		{
 			var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
-			var audioResult = await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
+			var response = await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
 			{
 				Prompt = speechToTextPrompt,
 				FileName = Path.GetFileName(audioffilePath),
@@ -43,17 +41,17 @@ namespace CognitiveSupport
 				Model = Models.WhisperV1,
 				ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson
 			});
-			if (audioResult.Successful)
+			if (response.Successful)
 			{
-				return audioResult.Text;
+				return response.Text;
 			}
 			else
 			{
-				if (audioResult.Error == null)
+				if (response.Error == null)
 				{
 					throw new Exception("Unknown Error");
 				}
-				return $"Error converting speech to text: {audioResult.Error.Message}";
+				return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
 			}
 		}
 	}

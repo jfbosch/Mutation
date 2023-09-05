@@ -1,14 +1,33 @@
 ﻿using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
+using CognitiveSupport.Extensions;
 using NAudio.Wave;
+using Newtonsoft.Json.Linq;
+using OpenAI.ObjectModels;
+using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
+using StringExtensionLibrary;
+using System.ComponentModel;
 using System.Drawing.Imaging;
+using static OpenAI.ObjectModels.SharedModels.IOpenAiModels;
 
 namespace Mutation
 {
 	public partial class MutationForm : Form
 	{
+		public enum InsertOption
+		{
+			[Description("Don't insert into 3rd party application")]
+			DoNotInsert,
+
+			[Description("Send keys to 3rd party application")]
+			SendKeys,
+
+			[Description("Paste into 3rd party application")]
+			Paste
+		}
+
 		private ScreenCaptureForm _activeScreenCaptureForm = null;
 
 		private Settings Settings { get; set; }
@@ -25,6 +44,7 @@ namespace Mutation
 		private bool RecordingAudio => AudioRecorder != null;
 
 		private SpeechToTextService SpeechToTextService { get; set; }
+		private LlmService LlmService { get; set; }
 		private Hotkey _hkSpeechToText { get; set; }
 
 		private int _defaultCaptureDeviceIndex = -1;
@@ -43,16 +63,93 @@ namespace Mutation
 			InitializeComponent();
 			InitializeAudioControls();
 
-			OcrService = new OcrService(Settings.AzureComputerVisionSettings.SubscriptionKey, Settings.AzureComputerVisionSettings.Endpoint);
+			OcrService = new OcrService(Settings.AzureComputerVisionSettings.ApiKey, Settings.AzureComputerVisionSettings.Endpoint);
 			SpeechToTextService = new SpeechToTextService(
-				Settings.OpenAiSettings.ApiKey
-				, Settings.OpenAiSettings.Endpoint);
+				Settings.SpeetchToTextSettings.ApiKey);
+			LlmService = new LlmService(
+				Settings.LlmSettings.ApiKey,
+				Settings.LlmSettings.ResourceName,
+				Settings.LlmSettings.ModelDeploymentIdMaps);
 
-			txtSpeechToTextPrompt.Text = Settings.OpenAiSettings.SpeechToTextPrompt;
+			txtSpeechToTextPrompt.Text = Settings.SpeetchToTextSettings.SpeechToTextPrompt;
 
 			HookupTooltips();
 
 			HookupHotkeys();
+
+			txtFormatTranscriptPrompt.Text = this.Settings.LlmSettings.FormatTranscriptPrompt;
+			txtReviewTranscriptPrompt.Text = this.Settings.LlmSettings.ReviewTranscriptPrompt;
+
+			InitializeLlmReviewListView();
+
+			cmbInsertInto3rdPartyApplication.DropDownStyle = ComboBoxStyle.DropDownList;
+			foreach (InsertOption option in Enum.GetValues(typeof(InsertOption)))
+			{
+				string description = GetEnumDescription(option);
+				cmbInsertInto3rdPartyApplication.Items.Add(new { Text = description, Value = option });
+			}
+			cmbInsertInto3rdPartyApplication.DisplayMember = "Text";
+			cmbInsertInto3rdPartyApplication.ValueMember = "Value";
+			cmbInsertInto3rdPartyApplication.SelectedIndex = 2;
+
+
+			cmbReviewTemperature.DropDownStyle = ComboBoxStyle.DropDownList;
+			for (decimal d = 0.0m; d < 1.9m; d = d + 0.1m)
+			{
+				cmbReviewTemperature.Items.Add(new { Text = $"{d}", Value = d });
+			}
+			cmbReviewTemperature.DisplayMember = "Text";
+			cmbReviewTemperature.ValueMember = "Value";
+			cmbReviewTemperature.SelectedIndex = 4;
+
+		}
+
+		public static string GetEnumDescription(Enum value)
+		{
+			var fieldInfo = value.GetType().GetField(value.ToString());
+			var attributes = (DescriptionAttribute[])fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false);
+
+			if (attributes != null && attributes.Length > 0)
+			{
+				return attributes[0].Description;
+			}
+			else
+			{
+				return value.ToString();
+			}
+		}
+
+
+
+		private void InitializeLlmReviewListView()
+		{
+			txtTranscriptReviewResponse.Visible = false;
+
+			dgvReview.Location = txtTranscriptReviewResponse.Location;
+			dgvReview.Height = txtTranscriptReviewResponse.Height;
+			dgvReview.Width = txtTranscriptReviewResponse.Width;
+			dgvReview.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+			dgvReview.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+			dgvReview.AutoGenerateColumns = false;
+			dgvReview.RowHeadersVisible = false;
+			dgvReview.MultiSelect = false;
+			dgvReview.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+			DataGridViewCheckBoxColumn checkBoxColumn = new DataGridViewCheckBoxColumn();
+			checkBoxColumn.HeaderText = "Select";
+			checkBoxColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader;
+			dgvReview.Columns.Add(checkBoxColumn);
+
+			DataGridViewTextBoxColumn textColumn = new DataGridViewTextBoxColumn();
+			textColumn.HeaderText = "Issue";
+			textColumn.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+			textColumn.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+			dgvReview.Columns.Add(textColumn);
+
+			// Add sample data during dev time
+			//dgvReview.Rows.Add(new object[] { false, "Long text item 1" });  // Adding an unchecked row
+			//dgvReview.Rows.Add(new object[] { false, "Long text item 2...............................bla bla" });
+			//dgvReview.Rows.Add(new object[] { false, "By setting the Anchor property to AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, the DataGridView will be anchored to all four sides of its parent container. This means that it will resize itself appropriately when the parent container is resized, maintaining the specified distance to each edge." });
 		}
 
 		private void HookupTooltips()
@@ -70,6 +167,29 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			toolTip.SetToolTip(txtSpeechToTextPrompt, speechToTextPromptToolTipMsg);
 			toolTip.SetToolTip(lblSpeechToTextPrompt, speechToTextPromptToolTipMsg);
+
+			var voiceCommands = this.Settings.LlmSettings.TranscriptFormatRules
+				.Select(x => new
+				{
+					x.Find,
+					ReplaceWith = x.ReplaceWith
+							.Replace(Environment.NewLine, @"<new line>")
+							.Replace(@"\t", @"<tab>"),
+					x.MatchType,
+					x.CaseSensitive
+				})
+				.Select(x => new
+				{
+					Rule = x,
+					Spacing = string.Concat(Enumerable.Repeat(
+						" ",
+						Math.Abs(75 - $"{x.Find} = {x.ReplaceWith}".Length)))
+				})
+				.Select(x => $"{x.Rule.Find} = {x.Rule.ReplaceWith}{x.Spacing}(Match: {x.Rule.MatchType}, Case Sensitive: {x.Rule.CaseSensitive})")
+				.ToArray();
+			string formattingCommandsPromptToolTipMsg = $"You can use the following voice commands while dictating: {Environment.NewLine}{Environment.NewLine}{string.Join(Environment.NewLine, voiceCommands)}";
+			toolTip.SetToolTip(lblSpeechToText, formattingCommandsPromptToolTipMsg);
+			toolTip.SetToolTip(lblFormatTranscriptResponse, formattingCommandsPromptToolTipMsg);
 		}
 
 		private void LoadSettings()
@@ -136,9 +256,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			else
 			{
 				txtActiveMic.Text = "(Unable to find device)";
-				Console.Beep(300, 100);
-				Console.Beep(300, 100);
-				Console.Beep(300, 100);
+				BeepFail();
 			}
 		}
 
@@ -160,15 +278,15 @@ The model may also leave out common filler words in the audio. If you want to ke
 			{
 				if (Microphone.IsMuted)
 				{
-					this.Text = "Muted Microphone";
+					this.Text = "Mutation - Muted Microphone";
 					this.BackColor = Color.LightGray;
-					Console.Beep(500, 200);
+					BeepMuted();
 				}
-				else
+				else // unmuted
 				{
-					this.Text = "Unuted Microphone";
-					this.BackColor = Color.White;
-					Console.Beep(1300, 50);
+					this.Text = "Mutation - Unmuted Microphone";
+					this.BackColor = Color.WhiteSmoke;
+					BeepUnmuted();
 				}
 
 				txtActiveMic.Text = this.Microphone.Name;
@@ -255,7 +373,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 					_activeScreenCaptureForm = null;
 
-					ExtractText(screenshot);
+					ExtractText(GetClipboardImage());
 				}
 			}
 		}
@@ -273,7 +391,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
-				Console.Beep(970, 80);
+				BeepStart();
 
 				txtOcr.Text = "Running OCR on image";
 
@@ -289,8 +407,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					SetTextToClipboard(text);
 					txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
 
-					Console.Beep(1050, 40);
-					Console.Beep(1050, 40);
+					BeepSuccess();
 
 					//using MessageForm msgForm = new MessageForm();
 					//msgForm.Show();
@@ -298,8 +415,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				}
 				else
 				{
-					Console.Beep(550, 40);
-					Console.Beep(400, 40);
+					BeepFail();
 
 					txtOcr.Text = "No image found on the clipboard.";
 					this.Activate();
@@ -311,8 +427,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
 				txtOcr.Text = msg;
 
-				Console.Beep(550, 80);
-				Console.Beep(400, 80);
+				BeepFail();
 
 				this.Activate();
 				//MessageBox.Show(this, msg, "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -330,9 +445,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 
 		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
-		public void SetTextToClipboard(string text)
+		public void SetTextToClipboard(
+			string text)
 		{
-			Clipboard.SetText(text, TextDataFormat.Text);
+			if (!string.IsNullOrWhiteSpace(text))
+				Clipboard.SetText(text, TextDataFormat.UnicodeText);
 		}
 
 
@@ -347,7 +464,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotKeySpeechToText()
 		{
-			_hkSpeechToText = MapHotKey(Settings.OpenAiSettings.SpeechToTextHotKey);
+			_hkSpeechToText = MapHotKey(Settings.SpeetchToTextSettings.SpeechToTextHotKey);
 			_hkSpeechToText.Pressed += delegate { SpeechToText(); };
 			TryRegisterHotkey(_hkSpeechToText);
 
@@ -358,21 +475,24 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
-				if (!Directory.Exists(Settings.OpenAiSettings.TempDirectory))
-					Directory.CreateDirectory(Settings.OpenAiSettings.TempDirectory);
+				string sessionsDirectory = Path.Combine(Settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
+				if (!Directory.Exists(sessionsDirectory))
+					Directory.CreateDirectory(sessionsDirectory);
 
-				string audioFilePath = Path.Combine(Settings.OpenAiSettings.TempDirectory, "mutation_recording.mp3");
+				string audioFilePath = Path.Combine(sessionsDirectory, "mutation_recording.mp3");
 
 				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
 					if (!RecordingAudio)
 					{
+						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Recording microphone...";
+
 						AudioRecorder = new AudioRecorder();
 						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
 						btnSpeechToTextRecord.Text = "Stop &Recording";
 
-						Console.Beep(970, 80);
+						BeepStart();
 					}
 					else // Busy recording, so we want to stop it.
 					{
@@ -380,32 +500,31 @@ The model may also leave out common filler words in the audio. If you want to ke
 						AudioRecorder.Dispose();
 						AudioRecorder = null;
 
-						Console.Beep(1050, 40);
+						BeepStart();
 
+						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Converting speech to text...";
+
 						btnSpeechToTextRecord.Text = "Processing";
 						btnSpeechToTextRecord.Enabled = false;
 
 						string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
 
-						SetTextToClipboard(text);
-						txtSpeechToText.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
+						txtSpeechToText.ReadOnly = false;
+						txtSpeechToText.Text = $"{text}";
 
 						btnSpeechToTextRecord.Text = "&Record";
 						btnSpeechToTextRecord.Enabled = true;
-
-						Console.Beep(1050, 40);
-						Console.Beep(1150, 40);
 					}
 				}
 
 			}
 			catch (Exception ex)
 			{
-				Console.Beep(550, 40);
-				Console.Beep(550, 40);
+				BeepFail();
 
 				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
+				txtSpeechToText.ReadOnly = true;
 				txtSpeechToText.Text = msg;
 
 				btnSpeechToTextRecord.Text = "&Record";
@@ -419,7 +538,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 				_audioRecorderLock.Release();
 			}
 		}
-
 
 		private static Hotkey MapHotKey(string hotKeyStringRepresentation)
 		{
@@ -456,7 +574,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
-			Settings.OpenAiSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			Settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			Settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
+			Settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 			this.SettingsManager.SaveSettingsToFile(Settings);
 
 			UnregisterHotkey(_hkToggleMicMute);
@@ -479,9 +599,233 @@ The model may also leave out common filler words in the audio. If you want to ke
 			await SpeechToText();
 		}
 
-		private void btnProofreadingReviewAndCorrect_Click(object sender, EventArgs e)
+		private void btnClearFormattedTranscript_Click(object sender, EventArgs e)
+		{
+			txtFormatTranscriptResponse.Text = string.Empty;
+		}
+
+		private async Task FormatSpeechToTextTranscriptWithRules()
+		{
+			string rawTranscript = txtSpeechToText.Text;
+
+			string text = rawTranscript;
+			if (radManualPunctuation.Checked)
+			{
+				text = text.RemoveSubstrings(",", ".", ";", ":", "?", "!", "...", "…");
+				text = text.Replace("  ", " ");
+			}
+			text = text.FormatWithRules(Settings.LlmSettings.TranscriptFormatRules);
+			text = text.CleanupPunctuation();
+
+			if (chkFormattedTranscriptAppend.Checked)
+				txtFormatTranscriptResponse.Text += text;
+			else
+				txtFormatTranscriptResponse.Text = text;
+
+			await Task.Delay(100);
+			SetTextToClipboard(text);
+
+			if (!this.ContainsFocus)
+			{
+				var selectedInsertOptionValue = cmbInsertInto3rdPartyApplication.SelectedItem;
+
+				if (selectedInsertOptionValue is not null)
+				{
+					InsertOption selectedOption = (InsertOption)((dynamic)selectedInsertOptionValue).Value;
+
+					switch (selectedOption)
+					{
+						case InsertOption.SendKeys:
+							BeepStart();
+							SendKeys.Send(text);
+							break;
+						case InsertOption.Paste:
+							Thread.Sleep(200); // Wait for text to arrive on clipboard.
+							BeepStart();
+							SendKeys.SendWait("^v");
+							break;
+					}
+				}
+			}
+
+			BeepSuccess();
+		}
+
+		private async Task FormatSpeechToTextTranscriptWithLlm()
+		{
+			txtFormatTranscriptResponse.Text = "Formatting...";
+			BeepStart();
+
+			string rawTranscript = txtSpeechToText.Text;
+			string formatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
+
+			var messages = new List<ChatMessage>
+			{
+				ChatMessage.FromSystem($"{formatTranscriptPrompt}"),
+				ChatMessage.FromUser($"Reformat the following transcript: {rawTranscript}"),
+			};
+
+			string formattedText = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
+			txtFormatTranscriptResponse.Text = formattedText.FixNewLines();
+
+			BeepSuccess();
+		}
+
+		private async Task ReviewSpeechToTextTranscriptWithLlm()
+		{
+			txtTranscriptReviewResponse.ReadOnly = true;
+			txtTranscriptReviewResponse.Text = "Reviewing...";
+			dgvReview.Enabled = false;
+			SetReviewGridCaption("Reviewing...");
+
+			dgvReview.Rows.Clear();
+			BeepStart();
+
+			string transcript = txtFormatTranscriptResponse.Text;
+			string reviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
+
+			var messages = new List<ChatMessage>
+			{
+				ChatMessage.FromSystem($"{reviewTranscriptPrompt}"),
+				ChatMessage.FromUser($"Review the following transcript: {Environment.NewLine}{Environment.NewLine}{transcript}"),
+			};
+
+			var selectedTemperature = cmbReviewTemperature.SelectedItem;
+			decimal temperature = ((dynamic)selectedTemperature).Value;
+			string review = await LlmService.CreateChatCompletion(messages, Models.Gpt_4, temperature);
+			txtTranscriptReviewResponse.Text = review.FixNewLines();
+			txtTranscriptReviewResponse.ReadOnly = false;
+
+			var lines = txtTranscriptReviewResponse.Text.Split(Environment.NewLine, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+			foreach (var line in lines)
+			{
+				string issue = line.RemovePrefix("- ");
+				dgvReview.Rows.Add(new object[] { false, issue });
+			}
+			dgvReview.Enabled = true;
+			SetReviewGridCaption("Issue");
+
+			BeepSuccess();
+		}
+
+		private void SetReviewGridCaption(string text)
+		{
+			dgvReview.Columns[1].HeaderCell.Value = text;
+		}
+
+		private void BeepMuted()
+		{
+			Console.Beep(500, 200);
+		}
+
+		private void BeepUnmuted()
+		{
+			Console.Beep(1300, 50);
+		}
+
+		private static void BeepStart()
+		{
+			Console.Beep(970, 80);
+		}
+
+		private static void BeepSuccess()
+		{
+			Console.Beep(1050, 40);
+			Console.Beep(1150, 40);
+		}
+
+		private static void BeepFail()
+		{
+			for (int i = 0; i < 3; i++)
+				Console.Beep(300, 100);
+		}
+
+		private async void btnReviewTranscript_Click(object sender, EventArgs e)
+		{
+			await ReviewSpeechToTextTranscriptWithLlm();
+		}
+
+		private void lblFormatTranscriptPrompt_Click(object sender, EventArgs e)
+		{
+			txtFormatTranscriptPrompt.Visible = !txtFormatTranscriptPrompt.Visible;
+		}
+
+		private void lblReviewTranscriptPrompt_Click(object sender, EventArgs e)
+		{
+			txtReviewTranscriptPrompt.Visible = !txtReviewTranscriptPrompt.Visible;
+		}
+
+		private async void txtSpeechToText_TextChanged(object sender, EventArgs e)
+		{
+			if (!txtSpeechToText.ReadOnly)
+			{
+				await FormatSpeechToTextTranscriptWithRules();
+			}
+		}
+
+		private void lblTranscriptReview_Click(object sender, EventArgs e)
+		{
+			dgvReview.Visible = txtTranscriptReviewResponse.Visible;
+			txtTranscriptReviewResponse.Visible = !dgvReview.Visible;
+		}
+
+		private async void btnApplySelectedReviewIssues_Click(object sender, EventArgs e)
+		{
+			await ApplyReviewActionsToFormattedTranscriptWithLlm();
+		}
+
+		private async Task ApplyReviewActionsToFormattedTranscriptWithLlm()
+		{
+			List<(DataGridViewRow row, string instruction)> selectedRows = new();
+			foreach (DataGridViewRow row in dgvReview.Rows)
+			{
+				if (row.Cells[0].Value != null && (bool)row.Cells[0].Value == true)
+					selectedRows.Add((row, row.Cells[1].Value.ToString()));
+			}
+
+			if (selectedRows.Any())
+			{
+				txtFormatTranscriptResponse.ReadOnly = true;
+				dgvReview.Enabled = false;
+				SetReviewGridCaption("Applying corrections...");
+
+				BeepStart();
+
+				string transcript = txtFormatTranscriptResponse.Text;
+				string systemPrompt = txtReviewTranscriptPrompt.Text;
+				string[] instructions = selectedRows
+					.Select(x => $"- {x.instruction}")
+					.ToArray();
+				string combinedInstructions = string.Join(Environment.NewLine, instructions);
+
+				var messages = new List<ChatMessage>
+				{
+					ChatMessage.FromSystem($"{systemPrompt}"),
+					ChatMessage.FromUser($"Apply the corrections and respond only with the corrected transcript.{Environment.NewLine}{Environment.NewLine}Correction Instructions:{Environment.NewLine}{combinedInstructions }{Environment.NewLine}{Environment.NewLine}Transcript:{Environment.NewLine}{transcript}"),
+				};
+
+				string revision = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
+				txtFormatTranscriptResponse.Text = revision.FixNewLines();
+				txtFormatTranscriptResponse.ReadOnly = false;
+
+				foreach (var (row, instruction) in selectedRows)
+					dgvReview.Rows.Remove(row);
+				dgvReview.Enabled = true;
+				SetReviewGridCaption("Issue");
+
+				BeepSuccess();
+			}
+		}
+
+		private void dgvReview_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+		{
+
+		}
+
+		private void dgvReview_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
 		{
 
 		}
 	}
 }
+
