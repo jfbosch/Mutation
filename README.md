@@ -1,7 +1,7 @@
 # Mutation
 
 ## Introduction
-The Mutation project is a simple .Net multifaceted tool designed to enhance productivity and accessibility for users via configurable, global hotkeys. Leveraging various technologies and cloud services, the application offers several features, including screen capturing, Optical Character Recognition (OCR), Speech to Text conversion, and microphone control functionalities.
+The Mutation project is a simple .Net multifaceted tool designed to enhance productivity and accessibility for users via configurable, global hotkeys. Leveraging various technologies and cloud services, the application offers several features, including microphone toggle, screen capture, Optical Character Recognition (OCR), Speech to Text conversion, and transcript review with the ChatGPT 4 LLM.
 
 ## Features
 ### Toggle Microphone Mute
@@ -50,6 +50,26 @@ If you want to use the speech-to-text functionality, you will need to create an 
 Unfortunately, this only has a limited free credit, but in my experience it is fairly cheap even with quite aggressive daily use.
 https://platform.openai.com/overview
 Currently, in Mutation.json, the OpenAiSettings.Endpoint value is not used and can be left unpopulated. For now, the application will use the default Whisper endpoint.
+
+
+#### Review transcript with ChatGPT API
+
+If you want to use the LLM review capabilities, you will need to provision an Azure OpenAI service on the Azure portal.
+Before you can do that, you have to apply. Here is the application form.
+https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xUOFA5Qk1UWDRBMjg0WFhPMkIzTzhKQ1dWNyQlQCN0PWcu
+
+Once you have been approved, you can join the GPT 4 waiting list as well.
+https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xURjE4QlhVUERGQ1NXOTlNT0w1NldTWjJCMSQlQCN0PWcu
+
+Note that you will require an existing Azure subscription ID during the application process. 
+
+Once you have been approved in the Azure portal, which is at portal.azure.com, you can provision a new resource of the type Azure OpenAI, and then you can deploy any of the models that you want to use. Typically, that would be chat-gpt 3. 5 turbo and gpt 4. You will require the API key as well as the name that you named the Azure OpenAI resource to configure the feature in Mutation.json 
+under the section called LlmSettings. (First run Mutation.exe to make sure the relevant settings in Mutation.json is created.)
+
+When you deploy a new model, use the exact same deployment name as the model name. I.e. copy and paste it.
+
+Note that there is no cost to just deploy the models. You will be charged for actual topen usage. Do familiarize yourself with the Azure OpenAI API pricing to avoid rude surprises. Specifically, GPT-4 starts getting very expensive very quickly. 
+
 
 
 Lastly, simply run the application, and you'll have access to all the features accessible via hotkeys. You can then use these hotkeys to perform the actions described in the Features section.
