@@ -3,20 +3,18 @@ using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
 using NAudio.Wave;
-using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
 using StringExtensionLibrary;
 using System.ComponentModel;
 using System.Drawing.Imaging;
-using static OpenAI.ObjectModels.SharedModels.IOpenAiModels;
 
 namespace Mutation
 {
 	public partial class MutationForm : Form
 	{
-		public enum InsertOption
+		public enum DictationInsertOption
 		{
 			[Description("Don't insert into 3rd party application")]
 			DoNotInsert,
@@ -83,7 +81,7 @@ namespace Mutation
 			InitializeLlmReviewListView();
 
 			cmbInsertInto3rdPartyApplication.DropDownStyle = ComboBoxStyle.DropDownList;
-			foreach (InsertOption option in Enum.GetValues(typeof(InsertOption)))
+			foreach (DictationInsertOption option in Enum.GetValues(typeof(DictationInsertOption)))
 			{
 				string description = GetEnumDescription(option);
 				cmbInsertInto3rdPartyApplication.Items.Add(new { Text = description, Value = option });
@@ -631,15 +629,15 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				if (selectedInsertOptionValue is not null)
 				{
-					InsertOption selectedOption = (InsertOption)((dynamic)selectedInsertOptionValue).Value;
+					DictationInsertOption selectedOption = (DictationInsertOption)((dynamic)selectedInsertOptionValue).Value;
 
 					switch (selectedOption)
 					{
-						case InsertOption.SendKeys:
+						case DictationInsertOption.SendKeys:
 							BeepStart();
 							SendKeys.Send(text);
 							break;
-						case InsertOption.Paste:
+						case DictationInsertOption.Paste:
 							Thread.Sleep(200); // Wait for text to arrive on clipboard.
 							BeepStart();
 							SendKeys.SendWait("^v");
