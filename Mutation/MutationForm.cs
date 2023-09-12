@@ -499,7 +499,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 				if (!Directory.Exists(sessionsDirectory))
 					Directory.CreateDirectory(sessionsDirectory);
 
-				string audioFilePath = Path.Combine(sessionsDirectory, "mutation_recording.mp3");
 
 				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
@@ -509,7 +508,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						txtSpeechToText.Text = "Recording microphone...";
 
 						AudioRecorder = new AudioRecorder();
-						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
+						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, new DirectoryInfo(sessionsDirectory));
 						btnSpeechToTextRecord.Text = "Stop &Recording";
 
 						BeepStart();
@@ -528,7 +527,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 						btnSpeechToTextRecord.Text = "Processing";
 						btnSpeechToTextRecord.Enabled = false;
 
-						string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
+						//BookMark??
+						string text = "bla bla";
+						//string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, sessionsDirectory).ConfigureAwait(true);
+
 
 						txtSpeechToText.ReadOnly = false;
 						txtSpeechToText.Text = $"{text}";

@@ -1,24 +1,23 @@
-﻿using NAudio.Lame;
-using NAudio.Wave;
+﻿using NAudio.Wave;
 
 namespace CognitiveSupport
 {
 	public class AudioRecorder : IDisposable
 	{
 		private WaveInEvent waveIn;
-		private LameMP3FileWriter mp3Writer;
+		private RollingAudioFileWriter mp3Writer;
 
 		public void StartRecording(
 			int captureDeviceIndex,
-			string outputFile)
+			DirectoryInfo outputDirectory)
 		{
 			waveIn = new WaveInEvent();
 			waveIn.DeviceNumber = captureDeviceIndex;
-			
+
 			// Debugging exception to show the name.
 			//throw new Exception("Device Index " + captureDeviceIndex + "   " + WaveInEvent.GetCapabilities(captureDeviceIndex).ProductName);
 
-			mp3Writer = new LameMP3FileWriter(outputFile, waveIn.WaveFormat, LAMEPreset.STANDARD);
+			mp3Writer = new RollingAudioFileWriter(outputDirectory);
 
 			waveIn.DataAvailable += (sender, e) =>
 			{
@@ -47,6 +46,7 @@ namespace CognitiveSupport
 			mp3Writer = null;
 			waveIn?.Dispose();
 			waveIn = null;
+			
 		}
 	}
 
