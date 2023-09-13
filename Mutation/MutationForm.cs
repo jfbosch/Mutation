@@ -482,6 +482,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_hkTextToSpeech.Pressed += delegate { TextToSpeech(); };
 			TryRegisterHotkey(_hkTextToSpeech);
 
+			//TODO: add label to UI.
 			//lblTextToSpeech.Text = $"Text to Speech: {_hkTextToSpeech}";
 		}
 
