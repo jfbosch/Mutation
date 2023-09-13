@@ -4,6 +4,8 @@ namespace CognitiveSupport
 {
 	public class AudioRecorder : IDisposable
 	{
+		public Exception LastRecordingException { get; set; }
+
 		private WaveInEvent waveIn;
 		private RollingAudioFileWriter mp3Writer;
 
@@ -11,6 +13,8 @@ namespace CognitiveSupport
 			int captureDeviceIndex,
 			DirectoryInfo outputDirectory)
 		{
+			LastRecordingException = null;
+
 			waveIn = new WaveInEvent();
 			waveIn.DeviceNumber = captureDeviceIndex;
 
@@ -21,7 +25,15 @@ namespace CognitiveSupport
 
 			waveIn.DataAvailable += (sender, e) =>
 			{
-				mp3Writer.Write(e.Buffer, 0, e.BytesRecorded);
+				try
+				{
+					mp3Writer.Write(e.Buffer, 0, e.BytesRecorded, waveIn.WaveFormat);
+				}
+				catch (Exception ex)
+				{
+					LastRecordingException = ex;
+					StopRecording();
+				}
 			};
 
 			waveIn.RecordingStopped += (sender, e) =>
@@ -46,7 +58,6 @@ namespace CognitiveSupport
 			mp3Writer = null;
 			waveIn?.Dispose();
 			waveIn = null;
-			
 		}
 	}
 

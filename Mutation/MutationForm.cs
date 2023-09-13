@@ -38,7 +38,7 @@ namespace Mutation
 		private OcrService OcrService { get; set; }
 
 		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
-		private AudioRecorder AudioRecorder { get; set; }
+		private AudioRecorder? AudioRecorder { get; set; }
 		private bool RecordingAudio => AudioRecorder != null;
 
 		private SpeechToTextService SpeechToTextService { get; set; }
@@ -257,7 +257,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				if (!micMatchFound)
 					MessageBox.Show($"No michrophone match found for {this.Microphone.Name}");
 
-				FeedbackToUser();
+				FeedbackToUserMicToggleState();
 			}
 			else
 			{
@@ -274,11 +274,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 				foreach (var mic in _devices)
 					mic.Mute(IsMuted);
 
-				FeedbackToUser();
+				FeedbackToUserMicToggleState();
 			}
 		}
 
-		private void FeedbackToUser()
+		private void FeedbackToUserMicToggleState()
 		{
 			lock (this)
 			{
@@ -517,8 +517,15 @@ The model may also leave out common filler words in the audio. If you want to ke
 					else // Busy recording, so we want to stop it.
 					{
 						AudioRecorder.StopRecording();
+						var ex = AudioRecorder.LastRecordingException;
+						AudioRecorder.LastRecordingException = null;
 						AudioRecorder.Dispose();
 						AudioRecorder = null;
+
+
+						if (ex is not null)
+							throw ex;
+
 
 						BeepStart();
 
