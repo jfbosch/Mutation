@@ -54,6 +54,9 @@ namespace Mutation
 		private IEnumerable<CoreAudioDevice> _devices;
 		private CoreAudioDevice Microphone { get; set; }
 
+		private TextToSpeechService _textToSpeechService;
+		private Hotkey _hkTextToSpeech { get; set; }
+
 		public MutationForm()
 		{
 			LoadSettings();
@@ -68,6 +71,8 @@ namespace Mutation
 				Settings.LlmSettings.ApiKey,
 				Settings.LlmSettings.ResourceName,
 				Settings.LlmSettings.ModelDeploymentIdMaps);
+
+			_textToSpeechService = new();
 
 			txtSpeechToTextPrompt.Text = Settings.SpeetchToTextSettings.SpeechToTextPrompt;
 
@@ -99,6 +104,9 @@ namespace Mutation
 			cmbReviewTemperature.DisplayMember = "Text";
 			cmbReviewTemperature.ValueMember = "Value";
 			cmbReviewTemperature.SelectedIndex = 4;
+
+
+			//BookMark??999
 
 		}
 
@@ -302,8 +310,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 			HookupHotKeyScreenshotOcr();
 			HookupHotKeyOcr();
 
-
 			HookupHotKeySpeechToText();
+			HookupHotKeyTextToSpeech();
 		}
 
 		private void HookupHotKeyScreenshot()
@@ -450,7 +458,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 				Clipboard.SetText(text, TextDataFormat.UnicodeText);
 		}
 
-
 		private void HookupHotKeyToggleMichrophoneMuteHotkey()
 		{
 			_hkToggleMicMute = MapHotKey(Settings.AudioSettings.MicrophoneToggleMuteHotKey);
@@ -467,6 +474,21 @@ The model may also leave out common filler words in the audio. If you want to ke
 			TryRegisterHotkey(_hkSpeechToText);
 
 			lblSpeechToText.Text = $"Speach to Text: {_hkSpeechToText}";
+		}
+
+		private void HookupHotKeyTextToSpeech()
+		{
+			_hkTextToSpeech = MapHotKey(Settings.TextToSpeechSettings.TextToSpeechHotKey);
+			_hkTextToSpeech.Pressed += delegate { TextToSpeech(); };
+			TryRegisterHotkey(_hkTextToSpeech);
+
+			//lblTextToSpeech.Text = $"Text to Speech: {_hkTextToSpeech}";
+		}
+
+		private void TextToSpeech()
+		{
+			string text = Clipboard.GetText();
+			_textToSpeechService.SpeakText(text);
 		}
 
 		private async Task SpeechToText()

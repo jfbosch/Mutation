@@ -8,6 +8,7 @@ public class Settings
 	public AzureComputerVisionSettings AzureComputerVisionSettings { get; set; }
 	public SpeetchToTextSettings SpeetchToTextSettings { get; set; }
 	public LlmSettings LlmSettings { get; set; }
+	public TextToSpeechSettings TextToSpeechSettings { get; set; }
 }
 
 public class AudioSettings
@@ -62,4 +63,9 @@ public class LlmSettings
 			Smart = 3,
 		}
 	}
+}
+
+public class TextToSpeechSettings
+{
+	public string TextToSpeechHotKey { get; set; }
 }

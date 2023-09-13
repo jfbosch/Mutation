@@ -335,6 +335,19 @@ When you are asked to apply revision corrections, you should do the following:
 			//somethingWasMissing = true;
 		}
 
+		//----------------------------------
+		if (settings.TextToSpeechSettings is null)
+		{
+			settings.TextToSpeechSettings = new TextToSpeechSettings();
+			somethingWasMissing = true;
+		}
+		var textToSpeechSettings = settings.TextToSpeechSettings;
+		if (string.IsNullOrWhiteSpace(textToSpeechSettings.TextToSpeechHotKey))
+		{
+			textToSpeechSettings.TextToSpeechHotKey = "CTRL+SHIFT+Q";
+			somethingWasMissing = true;
+		}
+
 		return somethingWasMissing;
 	}
 
