@@ -32,9 +32,8 @@ namespace CognitiveSupport
 			int count,
 			WaveFormat waveFormat)
 		{
-			//BookMark??
-			//if (buffer is null)
-			//	throw new ArgumentNullException(nameof(buffer));
+			if (buffer is null)
+				throw new ArgumentNullException(nameof(buffer));
 
 			lock (_lock)
 			{
