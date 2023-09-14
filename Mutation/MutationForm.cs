@@ -108,6 +108,10 @@ namespace Mutation
 
 			//BookMark??999
 
+			var sessionDir = new DirectoryInfo(@"C:\Temp\Mutation\Sessions\Session_2023-09-14_08-44-04");
+			var rolling = new RollingAudioFileWriter(sessionDir);
+			string wave = Path.Combine(sessionDir.FullName, "_output.wav");
+			rolling.Split(wave);
 		}
 
 		public static string GetEnumDescription(Enum value)
