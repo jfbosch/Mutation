@@ -12,7 +12,7 @@ public class RollingAudioFileWriter : IDisposable
 	private readonly object _lock = new object();
 	private DirectoryInfo _sessionDirectory;
 
-	private volatile WaveFileWriter _activeWaveWriter;
+	private volatile WaveFileWriter? _activeWaveWriter;
 
 	private int _fileIndex = 0;
 	private DateTime _lastFileSwitch = DateTime.UtcNow;

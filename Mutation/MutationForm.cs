@@ -471,10 +471,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 			lblToggleMic.Text = $"Toggle Michrophone Mute: {_hkToggleMicMute}";
 		}
 
-		private void HookupHotKeySpeechToText()
+		private async void HookupHotKeySpeechToText()
 		{
 			_hkSpeechToText = MapHotKey(Settings.SpeetchToTextSettings.SpeechToTextHotKey);
-			_hkSpeechToText.Pressed += delegate { SpeechToText(); };
+			_hkSpeechToText.Pressed += async delegate { await SpeechToText(); };
 			TryRegisterHotkey(_hkSpeechToText);
 
 			lblSpeechToText.Text = $"Speach to Text: {_hkSpeechToText}";

@@ -8,8 +8,8 @@ namespace CognitiveSupport
 {
 	public class SpeechToTextService
 	{
-		private readonly string ApiKey;
-		private readonly string Endpoint;
+		private readonly string _apiKey;
+		private readonly string _endpoint;
 		private readonly object _lock = new object();
 		private readonly IOpenAIService _openAIService;
 
@@ -17,7 +17,7 @@ namespace CognitiveSupport
 		public SpeechToTextService(
 			string apiKey)
 		{
-			ApiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+			_apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
 
 			OpenAiOptions options = new OpenAiOptions
 			{
