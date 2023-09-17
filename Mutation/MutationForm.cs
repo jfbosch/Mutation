@@ -2,6 +2,7 @@
 using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
+using NAudio.Lame;
 using NAudio.Wave;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
@@ -26,7 +27,10 @@ namespace Mutation
 			Paste
 		}
 
-		private ScreenCaptureForm _activeScreenCaptureForm = null;
+		private System.Threading.Timer? StreamingSpeechToTextTimer;
+		private readonly string _sessionsDirectory;
+
+		private ScreenCaptureForm? _activeScreenCaptureForm;
 
 		private Settings Settings { get; set; }
 		private SettingsManager SettingsManager { get; set; }
@@ -73,8 +77,12 @@ namespace Mutation
 				Settings.LlmSettings.ModelDeploymentIdMaps);
 
 			_textToSpeechService = new();
-
 			txtSpeechToTextPrompt.Text = Settings.SpeetchToTextSettings.SpeechToTextPrompt;
+			_sessionsDirectory = Path.Combine(Settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
+			if (!Directory.Exists(_sessionsDirectory))
+				Directory.CreateDirectory(_sessionsDirectory);
+
+
 
 			HookupTooltips();
 
@@ -106,12 +114,12 @@ namespace Mutation
 			cmbReviewTemperature.SelectedIndex = 4;
 
 
-			//BookMark??999
-
-			var sessionDir = new DirectoryInfo(@"C:\Temp\Mutation\Sessions\Session_2023-09-14_08-44-04");
-			var rolling = new RollingAudioFileWriter(sessionDir);
-			string wave = Path.Combine(sessionDir.FullName, "_output.wav");
-			rolling.Split(wave);
+			//BookMark??
+			//HACK:
+			//var sessionDir = new DirectoryInfo(@"C:\Temp\Mutation\Sessions\Session_2023-09-14_08-44-04");
+			//var rolling = new RollingAudioFileWriter(sessionDir);
+			//string wave = Path.Combine(sessionDir.FullName, "_output.wav");
+			//rolling.Split(wave);
 		}
 
 		public static string GetEnumDescription(Enum value)
@@ -471,10 +479,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 			lblToggleMic.Text = $"Toggle Michrophone Mute: {_hkToggleMicMute}";
 		}
 
-		private async void HookupHotKeySpeechToText()
+		private void HookupHotKeySpeechToText()
 		{
 			_hkSpeechToText = MapHotKey(Settings.SpeetchToTextSettings.SpeechToTextHotKey);
-			_hkSpeechToText.Pressed += async delegate { await SpeechToText(); };
+			_hkSpeechToText.Pressed += delegate { SpeechToText(); };
 			TryRegisterHotkey(_hkSpeechToText);
 
 			lblSpeechToText.Text = $"Speach to Text: {_hkSpeechToText}";
@@ -500,11 +508,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
-				string sessionsDirectory = Path.Combine(Settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
-				if (!Directory.Exists(sessionsDirectory))
-					Directory.CreateDirectory(sessionsDirectory);
-
-
 				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
 					if (!RecordingAudio)
@@ -513,42 +516,30 @@ The model may also leave out common filler words in the audio. If you want to ke
 						txtSpeechToText.Text = "Recording microphone...";
 
 						AudioRecorder = new AudioRecorder();
-						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, new DirectoryInfo(sessionsDirectory));
+						var sessionDirectory = AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, new DirectoryInfo(_sessionsDirectory));
 						btnSpeechToTextRecord.Text = "Stop &Recording";
 
 						BeepStart();
+						StreamingSpeechToTextTimer =
+							new
+							(
+								new TimerCallback(StreamingSpeechToTextTimerCallback),
+								sessionDirectory,
+								TimeSpan.FromSeconds(2),
+								TimeSpan.FromSeconds(2)
+							);
 					}
 					else // Busy recording, so we want to stop it.
 					{
-						AudioRecorder.StopRecording();
-						var ex = AudioRecorder.LastRecordingException;
-						AudioRecorder.LastRecordingException = null;
-						AudioRecorder.Dispose();
+						AudioRecorder?.StopRecording();
+						var lastRecordingException = AudioRecorder?.LastRecordingException;
+						AudioRecorder?.Dispose();
 						AudioRecorder = null;
 
-
-						if (ex is not null)
-							throw ex;
-
+						if (lastRecordingException is not null)
+							throw lastRecordingException;
 
 						BeepStart();
-
-						txtSpeechToText.ReadOnly = true;
-						txtSpeechToText.Text = "Converting speech to text...";
-
-						btnSpeechToTextRecord.Text = "Processing";
-						btnSpeechToTextRecord.Enabled = false;
-
-						//BookMark??
-						string text = "bla bla";
-						//string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, sessionsDirectory).ConfigureAwait(true);
-
-
-						txtSpeechToText.ReadOnly = false;
-						txtSpeechToText.Text = $"{text}";
-
-						btnSpeechToTextRecord.Text = "&Record";
-						btnSpeechToTextRecord.Enabled = true;
 					}
 				}
 
@@ -570,6 +561,117 @@ The model may also leave out common filler words in the audio. If you want to ke
 			finally
 			{
 				_audioRecorderLock.Release();
+			}
+		}
+
+		private async void StreamingSpeechToTextTimerCallback(object state)
+		{
+			DirectoryInfo sessionDirectory = (DirectoryInfo)state;
+			var waveFiles = sessionDirectory.GetFiles("clip_*.wav");
+
+			if (!RecordingAudio && !waveFiles.Any())
+			{
+				StreamingSpeechToTextTimer?.Dispose();
+				StreamingSpeechToTextTimer = null;
+
+				this.BeginInvoke((MethodInvoker)delegate
+				{
+					txtSpeechToText.ReadOnly = true;
+					txtSpeechToText.Text = "Converting speech to text...";
+
+					btnSpeechToTextRecord.Text = "Processing";
+					btnSpeechToTextRecord.Enabled = false;
+
+					txtSpeechToText.ReadOnly = false;
+
+					btnSpeechToTextRecord.Text = "&Record";
+					btnSpeechToTextRecord.Enabled = true;
+				});
+			}
+
+			ConvertWaveClipsToMp3(sessionDirectory);
+			var mp3Files = sessionDirectory.GetFiles("clip_*.mp3")
+				.OrderBy(x => x.Name)
+				.ToList();
+
+			if (!mp3Files.Any())
+				return;
+
+			string prompt = txtSpeechToTextPrompt.Text;
+			foreach (var mp3File in mp3Files)
+			{
+				FileInfo txtFile = new(Path.Combine(mp3File.Directory.FullName, $"{Path.GetFileNameWithoutExtension(mp3File.Name)}.txt"));
+				if (txtFile.Exists)
+					// mp3 was already converted to text.
+					continue;
+
+				string text = await this.SpeechToTextService.ConvertAudioToText(prompt, mp3File.FullName);
+				prompt = $"{prompt} {text}";
+				File.AppendAllText(txtFile.FullName, text);
+
+				this.BeginInvoke((MethodInvoker)delegate
+				{
+					txtSpeechToText.Text += $"{text}";
+				});
+			}
+		}
+
+		//BookMark??-
+		public void SpliceWaveClipsToMp3(
+			DirectoryInfo sessionDirectory)
+		{
+			string mp3FilePath = Path.Combine(sessionDirectory.FullName, $"_spliced_{DateTime.UtcNow.Ticks}.mp3");
+
+			var waveFiles = sessionDirectory.GetFiles("clip_*.wav").OrderBy(f => f.Name).ToList();
+			if (waveFiles.Count() == 0)
+				return;
+
+			using (var reader = new WaveFileReader(waveFiles[0].FullName))
+			using (var mp3Writer = new LameMP3FileWriter(mp3FilePath, reader.WaveFormat, LAMEPreset.STANDARD))
+			{
+				byte[] buffer = new byte[reader.WaveFormat.AverageBytesPerSecond * 4];
+
+				foreach (var waveFile in waveFiles)
+				{
+					using (var waveReader = new WaveFileReader(waveFile.FullName))
+					{
+						int read;
+						while ((read = waveReader.Read(buffer, 0, buffer.Length)) > 0)
+						{
+							mp3Writer.Write(buffer, 0, read);
+						}
+					}
+				}
+			}
+		}
+
+
+		public void ConvertWaveClipsToMp3(
+			DirectoryInfo sessionDirectory)
+		{
+			var waveFiles = sessionDirectory.GetFiles("clip_*.wav").OrderBy(f => f.Name).ToList();
+			if (waveFiles.Count() == 0)
+				return;
+
+			foreach (var waveFile in waveFiles)
+			{
+				FileInfo mp3File = new(Path.Combine(waveFile.Directory.FullName, $"{Path.GetFileNameWithoutExtension(waveFile.Name)}.mp3"));
+
+				using (var reader = new WaveFileReader(waveFile.FullName))
+				using (var mp3Writer = new LameMP3FileWriter(mp3File.FullName, reader.WaveFormat, LAMEPreset.STANDARD))
+				{
+					byte[] buffer = new byte[reader.WaveFormat.AverageBytesPerSecond * 4];
+					using (var waveReader = new WaveFileReader(waveFile.FullName))
+					{
+						int read;
+						while ((read = waveReader.Read(buffer, 0, buffer.Length)) > 0)
+						{
+							mp3Writer.Write(buffer, 0, read);
+						}
+					}
+				}
+
+				waveFile.Delete();
 			}
 		}
 

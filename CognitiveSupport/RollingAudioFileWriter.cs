@@ -17,6 +17,8 @@ public class RollingAudioFileWriter : IDisposable
 	private int _fileIndex = 0;
 	private DateTime _lastFileSwitch = DateTime.UtcNow;
 
+	public DirectoryInfo SessionDirectory => _sessionDirectory;
+
 	public RollingAudioFileWriter(DirectoryInfo outputDirectory)
 	{
 		_sessionDirectory = outputDirectory ?? throw new ArgumentNullException(nameof(outputDirectory));
@@ -84,7 +86,7 @@ public class RollingAudioFileWriter : IDisposable
 			_activeWaveWriter?.Dispose();
 			_activeWaveWriter = null;
 			RenameTempFileToFinalClipFile(_fileIndex);
-			SpliceClips();
+			//SpliceClips();
 		}
 	}
 

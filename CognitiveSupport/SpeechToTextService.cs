@@ -1,8 +1,8 @@
-﻿using OpenAI.ObjectModels.RequestModels;
-using OpenAI.ObjectModels;
+﻿using OpenAI;
 using OpenAI.Interfaces;
 using OpenAI.Managers;
-using OpenAI;
+using OpenAI.ObjectModels;
+using OpenAI.ObjectModels.RequestModels;
 
 namespace CognitiveSupport
 {
@@ -35,11 +35,13 @@ namespace CognitiveSupport
 			var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
 			var response = await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
 			{
+				Language = "en",
 				Prompt = speechToTextPrompt,
 				FileName = Path.GetFileName(audioffilePath),
 				File = audioBytes,
 				Model = Models.WhisperV1,
-				ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson
+				ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson,
+				Temperature = 0.2f,
 			});
 			if (response.Successful)
 			{
@@ -48,10 +50,9 @@ namespace CognitiveSupport
 			else
 			{
 				if (response.Error == null)
-				{
-					throw new Exception("Unknown Error");
-				}
-				return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
+					return $"Error converting speech to text: Unknown Error";
+				else
+					return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
 			}
 		}
 	}

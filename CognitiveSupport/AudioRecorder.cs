@@ -9,7 +9,8 @@ namespace CognitiveSupport
 		private WaveInEvent? _waveIn;
 		private RollingAudioFileWriter? _audioWriter;
 
-		public void StartRecording(
+		/// <returns>The session directory to which recorded files are being saved.</returns>
+		public DirectoryInfo StartRecording(
 			int captureDeviceIndex,
 			DirectoryInfo outputDirectory)
 		{
@@ -42,6 +43,8 @@ namespace CognitiveSupport
 			};
 
 			_waveIn.StartRecording();
+
+			return _audioWriter.SessionDirectory;
 		}
 
 		public void StopRecording()
