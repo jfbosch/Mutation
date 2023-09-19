@@ -116,10 +116,18 @@ namespace Mutation
 
 			//BookMark??
 			//HACK:
-			//var sessionDir = new DirectoryInfo(@"C:\Temp\Mutation\Sessions\Session_2023-09-14_08-44-04");
-			//var rolling = new RollingAudioFileWriter(sessionDir);
-			//string wave = Path.Combine(sessionDir.FullName, "_output.wav");
-			//rolling.Split(wave);
+			var sessionDir = new DirectoryInfo(@"C:\Temp\Mutation\Sessions\_Samples");
+			//ConvertWaveClipsToMp3(sessionDir);
+
+			var rolling = new RollingAudioFileWriter(sessionDir);
+			string wave = Path.Combine(sessionDir.FullName, "Sample1.wav");
+			rolling.SplitWaveFileOnPauses(wave,
+				fftLength: 4096 * 2,
+				volumeHistorySize: 20,
+				averageVolumeThresholdMultiplier: 0.9,
+				minPauseLengthMs: 200.0,
+				pauseBufferZoneMs: 30.0);
+
 		}
 
 		public static string GetEnumDescription(Enum value)

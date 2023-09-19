@@ -118,9 +118,23 @@ public class RollingAudioFileWriter : IDisposable
 		}
 	}
 
-	public void Split(string waveFile)
+
+	/// <summary>
+	/// Splits a given wave file based on detected pauses in the audio.
+	/// </summary>
+	/// <param name="waveFile">The path to the wave file to split.</param>
+	/// <param name="fftLength">The length of the FFT. A larger FFT length provides more frequency resolution but less time resolution.</param>
+	/// <param name="volumeHistorySize">The size of the volume history used for dynamic thresholding. Increasing this value can make the threshold less sensitive to sudden volume changes.</param>
+	/// <param name="averageVolumeThresholdMultiplier">The multiplier applied to the average volume to calculate the dynamic threshold for detecting pauses. Lower values make the algorithm more sensitive to pauses.</param>
+	/// <param name="minPauseLengthMs">The minimum length in milliseconds for a detected pause. Increase this value to consider only longer pauses as word boundaries.</param>
+	/// <param name="pauseBufferZoneMs">The buffer zone in milliseconds around detected pauses. A larger buffer may help avoid cutting off words, but could also merge closely-spaced words.</param>
+	public void SplitWaveFileOnPauses(string waveFile,
+		int fftLength = 4096 * 2,
+		int volumeHistorySize = 20,
+		double averageVolumeThresholdMultiplier = 0.9,
+		double minPauseLengthMs = 20.0,
+		double pauseBufferZoneMs = 30.0)
 	{
-		int fftLength = 4096;
 		float[] fftBuffer = new float[fftLength];
 		Complex[] fftComplex = new Complex[fftLength];
 		List<long> pausePositions = new List<long>();
@@ -128,7 +142,7 @@ public class RollingAudioFileWriter : IDisposable
 		long currentPauseStart = 0;
 		bool isPause = false;
 
-		double[] volumeHistory = new double[10];  // Keep track of last 10 volumes
+		double[] volumeHistory = new double[volumeHistorySize];
 		int historyIndex = 0;
 
 		using (var reader = new WaveFileReader(waveFile))
@@ -149,14 +163,17 @@ public class RollingAudioFileWriter : IDisposable
 					audioBuffer[i] *= 0.5f * (1.0f - (float)Math.Cos(2 * Math.PI * i / (samplesReadNow - 1)));
 				}
 
+				// Fill fftComplex
 				for (int i = 0; i < fftLength / 2; i++)
 				{
 					fftComplex[i].X = (i < samplesReadNow) ? audioBuffer[i] : 0;
 					fftComplex[i].Y = 0;
 				}
 
+				// Perform FFT
 				FastFourierTransform.FFT(true, (int)Math.Log(fftLength, 2.0), fftComplex);
 
+				// Calculate volume
 				double sum = 0;
 				for (int i = 1; i < fftComplex.Length / 2; i++)
 				{
@@ -170,8 +187,9 @@ public class RollingAudioFileWriter : IDisposable
 				historyIndex++;
 
 				// Calculate dynamic threshold
-				double dynamicThreshold = volumeHistory.Average() * 0.9;
+				double dynamicThreshold = volumeHistory.Average() * averageVolumeThresholdMultiplier;
 
+				// Check for pause
 				if (volume < dynamicThreshold)
 				{
 					if (!isPause)
@@ -184,12 +202,13 @@ public class RollingAudioFileWriter : IDisposable
 				{
 					if (isPause)
 					{
-						long pauseLength = samplesRead - currentPauseStart;
-						long bufferZone = (long)(reader.WaveFormat.SampleRate * 0.02d); // 20 ms buffer
+						long pauseLength = samplesRead - currentPauseStart; // Declare and calculate pauseLength here
+						long bufferZone = (long)(reader.WaveFormat.SampleRate * (pauseBufferZoneMs / 1000.0d));
+						long minPauseLength = (long)(reader.WaveFormat.SampleRate * (minPauseLengthMs / 1000.0d));
 
-						if (pauseLength >= (reader.WaveFormat.SampleRate * 0.05) // 50 ms
-								  && currentPauseStart > bufferZone
-								  && (samplesRead + bufferZone) < totalSamples)
+						if (pauseLength >= minPauseLength
+									 && currentPauseStart > bufferZone
+									 && (samplesRead + bufferZone) < totalSamples)
 						{
 							pausePositions.Add(currentPauseStart + bufferZone);
 						}
