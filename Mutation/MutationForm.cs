@@ -401,6 +401,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				txtOcr.Text = "Running OCR on image";
 
+				if (image is null)
+					// Sometimes we are too quick for the image to have shown up on the clipboard, so, waita  short while and try again.
+					await Task.Delay(100);
+
 				if (image is not null)
 				{
 					using MemoryStream imageStream = new MemoryStream();
@@ -424,8 +428,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 					BeepFail();
 
 					txtOcr.Text = "No image found on the clipboard.";
-					this.Activate();
-					MessageBox.Show("No image found on the clipboard.");
+					//this.Activate();
+					//MessageBox.Show("No image found on the clipboard.");
 				}
 			}
 			catch (Exception ex)
@@ -435,7 +439,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				BeepFail();
 
-				this.Activate();
+				//this.Activate();
 				//MessageBox.Show(this, msg, "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
