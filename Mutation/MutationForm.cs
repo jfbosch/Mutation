@@ -229,6 +229,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			{
 				this.Size = new Size(Math.Max(this.Size.Width, 150), Math.Max(this.Size.Height, 150));
 			}
+
 			if (Settings.MainWindowUiSettings.WindowLocation != Point.Empty)
 			{
 				// Make sure the window location stays within the screen bounds
