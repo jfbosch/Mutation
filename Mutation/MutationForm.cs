@@ -215,29 +215,26 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void RestoreWindowLocationAndSizeFromSettings()
 		{
-			if (Settings != null)
-			{
-				if (Settings.MainWindowUiSettings.WindowSize == Size.Empty)
-				{
-					this.Size = Settings.MainWindowUiSettings.WindowSize;
-				}
-				else
-				{
-					// Make sure the window size stays within the screen bounds
-					this.Size = new Size(Math.Min(Settings.MainWindowUiSettings.WindowSize.Width, Screen.PrimaryScreen.Bounds.Width),
-												Math.Min(Settings.MainWindowUiSettings.WindowSize.Height, Screen.PrimaryScreen.Bounds.Height));
-				}
+			if (Settings is null)
+				return;
 
-				if (Settings.MainWindowUiSettings.WindowLocation == Point.Empty)
-				{
-					this.Location = Settings.MainWindowUiSettings.WindowLocation;
-				}
-				else
-				{
-					// Make sure the window location stays within the screen bounds
-					this.Location = new Point(Math.Max(Math.Min(Settings.MainWindowUiSettings.WindowLocation.X, Screen.PrimaryScreen.Bounds.Width - this.Size.Width), 0),
-													  Math.Max(Math.Min(Settings.MainWindowUiSettings.WindowLocation.Y, Screen.PrimaryScreen.Bounds.Height - this.Size.Height), 0));
-				}   
+			if (Settings.MainWindowUiSettings.WindowSize != Size.Empty)
+			{
+				// Make sure the window size stays within the screen bounds
+				this.Size = new Size(Math.Min(Settings.MainWindowUiSettings.WindowSize.Width, Screen.PrimaryScreen.Bounds.Width),
+											Math.Min(Settings.MainWindowUiSettings.WindowSize.Height, Screen.PrimaryScreen.Bounds.Height));
+			}
+			
+			if (this.Size.Width < 150 || this.Size.Height < 150)
+			{
+				this.Size = new Size(Math.Max(this.Size.Width, 150), Math.Max(this.Size.Height, 150));
+			}
+			if (Settings.MainWindowUiSettings.WindowLocation != Point.Empty)
+			{
+				// Make sure the window location stays within the screen bounds
+				this.Location = new Point(Math.Max(Math.Min(Settings.MainWindowUiSettings.WindowLocation.X, Screen.PrimaryScreen.Bounds.Width - this.Size.Width), 0),
+												  Math.Max(Math.Min(Settings.MainWindowUiSettings.WindowLocation.Y, Screen.PrimaryScreen.Bounds.Height - this.Size.Height), 0));
+
 			}
 		}
 
