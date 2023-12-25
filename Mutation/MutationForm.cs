@@ -213,6 +213,32 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 		}
 
+		private void RestoreWindowLocationAndSizeFromSettings()
+		{
+			if (Settings is null)
+				return;
+
+			if (Settings.MainWindowUiSettings.WindowSize != Size.Empty)
+			{
+				// Make sure the window size stays within the screen bounds
+				this.Size = new Size(Math.Min(Settings.MainWindowUiSettings.WindowSize.Width, Screen.PrimaryScreen.Bounds.Width),
+											Math.Min(Settings.MainWindowUiSettings.WindowSize.Height, Screen.PrimaryScreen.Bounds.Height));
+			}
+			
+			if (this.Size.Width < 150 || this.Size.Height < 150)
+			{
+				this.Size = new Size(Math.Max(this.Size.Width, 150), Math.Max(this.Size.Height, 150));
+			}
+
+			if (Settings.MainWindowUiSettings.WindowLocation != Point.Empty)
+			{
+				// Make sure the window location stays within the screen bounds
+				this.Location = new Point(Math.Max(Math.Min(Settings.MainWindowUiSettings.WindowLocation.X, Screen.PrimaryScreen.Bounds.Width - this.Size.Width), 0),
+												  Math.Max(Math.Min(Settings.MainWindowUiSettings.WindowLocation.Y, Screen.PrimaryScreen.Bounds.Height - this.Size.Height), 0));
+
+			}
+		}
+
 		internal void InitializeAudioControls()
 		{
 			txtActiveMic.Text = "(Initializing...)";
@@ -401,6 +427,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				txtOcr.Text = "Running OCR on image";
 
+				if (image is null)
+					// Sometimes we are too quick for the image to have shown up on the clipboard, so, waita  short while and try again.
+					await Task.Delay(100);
+
 				if (image is not null)
 				{
 					using MemoryStream imageStream = new MemoryStream();
@@ -424,8 +454,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 					BeepFail();
 
 					txtOcr.Text = "No image found on the clipboard.";
-					this.Activate();
-					MessageBox.Show("No image found on the clipboard.");
+					//this.Activate();
+					//MessageBox.Show("No image found on the clipboard.");
 				}
 			}
 			catch (Exception ex)
@@ -435,7 +465,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				BeepFail();
 
-				this.Activate();
+				//this.Activate();
 				//MessageBox.Show(this, msg, "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
@@ -594,6 +624,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
+			Settings.MainWindowUiSettings.WindowSize = this.Size;
+			Settings.MainWindowUiSettings.WindowLocation = this.Location;
+
 			Settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
 			Settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
 			Settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
@@ -611,7 +644,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void MutationForm_Load(object sender, EventArgs e)
 		{
-
+			RestoreWindowLocationAndSizeFromSettings();
 		}
 
 		private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)

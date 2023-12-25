@@ -1,4 +1,6 @@
-﻿namespace CognitiveSupport;
+﻿using System.Drawing;
+
+namespace CognitiveSupport;
 
 public class Settings
 {
@@ -9,11 +11,19 @@ public class Settings
 	public SpeetchToTextSettings SpeetchToTextSettings { get; set; }
 	public LlmSettings LlmSettings { get; set; }
 	public TextToSpeechSettings TextToSpeechSettings { get; set; }
+
+	public MainWindowUiSettings MainWindowUiSettings { get; set; } = new MainWindowUiSettings();
 }
 
 public class AudioSettings
 {
 	public string MicrophoneToggleMuteHotKey { get; set; }
+}
+
+public class MainWindowUiSettings
+{
+	public Point WindowLocation { get; set; }
+	public Size WindowSize { get; set; }
 }
 
 public class AzureComputerVisionSettings
