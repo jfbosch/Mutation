@@ -144,6 +144,8 @@ internal class SettingsManager
 
 		if (string.IsNullOrWhiteSpace(llmSettings.FormatTranscriptPrompt))
 		{
+			//TODO: formatting is now done with normal code, so this should be deleted.
+
 			llmSettings.FormatTranscriptPrompt = @"You are a helpful proofreader and editor. When you are asked to format a transcript, apply the following rules to improve the formatting of the text:
 Replace the words 'new line' (case insensitive) with an actual new line character, and replace the words 'new paragraph' (case insensitive) with 2 new line characters, and replace the words 'new bullet' (case insensitive) with a newline character and a bullet character, eg. '- ', and end the preceding sentence with a full stop '.', and start the new sentence with a capital letter, and do not make any other changes.
 
@@ -238,6 +240,13 @@ When you are asked to apply revision corrections, you should do the following:
 				},
 				new LlmSettings.TranscriptFormatRule
 				{
+					Find= "newline",
+					ReplaceWith= $"{Environment.NewLine}",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
 					Find= "next line",
 					ReplaceWith= $"{Environment.NewLine}",
 					CaseSensitive = false,
@@ -246,6 +255,13 @@ When you are asked to apply revision corrections, you should do the following:
 				new LlmSettings.TranscriptFormatRule
 				{
 					Find= "new paragraph",
+					ReplaceWith= $"{Environment.NewLine}{Environment.NewLine}",
+					CaseSensitive = false,
+					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
+				},
+				new LlmSettings.TranscriptFormatRule
+				{
+					Find= "new paragraphs",
 					ReplaceWith= $"{Environment.NewLine}{Environment.NewLine}",
 					CaseSensitive = false,
 					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,
@@ -357,7 +373,7 @@ When you are asked to apply revision corrections, you should do the following:
 
 		Settings settings = JsonConvert.DeserializeObject<Settings>(json, _jsonSerializerSettings);
 
-		if (settings.LlmSettings?.TranscriptFormatRules?.Count == 4)
+		if (settings.LlmSettings?.TranscriptFormatRules?.Count is 4 or 14)
 		{
 			// Get rid of the old defaults.
 			settings.LlmSettings.TranscriptFormatRules.Clear();
