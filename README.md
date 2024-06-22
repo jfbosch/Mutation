@@ -53,15 +53,15 @@ If you want to use the speech-to-text functionality, you will need to create an 
 
 1. To use OpenAI Proper
 Create an OpenAI API account, add a credit card, configure a budget, generate API keys for the Whisper API, and configure the following in Mutation.json under SpeetchToTextSettings:
-    "ApiKey" : "<your API key>",
-    "BaseDomain" : "https://api.groq.com/openai/",
-    "ModelId": "whisper-large-v3",
+- "ApiKey" : "<your API key>",
+- "BaseDomain" : "https://api.openai.com/",
+- "ModelId": "whisper-1",
 
 2. Groq.com
 Create a Groq account, generate an API key, and configure the following in Mutation.json under SpeetchToTextSettings:
-    "ApiKey" : "<your API key>",
-    "BaseDomain" : "https://api.openai.com/",
-    "ModelId": "whisper-1",
+- "ApiKey" : "<your API key>",
+- "BaseDomain" : "https://api.groq.com/openai/",
+- "ModelId": "whisper-large-v3",
 
 Of course, as things stand now, Groq is much faster because of the inference chip they use, and they have a generous daily free quota. 
 
