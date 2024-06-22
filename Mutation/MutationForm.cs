@@ -66,7 +66,9 @@ namespace Mutation
 
 			OcrService = new OcrService(Settings.AzureComputerVisionSettings.ApiKey, Settings.AzureComputerVisionSettings.Endpoint);
 			SpeechToTextService = new SpeechToTextService(
-				Settings.SpeetchToTextSettings.ApiKey);
+				Settings.SpeetchToTextSettings.ApiKey,
+				Settings.SpeetchToTextSettings.BaseDomain,
+				Settings.SpeetchToTextSettings.ModelId);
 			LlmService = new LlmService(
 				Settings.LlmSettings.ApiKey,
 				Settings.LlmSettings.ResourceName,

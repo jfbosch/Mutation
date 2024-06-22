@@ -39,6 +39,8 @@ public class SpeetchToTextSettings
 {
 	public string SpeechToTextHotKey { get; set; }
 	public string ApiKey { get; set; }
+	public string BaseDomain { get; set; }
+	public string ModelId { get; set; }
 	public string TempDirectory { get; set; }
 	public string SpeechToTextPrompt { get; set; }
 
