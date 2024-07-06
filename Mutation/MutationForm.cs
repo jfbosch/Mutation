@@ -2,6 +2,7 @@
 using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
+using Mutation.ConsoleDI.Example;
 using NAudio.Wave;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
@@ -57,8 +58,11 @@ namespace Mutation
 		private TextToSpeechService _textToSpeechService;
 		private Hotkey _hkTextToSpeech { get; set; }
 
-		public MutationForm()
+		public MutationForm(
+			IExampleSingletonService dependency)
 		{
+			var u = dependency ?? throw new ArgumentNullException();
+
 			LoadSettings();
 
 			InitializeComponent();
@@ -226,7 +230,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				this.Size = new Size(Math.Min(Settings.MainWindowUiSettings.WindowSize.Width, Screen.PrimaryScreen.Bounds.Width),
 											Math.Min(Settings.MainWindowUiSettings.WindowSize.Height, Screen.PrimaryScreen.Bounds.Height));
 			}
-			
+
 			if (this.Size.Width < 150 || this.Size.Height < 150)
 			{
 				this.Size = new Size(Math.Max(this.Size.Width, 150), Math.Max(this.Size.Height, 150));
