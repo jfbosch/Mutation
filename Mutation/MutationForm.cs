@@ -61,7 +61,7 @@ namespace Mutation
 		public MutationForm(
 			IExampleSingletonService dependency)
 		{
-			var u = dependency ?? throw new ArgumentNullException();
+			var u = dependency ?? throw new ArgumentNullException(nameof(dependency));
 
 			LoadSettings();
 
