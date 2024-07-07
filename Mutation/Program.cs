@@ -37,8 +37,6 @@ internal static class Program
 	private static HostApplicationBuilder CreateApplicationBuilder()
 	{
 		HostApplicationBuilder builder = Host.CreateApplicationBuilder();
-		//builder.Configuration.add
-		//builder.Services.Configure
 
 		var settingsManager = CreateSettingsManager();
 		var settings = settingsManager.LoadAndEnsureSettings();

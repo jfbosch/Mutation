@@ -14,18 +14,6 @@ namespace Mutation
 {
 	public partial class MutationForm : Form
 	{
-		public enum DictationInsertOption
-		{
-			[Description("Don't insert into 3rd party application")]
-			DoNotInsert,
-
-			[Description("Send keys to 3rd party application")]
-			SendKeys,
-
-			[Description("Paste into 3rd party application")]
-			Paste
-		}
-
 		private ScreenCaptureForm _activeScreenCaptureForm = null;
 
 		private Settings _settings { get; set; }
