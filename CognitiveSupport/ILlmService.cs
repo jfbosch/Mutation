@@ -1,9 +1,8 @@
 ﻿using OpenAI.ObjectModels.RequestModels;
 
-namespace CognitiveSupport
+namespace CognitiveSupport;
+
+public interface ILlmService
 {
-	public interface ILlmService
-	{
-		Task<string> CreateChatCompletion(IList<ChatMessage> messages, string llmModelName, decimal temperature = 0.7M);
-	}
+	Task<string> CreateChatCompletion(IList<ChatMessage> messages, string llmModelName, decimal temperature = 0.7M);
 }

@@ -6,7 +6,7 @@ using OpenAI;
 
 namespace CognitiveSupport
 {
-	public class SpeechToTextService
+	public class SpeechToTextService : ISpeechToTextService
 	{
 		private readonly string _apiKey;
 		private readonly string _modelId;

@@ -39,7 +39,7 @@ namespace Mutation
 		private int _defaultCaptureDeviceIndex = -1;
 
 		private Hotkey _hkSpeechToText { get; set; }
-		private SpeechToTextService SpeechToTextService { get; set; }
+		private ISpeechToTextService _speechToTextService { get; set; }
 		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
 		private AudioRecorder _audioRecorder { get; set; }
 		private bool RecordingAudio => _audioRecorder != null;
@@ -51,31 +51,28 @@ namespace Mutation
 
 		private ILlmService _llmService { get; set; }
 
-		private TextToSpeechService _textToSpeechService;
 		private Hotkey _hkTextToSpeech { get; set; }
+		private ITextToSpeechService _textToSpeechService;
 
 		public MutationForm(
 			ISettingsManager settingsManager,
 			Settings settings,
 			CoreAudioController coreAudioController,
 			IOcrService ocrService,
+			ISpeechToTextService speechToTextService,
+			ITextToSpeechService textToSpeechService,
 			ILlmService llmService)
 		{
 			this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
 			this._coreAudioController = coreAudioController ?? throw new ArgumentNullException(nameof(coreAudioController));
 			this._ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
+			this._speechToTextService = speechToTextService ?? throw new ArgumentNullException(nameof(speechToTextService));
+			this._textToSpeechService  = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 			this._llmService = llmService  ?? throw new ArgumentNullException(nameof(llmService));
 
 			InitializeComponent();
 			InitializeAudioControls();
-
-			SpeechToTextService = new SpeechToTextService(
-				_settings.SpeetchToTextSettings.ApiKey,
-				_settings.SpeetchToTextSettings.BaseDomain,
-				_settings.SpeetchToTextSettings.ModelId);
-
-			_textToSpeechService = new();
 
 			txtSpeechToTextPrompt.Text = _settings.SpeetchToTextSettings.SpeechToTextPrompt;
 
@@ -544,7 +541,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						btnSpeechToTextRecord.Text = "Processing";
 						btnSpeechToTextRecord.Enabled = false;
 
-						string text = await this.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
+						string text = await this._speechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
 
 						txtSpeechToText.ReadOnly = false;
 						txtSpeechToText.Text = $"{text}";

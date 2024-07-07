@@ -59,6 +59,13 @@ internal static class Program
 				settings.LlmSettings.ResourceName,
 				settings.LlmSettings.ModelDeploymentIdMaps));
 
+		builder.Services.AddSingleton<ISpeechToTextService>(
+			new SpeechToTextService(
+				settings.SpeetchToTextSettings.ApiKey,
+				settings.SpeetchToTextSettings.BaseDomain,
+				settings.SpeetchToTextSettings.ModelId));
+
+		builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 
 		builder.Services.AddSingleton<MutationForm>();
 
