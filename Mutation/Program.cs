@@ -57,9 +57,16 @@ internal static class Program
 				settings.LlmSettings.ResourceName,
 				settings.LlmSettings.ModelDeploymentIdMaps));
 
+		builder.Services.AddSingleton<HttpClient>(x =>
+		{
+			HttpClient httpClient = new HttpClient();
+			httpClient.Timeout = TimeSpan.FromSeconds(30);
+			return httpClient;
+		});
+
 		builder.Services.AddSingleton<IOpenAIService>(x =>
 		{
-			string baseDomain  = settings.SpeetchToTextSettings.BaseDomain?.Trim();
+			string baseDomain = settings.SpeetchToTextSettings.BaseDomain?.Trim();
 			if (baseDomain == "")
 				baseDomain = null;
 
@@ -68,8 +75,8 @@ internal static class Program
 				ApiKey = settings.SpeetchToTextSettings.ApiKey,
 				BaseDomain = baseDomain,
 			};
-			HttpClient httpClient = new HttpClient();
-			httpClient.Timeout = TimeSpan.FromSeconds(30);
+
+			HttpClient httpClient = x.GetRequiredService<HttpClient>();
 			return new OpenAIService(options, httpClient);
 		});
 
