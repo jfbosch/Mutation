@@ -2,7 +2,6 @@
 using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
-using Mutation.ConsoleDI.Example;
 using NAudio.Wave;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
@@ -30,13 +29,13 @@ namespace Mutation
 		private ScreenCaptureForm _activeScreenCaptureForm = null;
 
 		private Settings Settings { get; set; }
-		private SettingsManager SettingsManager { get; set; }
+		private ISettingsManager SettingsManager { get; set; }
 
 		private Hotkey _hkScreenshot;
 		private Hotkey _hkScreenshotOcr;
 		private Hotkey _hkOcr;
 
-		private OcrService OcrService { get; set; }
+		private IOcrService OcrService { get; set; }
 
 		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
 		private AudioRecorder AudioRecorder { get; set; }
@@ -59,16 +58,19 @@ namespace Mutation
 		private Hotkey _hkTextToSpeech { get; set; }
 
 		public MutationForm(
-			IExampleSingletonService dependency)
+			ISettingsManager settingsManager,
+			Settings settings,
+			IOcrService ocrService)
 		{
-			var u = dependency ?? throw new ArgumentNullException(nameof(dependency));
+			this.SettingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
+			this.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+			this.OcrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
 
-			LoadSettings();
+
 
 			InitializeComponent();
 			InitializeAudioControls();
 
-			OcrService = new OcrService(Settings.AzureComputerVisionSettings.ApiKey, Settings.AzureComputerVisionSettings.Endpoint);
 			SpeechToTextService = new SpeechToTextService(
 				Settings.SpeetchToTextSettings.ApiKey,
 				Settings.SpeetchToTextSettings.BaseDomain,
@@ -202,21 +204,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 			string formattingCommandsPromptToolTipMsg = $"You can use the following voice commands while dictating: {Environment.NewLine}{Environment.NewLine}{string.Join(Environment.NewLine, voiceCommands)}";
 			toolTip.SetToolTip(lblSpeechToText, formattingCommandsPromptToolTipMsg);
 			toolTip.SetToolTip(lblFormatTranscriptResponse, formattingCommandsPromptToolTipMsg);
-		}
-
-		private void LoadSettings()
-		{
-			try
-			{
-				string filePath = "Mutation.json";
-				this.SettingsManager = new SettingsManager(filePath);
-				this.Settings = this.SettingsManager.LoadAndEnsureSettings();
-			}
-			catch (Exception ex)
-				when (ex.Message.ToLower().Contains("could not find the settings"))
-			{
-				MessageBox.Show(this, $"Failed to load settings: {ex.Message}", "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
 		}
 
 		private void RestoreWindowLocationAndSizeFromSettings()

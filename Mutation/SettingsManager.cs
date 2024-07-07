@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Mutation;
 
-internal class SettingsManager
+internal class SettingsManager : ISettingsManager
 {
 	private static readonly JsonSerializerSettings _jsonSerializerSettings = new JsonSerializerSettings
 	{
@@ -388,7 +388,7 @@ When you are asked to apply revision corrections, you should do the following:
 		File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
 	}
 
-	internal Settings LoadAndEnsureSettings()
+	public Settings LoadAndEnsureSettings()
 	{
 		CreateSettingsFileOfNotExists(SettingsFileFullPath);
 
@@ -404,5 +404,4 @@ When you are asked to apply revision corrections, you should do the following:
 
 		return settings;
 	}
-
 }

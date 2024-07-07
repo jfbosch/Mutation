@@ -1,6 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+﻿using CognitiveSupport;
 using ConsoleDI.Example;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Mutation.ConsoleDI.Example;
 
 namespace Mutation;
@@ -15,25 +16,17 @@ internal static class Program
 
 		Application.EnableVisualStyles();
 		Application.SetCompatibleTextRenderingDefault(false);
-
 		ApplicationConfiguration.Initialize();
+
 		try
 		{
-
-			HostApplicationBuilder builder = Host.CreateApplicationBuilder();
-
-			builder.Services.AddSingleton<MutationForm>();
-
-			builder.Services.AddTransient<IExampleTransientService, ExampleTransientService>();
-			builder.Services.AddScoped<IExampleScopedService, ExampleScopedService>();
-			builder.Services.AddSingleton<IExampleSingletonService, ExampleSingletonService>();
-			builder.Services.AddTransient<ServiceLifetimeReporter>();
-
+			HostApplicationBuilder builder = CreateApplicationBuilder();
 			using IHost host = builder.Build();
 
 			using var serviceScope = host.Services.CreateScope();
 			var services = serviceScope.ServiceProvider;
 			var mainForm = services.GetRequiredService<MutationForm>();
+
 			Application.Run(mainForm);
 		}
 		catch (Exception ex)
@@ -42,23 +35,46 @@ internal static class Program
 		}
 	}
 
-
-	static void ExemplifyServiceLifetime(
-		IServiceProvider hostProvider,
-		string lifetime)
+	private static HostApplicationBuilder CreateApplicationBuilder()
 	{
-		using IServiceScope serviceScope = hostProvider.CreateScope();
-		IServiceProvider provider = serviceScope.ServiceProvider;
-		ServiceLifetimeReporter logger = provider.GetRequiredService<ServiceLifetimeReporter>();
-		logger.ReportServiceLifetimeDetails(
-			 $"{lifetime}: Call 1 to provider.GetRequiredService<ServiceLifetimeReporter>()");
+		HostApplicationBuilder builder = Host.CreateApplicationBuilder();
+		//builder.Configuration.add
+		//builder.Services.Configure
 
-		Console.WriteLine("...");
+		var settingsManager = CreateSettingsManager();
+		var settings = settingsManager.LoadAndEnsureSettings();
+		builder.Services.AddSingleton<ISettingsManager>(settingsManager);
+		builder.Services.AddSingleton<CognitiveSupport.Settings>(settings);
 
-		logger = provider.GetRequiredService<ServiceLifetimeReporter>();
-		logger.ReportServiceLifetimeDetails(
-			 $"{lifetime}: Call 2 to provider.GetRequiredService<ServiceLifetimeReporter>()");
+		builder.Services.AddSingleton<IOcrService>(
+			new OcrService(settings.AzureComputerVisionSettings.ApiKey, settings.AzureComputerVisionSettings.Endpoint));
 
-		Console.WriteLine();
+		builder.Services.AddSingleton<MutationForm>();
+
+		//BookMark??
+		builder.Services.AddTransient<IExampleTransientService, ExampleTransientService>();
+		builder.Services.AddScoped<IExampleScopedService, ExampleScopedService>();
+		builder.Services.AddSingleton<IExampleSingletonService, ExampleSingletonService>();
+		builder.Services.AddTransient<ServiceLifetimeReporter>();
+		return builder;
 	}
+
+	private static SettingsManager CreateSettingsManager()
+	{
+		try
+		{
+			string filePath = "Mutation.json";
+			SettingsManager settingsManager = new SettingsManager(filePath);
+			return settingsManager;
+			//var settings = settingsManager.LoadAndEnsureSettings();
+		}
+		catch (Exception ex)
+			when (ex.Message.ToLower().Contains("could not find the settings"))
+		{
+			//MessageBox.Show(this, $"Failed to load settings: {ex.Message}", "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			throw;
+		}
+	}
+
+
 }
