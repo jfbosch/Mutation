@@ -28,31 +28,28 @@ namespace Mutation
 
 		private ScreenCaptureForm _activeScreenCaptureForm = null;
 
-		private Settings Settings { get; set; }
-		private ISettingsManager SettingsManager { get; set; }
+		private Settings _settings { get; set; }
+		private ISettingsManager _settingsManager { get; set; }
+
+		private Hotkey _hkToggleMicMute;
+		private bool _isMuted = false;
+		private CoreAudioController _coreAudioController;
+		private IEnumerable<CoreAudioDevice> _devices;
+		private CoreAudioDevice _microphone { get; set; }
+		private int _defaultCaptureDeviceIndex = -1;
+
+		private Hotkey _hkSpeechToText { get; set; }
+		private SpeechToTextService SpeechToTextService { get; set; }
+		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
+		private AudioRecorder _audioRecorder { get; set; }
+		private bool RecordingAudio => _audioRecorder != null;
 
 		private Hotkey _hkScreenshot;
 		private Hotkey _hkScreenshotOcr;
 		private Hotkey _hkOcr;
+		private IOcrService _ocrService { get; set; }
 
-		private IOcrService OcrService { get; set; }
-
-		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
-		private AudioRecorder AudioRecorder { get; set; }
-		private bool RecordingAudio => AudioRecorder != null;
-
-		private SpeechToTextService SpeechToTextService { get; set; }
-		private LlmService LlmService { get; set; }
-		private Hotkey _hkSpeechToText { get; set; }
-
-		private int _defaultCaptureDeviceIndex = -1;
-
-
-		private Hotkey _hkToggleMicMute;
-		private bool IsMuted = false;
-		private CoreAudioController _audioController;
-		private IEnumerable<CoreAudioDevice> _devices;
-		private CoreAudioDevice Microphone { get; set; }
+		private ILlmService _llmService { get; set; }
 
 		private TextToSpeechService _textToSpeechService;
 		private Hotkey _hkTextToSpeech { get; set; }
@@ -60,36 +57,34 @@ namespace Mutation
 		public MutationForm(
 			ISettingsManager settingsManager,
 			Settings settings,
-			IOcrService ocrService)
+			CoreAudioController coreAudioController,
+			IOcrService ocrService,
+			ILlmService llmService)
 		{
-			this.SettingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
-			this.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
-			this.OcrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
-
-
+			this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
+			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
+			this._coreAudioController = coreAudioController ?? throw new ArgumentNullException(nameof(coreAudioController));
+			this._ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
+			this._llmService = llmService  ?? throw new ArgumentNullException(nameof(llmService));
 
 			InitializeComponent();
 			InitializeAudioControls();
 
 			SpeechToTextService = new SpeechToTextService(
-				Settings.SpeetchToTextSettings.ApiKey,
-				Settings.SpeetchToTextSettings.BaseDomain,
-				Settings.SpeetchToTextSettings.ModelId);
-			LlmService = new LlmService(
-				Settings.LlmSettings.ApiKey,
-				Settings.LlmSettings.ResourceName,
-				Settings.LlmSettings.ModelDeploymentIdMaps);
+				_settings.SpeetchToTextSettings.ApiKey,
+				_settings.SpeetchToTextSettings.BaseDomain,
+				_settings.SpeetchToTextSettings.ModelId);
 
 			_textToSpeechService = new();
 
-			txtSpeechToTextPrompt.Text = Settings.SpeetchToTextSettings.SpeechToTextPrompt;
+			txtSpeechToTextPrompt.Text = _settings.SpeetchToTextSettings.SpeechToTextPrompt;
 
 			HookupTooltips();
 
 			HookupHotkeys();
 
-			txtFormatTranscriptPrompt.Text = this.Settings.LlmSettings.FormatTranscriptPrompt;
-			txtReviewTranscriptPrompt.Text = this.Settings.LlmSettings.ReviewTranscriptPrompt;
+			txtFormatTranscriptPrompt.Text = this._settings.LlmSettings.FormatTranscriptPrompt;
+			txtReviewTranscriptPrompt.Text = this._settings.LlmSettings.ReviewTranscriptPrompt;
 
 			InitializeLlmReviewListView();
 
@@ -182,7 +177,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			toolTip.SetToolTip(txtSpeechToTextPrompt, speechToTextPromptToolTipMsg);
 			toolTip.SetToolTip(lblSpeechToTextPrompt, speechToTextPromptToolTipMsg);
 
-			var voiceCommands = this.Settings.LlmSettings.TranscriptFormatRules
+			var voiceCommands = this._settings.LlmSettings.TranscriptFormatRules
 				.Select(x => new
 				{
 					x.Find,
@@ -208,14 +203,14 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void RestoreWindowLocationAndSizeFromSettings()
 		{
-			if (Settings is null)
+			if (_settings is null)
 				return;
 
-			if (Settings.MainWindowUiSettings.WindowSize != Size.Empty)
+			if (_settings.MainWindowUiSettings.WindowSize != Size.Empty)
 			{
 				// Make sure the window size stays within the screen bounds
-				this.Size = new Size(Math.Min(Settings.MainWindowUiSettings.WindowSize.Width, Screen.PrimaryScreen.Bounds.Width),
-											Math.Min(Settings.MainWindowUiSettings.WindowSize.Height, Screen.PrimaryScreen.Bounds.Height));
+				this.Size = new Size(Math.Min(_settings.MainWindowUiSettings.WindowSize.Width, Screen.PrimaryScreen.Bounds.Width),
+											Math.Min(_settings.MainWindowUiSettings.WindowSize.Height, Screen.PrimaryScreen.Bounds.Height));
 			}
 
 			if (this.Size.Width < 150 || this.Size.Height < 150)
@@ -223,11 +218,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 				this.Size = new Size(Math.Max(this.Size.Width, 150), Math.Max(this.Size.Height, 150));
 			}
 
-			if (Settings.MainWindowUiSettings.WindowLocation != Point.Empty)
+			if (_settings.MainWindowUiSettings.WindowLocation != Point.Empty)
 			{
 				// Make sure the window location stays within the screen bounds
-				this.Location = new Point(Math.Max(Math.Min(Settings.MainWindowUiSettings.WindowLocation.X, Screen.PrimaryScreen.Bounds.Width - this.Size.Width), 0),
-												  Math.Max(Math.Min(Settings.MainWindowUiSettings.WindowLocation.Y, Screen.PrimaryScreen.Bounds.Height - this.Size.Height), 0));
+				this.Location = new Point(Math.Max(Math.Min(_settings.MainWindowUiSettings.WindowLocation.X, Screen.PrimaryScreen.Bounds.Width - this.Size.Width), 0),
+												  Math.Max(Math.Min(_settings.MainWindowUiSettings.WindowLocation.Y, Screen.PrimaryScreen.Bounds.Height - this.Size.Height), 0));
 
 			}
 		}
@@ -237,14 +232,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 			txtActiveMic.Text = "(Initializing...)";
 			Application.DoEvents();
 
-
-			_audioController = new CoreAudioController();
-			_devices = _audioController.GetDevices(DeviceType.Capture, DeviceState.Active);
+			_devices = _coreAudioController.GetDevices(DeviceType.Capture, DeviceState.Active);
 			var defaultMicDevice = _devices
 				.FirstOrDefault(x => x.IsDefaultDevice);
 			if (defaultMicDevice != null)
 			{
-				this.Microphone = defaultMicDevice;
+				this._microphone = defaultMicDevice;
 
 				// The AudioSwitcher library, CoreAudioDevice.Name returns a value like
 				// "Krisp Michrophone". This is the name of the device as under Windows recording devices.
@@ -274,7 +267,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					}
 				}
 				if (!micMatchFound)
-					MessageBox.Show($"No michrophone match found for {this.Microphone.Name}");
+					MessageBox.Show($"No michrophone match found for {this._microphone.Name}");
 
 				FeedbackToUser();
 			}
@@ -289,9 +282,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			lock (this)
 			{
-				IsMuted = !IsMuted;
+				_isMuted = !_isMuted;
 				foreach (var mic in _devices)
-					mic.Mute(IsMuted);
+					mic.Mute(_isMuted);
 
 				FeedbackToUser();
 			}
@@ -301,7 +294,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			lock (this)
 			{
-				if (Microphone.IsMuted)
+				if (_microphone.IsMuted)
 				{
 					this.Text = "Mutation - Muted Microphone";
 					this.BackColor = Color.LightGray;
@@ -314,7 +307,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					BeepUnmuted();
 				}
 
-				txtActiveMic.Text = this.Microphone.Name;
+				txtActiveMic.Text = this._microphone.Name;
 
 				int i = 1;
 				txtAllMics.Text = string.Join(Environment.NewLine, _devices.Select(m => $"{i++}) {m.FullName}{(m.IsMuted ? "       - muted" : "")}").ToArray());
@@ -335,7 +328,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotKeyScreenshot()
 		{
-			_hkScreenshot = MapHotKey(Settings.AzureComputerVisionSettings.ScreenshotHotKey);
+			_hkScreenshot = MapHotKey(_settings.AzureComputerVisionSettings.ScreenshotHotKey);
 			_hkScreenshot.Pressed += delegate { TakeScreenshotToClipboard(); };
 			TryRegisterHotkey(_hkScreenshot);
 
@@ -369,7 +362,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotKeyScreenshotOcr()
 		{
-			_hkScreenshotOcr = MapHotKey(Settings.AzureComputerVisionSettings.ScreenshotOcrHotKey);
+			_hkScreenshotOcr = MapHotKey(_settings.AzureComputerVisionSettings.ScreenshotOcrHotKey);
 			_hkScreenshotOcr.Pressed += delegate { TakeScreenshotAndExtractText(); };
 			TryRegisterHotkey(_hkScreenshotOcr);
 
@@ -405,7 +398,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotKeyOcr()
 		{
-			_hkOcr = MapHotKey(Settings.AzureComputerVisionSettings.OcrHotKey);
+			_hkOcr = MapHotKey(_settings.AzureComputerVisionSettings.OcrHotKey);
 			_hkOcr.Pressed += delegate { ExtractText(GetClipboardImage()); };
 			TryRegisterHotkey(_hkOcr);
 
@@ -429,7 +422,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					using MemoryStream imageStream = new MemoryStream();
 					image.Save(imageStream, ImageFormat.Jpeg);
 					imageStream.Seek(0, SeekOrigin.Begin);
-					string text = await this.OcrService.ExtractText(imageStream).ConfigureAwait(true);
+					string text = await this._ocrService.ExtractText(imageStream).ConfigureAwait(true);
 
 					//MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
 
@@ -483,7 +476,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotKeyToggleMichrophoneMuteHotkey()
 		{
-			_hkToggleMicMute = MapHotKey(Settings.AudioSettings.MicrophoneToggleMuteHotKey);
+			_hkToggleMicMute = MapHotKey(_settings.AudioSettings.MicrophoneToggleMuteHotKey);
 			_hkToggleMicMute.Pressed += delegate { ToggleMicrophoneMute(); };
 			TryRegisterHotkey(_hkToggleMicMute);
 
@@ -492,7 +485,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotKeySpeechToText()
 		{
-			_hkSpeechToText = MapHotKey(Settings.SpeetchToTextSettings.SpeechToTextHotKey);
+			_hkSpeechToText = MapHotKey(_settings.SpeetchToTextSettings.SpeechToTextHotKey);
 			_hkSpeechToText.Pressed += delegate { SpeechToText(); };
 			TryRegisterHotkey(_hkSpeechToText);
 
@@ -501,7 +494,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotKeyTextToSpeech()
 		{
-			_hkTextToSpeech = MapHotKey(Settings.TextToSpeechSettings.TextToSpeechHotKey);
+			_hkTextToSpeech = MapHotKey(_settings.TextToSpeechSettings.TextToSpeechHotKey);
 			_hkTextToSpeech.Pressed += delegate { TextToSpeech(); };
 			TryRegisterHotkey(_hkTextToSpeech);
 
@@ -518,7 +511,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
-				string sessionsDirectory = Path.Combine(Settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
+				string sessionsDirectory = Path.Combine(_settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
 				if (!Directory.Exists(sessionsDirectory))
 					Directory.CreateDirectory(sessionsDirectory);
 
@@ -531,17 +524,17 @@ The model may also leave out common filler words in the audio. If you want to ke
 						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Recording microphone...";
 
-						AudioRecorder = new AudioRecorder();
-						AudioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
+						_audioRecorder = new AudioRecorder();
+						_audioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
 						btnSpeechToTextRecord.Text = "Stop &Recording";
 
 						BeepStart();
 					}
 					else // Busy recording, so we want to stop it.
 					{
-						AudioRecorder.StopRecording();
-						AudioRecorder.Dispose();
-						AudioRecorder = null;
+						_audioRecorder.StopRecording();
+						_audioRecorder.Dispose();
+						_audioRecorder = null;
 
 						BeepStart();
 
@@ -617,13 +610,13 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
-			Settings.MainWindowUiSettings.WindowSize = this.Size;
-			Settings.MainWindowUiSettings.WindowLocation = this.Location;
+			_settings.MainWindowUiSettings.WindowSize = this.Size;
+			_settings.MainWindowUiSettings.WindowLocation = this.Location;
 
-			Settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
-			Settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
-			Settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
-			this.SettingsManager.SaveSettingsToFile(Settings);
+			_settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			_settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
+			_settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
+			this._settingsManager.SaveSettingsToFile(_settings);
 
 			UnregisterHotkey(_hkToggleMicMute);
 			UnregisterHotkey(_hkOcr);
@@ -660,7 +653,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				text = text.RemoveSubstrings(",", ".", ";", ":", "?", "!", "...", "…");
 				text = text.Replace("  ", " ");
 			}
-			text = text.FormatWithRules(Settings.LlmSettings.TranscriptFormatRules);
+			text = text.FormatWithRules(_settings.LlmSettings.TranscriptFormatRules);
 			text = text.CleanupPunctuation();
 
 			if (chkFormattedTranscriptAppend.Checked)
@@ -711,7 +704,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				ChatMessage.FromUser($"Reformat the following transcript: {rawTranscript}"),
 			};
 
-			string formattedText = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
+			string formattedText = await _llmService.CreateChatCompletion(messages, Models.Gpt_4);
 			txtFormatTranscriptResponse.Text = formattedText.FixNewLines();
 
 			BeepSuccess();
@@ -738,7 +731,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			var selectedTemperature = cmbReviewTemperature.SelectedItem;
 			decimal temperature = ((dynamic)selectedTemperature).Value;
-			string review = await LlmService.CreateChatCompletion(messages, Models.Gpt_4, temperature);
+			string review = await _llmService.CreateChatCompletion(messages, Models.Gpt_4, temperature);
 			txtTranscriptReviewResponse.Text = review.FixNewLines();
 			txtTranscriptReviewResponse.ReadOnly = false;
 
@@ -850,7 +843,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					ChatMessage.FromUser($"Apply the corrections and respond only with the corrected transcript.{Environment.NewLine}{Environment.NewLine}Correction Instructions:{Environment.NewLine}{combinedInstructions }{Environment.NewLine}{Environment.NewLine}Transcript:{Environment.NewLine}{transcript}"),
 				};
 
-				string revision = await LlmService.CreateChatCompletion(messages, Models.Gpt_4);
+				string revision = await _llmService.CreateChatCompletion(messages, Models.Gpt_4);
 				txtFormatTranscriptResponse.Text = revision.FixNewLines();
 				txtFormatTranscriptResponse.ReadOnly = false;
 

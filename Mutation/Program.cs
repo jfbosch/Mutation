@@ -1,8 +1,10 @@
-﻿using CognitiveSupport;
+﻿using AudioSwitcher.AudioApi.CoreAudio;
+using CognitiveSupport;
 using ConsoleDI.Example;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Mutation.ConsoleDI.Example;
+using System.Runtime;
 
 namespace Mutation;
 
@@ -46,8 +48,17 @@ internal static class Program
 		builder.Services.AddSingleton<ISettingsManager>(settingsManager);
 		builder.Services.AddSingleton<CognitiveSupport.Settings>(settings);
 
+		builder.Services.AddSingleton<CoreAudioController>();
+
 		builder.Services.AddSingleton<IOcrService>(
 			new OcrService(settings.AzureComputerVisionSettings.ApiKey, settings.AzureComputerVisionSettings.Endpoint));
+
+		builder.Services.AddSingleton<ILlmService>(
+			new LlmService(
+				settings.LlmSettings.ApiKey,
+				settings.LlmSettings.ResourceName,
+				settings.LlmSettings.ModelDeploymentIdMaps));
+
 
 		builder.Services.AddSingleton<MutationForm>();
 
