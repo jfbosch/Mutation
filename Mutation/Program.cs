@@ -5,6 +5,9 @@ using Microsoft.Extensions.Hosting;
 using OpenAI;
 using OpenAI.Interfaces;
 using OpenAI.Managers;
+using Polly;
+using Polly.Timeout;
+using System.Net;
 
 namespace Mutation;
 
@@ -57,12 +60,32 @@ internal static class Program
 				settings.LlmSettings.ResourceName,
 				settings.LlmSettings.ModelDeploymentIdMaps));
 
-		builder.Services.AddSingleton<HttpClient>(x =>
-		{
-			HttpClient httpClient = new HttpClient();
-			httpClient.Timeout = TimeSpan.FromSeconds(30);
-			return httpClient;
-		});
+
+		const string OpenAiHttpClient = "openai-http-client";
+		builder.Services.AddHttpClient(OpenAiHttpClient)
+			.AddStandardResilienceHandler(options =>
+			{
+				options.Retry.ShouldHandle = async (args) =>
+					 args.Outcome switch
+					 {
+						 { Exception: TimeoutRejectedException } => true,
+						 { Exception: HttpRequestException } => true,
+						 { Result: { StatusCode: HttpStatusCode.InternalServerError } } => true,
+						 _ => false
+					 };
+				options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
+				options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
+				options.Retry.MaxRetryAttempts = 4;
+				options.Retry.BackoffType = DelayBackoffType.Exponential;
+				options.Retry.Delay = TimeSpan.FromMilliseconds(50);
+
+				options.Retry.OnRetry = async args =>
+				{
+					BeepFail(args.AttemptNumber);
+				};
+
+			});
+
 
 		builder.Services.AddSingleton<IOpenAIService>(x =>
 		{
@@ -76,7 +99,8 @@ internal static class Program
 				BaseDomain = baseDomain,
 			};
 
-			HttpClient httpClient = x.GetRequiredService<HttpClient>();
+			IHttpClientFactory httpClientFactory = x.GetRequiredService<IHttpClientFactory>();
+			HttpClient httpClient = httpClientFactory.CreateClient(OpenAiHttpClient);
 			return new OpenAIService(options, httpClient);
 		});
 
@@ -104,7 +128,6 @@ internal static class Program
 			string filePath = "Mutation.json";
 			SettingsManager settingsManager = new SettingsManager(filePath);
 			return settingsManager;
-			//var settings = settingsManager.LoadAndEnsureSettings();
 		}
 		catch (Exception ex)
 			when (ex.Message.ToLower().Contains("could not find the settings"))
@@ -114,5 +137,10 @@ internal static class Program
 		}
 	}
 
+	private static void BeepFail(int numberOfBeeps = 1)
+	{
+		for (int i = 0; i < numberOfBeeps; i++)
+			Console.Beep(400 + (100 * numberOfBeeps), 100);
+	}
 
 }

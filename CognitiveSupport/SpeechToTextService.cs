@@ -1,8 +1,6 @@
-﻿using OpenAI.ObjectModels.RequestModels;
+﻿using OpenAI.Interfaces;
 using OpenAI.ObjectModels;
-using OpenAI.Interfaces;
-using OpenAI.Managers;
-using OpenAI;
+using OpenAI.ObjectModels.RequestModels;
 
 namespace CognitiveSupport
 {
@@ -16,7 +14,7 @@ namespace CognitiveSupport
 			IOpenAIService openAIService,
 			string modelId)
 		{
-			_openAIService = openAIService  ?? throw new ArgumentNullException(nameof(openAIService));
+			_openAIService = openAIService ?? throw new ArgumentNullException(nameof(openAIService));
 			_modelId = modelId ?? throw new ArgumentNullException(nameof(modelId), "Check your Whisper API provider's documentation for supported modelIds. On OpenAI, it's something like 'whisper-1'. On Groq, it's something like 'whisper-large-v3'.");
 		}
 
