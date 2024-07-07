@@ -1,10 +1,7 @@
 ﻿using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
-using ConsoleDI.Example;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Mutation.ConsoleDI.Example;
-using System.Runtime;
 
 namespace Mutation;
 
@@ -69,11 +66,6 @@ internal static class Program
 
 		builder.Services.AddSingleton<MutationForm>();
 
-		//BookMark??
-		builder.Services.AddTransient<IExampleTransientService, ExampleTransientService>();
-		builder.Services.AddScoped<IExampleScopedService, ExampleScopedService>();
-		builder.Services.AddSingleton<IExampleSingletonService, ExampleSingletonService>();
-		builder.Services.AddTransient<ServiceLifetimeReporter>();
 		return builder;
 	}
 
