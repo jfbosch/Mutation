@@ -8,32 +8,16 @@ namespace CognitiveSupport
 {
 	public class SpeechToTextService : ISpeechToTextService
 	{
-		private readonly string _apiKey;
 		private readonly string _modelId;
-		private readonly string _baseDomain;
 		private readonly object _lock = new object();
 		private readonly IOpenAIService _openAIService;
 
-
 		public SpeechToTextService(
-			string apiKey,
-			string baseDomain,
+			IOpenAIService openAIService,
 			string modelId)
 		{
-			_apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-			_baseDomain = baseDomain?.Trim();
-			if (_baseDomain == "")
-				_baseDomain = null;
+			_openAIService = openAIService  ?? throw new ArgumentNullException(nameof(openAIService));
 			_modelId = modelId ?? throw new ArgumentNullException(nameof(modelId), "Check your Whisper API provider's documentation for supported modelIds. On OpenAI, it's something like 'whisper-1'. On Groq, it's something like 'whisper-large-v3'.");
-
-			OpenAiOptions options = new OpenAiOptions
-			{
-				ApiKey = apiKey,
-				BaseDomain = _baseDomain,
-			};
-			HttpClient httpClient = new HttpClient();
-			httpClient.Timeout = TimeSpan.FromSeconds(30);
-			_openAIService = new OpenAIService(options, httpClient);
 		}
 
 		public async Task<string> ConvertAudioToText(

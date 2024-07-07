@@ -2,6 +2,9 @@
 using CognitiveSupport;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OpenAI;
+using OpenAI.Interfaces;
+using OpenAI.Managers;
 
 namespace Mutation;
 
@@ -54,11 +57,31 @@ internal static class Program
 				settings.LlmSettings.ResourceName,
 				settings.LlmSettings.ModelDeploymentIdMaps));
 
-		builder.Services.AddSingleton<ISpeechToTextService>(
-			new SpeechToTextService(
-				settings.SpeetchToTextSettings.ApiKey,
-				settings.SpeetchToTextSettings.BaseDomain,
-				settings.SpeetchToTextSettings.ModelId));
+		builder.Services.AddSingleton<IOpenAIService>(x =>
+		{
+			string baseDomain  = settings.SpeetchToTextSettings.BaseDomain?.Trim();
+			if (baseDomain == "")
+				baseDomain = null;
+
+			OpenAiOptions options = new OpenAiOptions
+			{
+				ApiKey = settings.SpeetchToTextSettings.ApiKey,
+				BaseDomain = baseDomain,
+			};
+			HttpClient httpClient = new HttpClient();
+			httpClient.Timeout = TimeSpan.FromSeconds(30);
+			return new OpenAIService(options, httpClient);
+		});
+
+
+		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		{
+			var openAIService = x.GetRequiredService<IOpenAIService>();
+
+			return new SpeechToTextService(
+				openAIService,
+				settings.SpeetchToTextSettings.ModelId);
+		});
 
 		builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 
