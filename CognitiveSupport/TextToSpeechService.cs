@@ -2,7 +2,7 @@
 
 namespace CognitiveSupport
 {
-	public class TextToSpeechService
+	public class TextToSpeechService : ITextToSpeechService
 	{
 		private readonly object _lock = new object();
 

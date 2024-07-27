@@ -7,7 +7,7 @@ using static OpenAI.ObjectModels.SharedModels.IOpenAiModels;
 
 namespace CognitiveSupport
 {
-	public class LlmService
+	public class LlmService : ILlmService
 	{
 		private readonly string ApiKey;
 		private readonly string Endpoint;

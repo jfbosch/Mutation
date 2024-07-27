@@ -1,11 +1,10 @@
-﻿// See https://aka.ms/new-console-template for more information
-using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
+﻿using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using System.Text;
 
 namespace CognitiveSupport;
 
-public class OcrService
+public class OcrService : IOcrService
 {
 	private string SubscriptionKey { get; init; }
 	private string Endpoint { get; init; }
