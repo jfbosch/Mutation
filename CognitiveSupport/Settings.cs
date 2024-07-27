@@ -37,6 +37,7 @@ public class AzureComputerVisionSettings
 
 public class SpeetchToTextSettings
 {
+	public SpeechToTextServices Service { get; set; }
 	public string SpeechToTextHotKey { get; set; }
 	public string ApiKey { get; set; }
 	public string BaseDomain { get; set; }
