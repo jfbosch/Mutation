@@ -62,29 +62,29 @@ internal static class Program
 
 
 		const string OpenAiHttpClient = "openai-http-client";
-		builder.Services.AddHttpClient(OpenAiHttpClient)
-			.AddStandardResilienceHandler(options =>
-			{
-				options.Retry.ShouldHandle = async (args) =>
-					 args.Outcome switch
-					 {
-						 { Exception: TimeoutRejectedException } => true,
-						 { Exception: HttpRequestException } => true,
-						 { Result: { StatusCode: HttpStatusCode.InternalServerError } } => true,
-						 _ => false
-					 };
-				options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
-				options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
-				options.Retry.MaxRetryAttempts = 4;
-				options.Retry.BackoffType = DelayBackoffType.Exponential;
-				options.Retry.Delay = TimeSpan.FromMilliseconds(50);
+		builder.Services.AddHttpClient(OpenAiHttpClient);
+			//.AddStandardResilienceHandler(options =>
+			//{
+			//	options.Retry.ShouldHandle = async (args) =>
+			//		 args.Outcome switch
+			//		 {
+			//			 { Exception: TimeoutRejectedException } => true,
+			//			 { Exception: HttpRequestException } => true,
+			//			 { Result: { StatusCode: HttpStatusCode.InternalServerError } } => true,
+			//			 _ => false
+			//		 };
+			//	options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
+			//	options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
+			//	options.Retry.MaxRetryAttempts = 4;
+			//	options.Retry.BackoffType = DelayBackoffType.Exponential;
+			//	options.Retry.Delay = TimeSpan.FromMilliseconds(50);
 
-				options.Retry.OnRetry = async args =>
-				{
-					BeepFail(args.AttemptNumber);
-				};
+			//	options.Retry.OnRetry = async args =>
+			//	{
+			//		BeepFail(args.AttemptNumber);
+			//	};
 
-			});
+			//});
 
 
 		builder.Services.AddSingleton<IOpenAIService>(x =>
