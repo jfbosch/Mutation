@@ -1,5 +1,6 @@
 ﻿using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
+using Deepgram;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
@@ -106,15 +107,17 @@ internal static class Program
 		});
 
 
-		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		switch (settings.SpeetchToTextSettings.Service)
 		{
-			var openAIService = x.GetRequiredService<IOpenAIService>();
-
-			return new WhisperSpeechToTextService(
-				openAIService,
-				settings.SpeetchToTextSettings.ModelId);
-		});
-
+			case SpeechToTextServices.OpenAiWhisper:
+				AddWhisperSpeechToTextService(builder, settings);
+				break;
+			case SpeechToTextServices.Deepgram:
+				AddDeepgramSpeechToTextService(builder, settings);
+				break;
+			default:
+				throw new NotSupportedException($"The SpeetchToText service '{settings.SpeetchToTextSettings.Service}' is not supported.");
+		}
 
 
 		builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
@@ -123,6 +126,46 @@ internal static class Program
 
 		return builder;
 	}
+
+	private static void AddWhisperSpeechToTextService(HostApplicationBuilder builder, Settings settings)
+	{
+		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		{
+			var openAIService = x.GetRequiredService<IOpenAIService>();
+
+			return new WhisperSpeechToTextService(
+				openAIService,
+				settings.SpeetchToTextSettings.ModelId);
+		});
+	}
+
+	private static void AddDeepgramSpeechToTextService(HostApplicationBuilder builder, Settings settings)
+	{
+		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		{
+			Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient = ClientFactory.CreateListenRESTClient(
+				settings.SpeetchToTextSettings.ApiKey);
+
+			return new DeepgramSpeechToTextService(
+				deepgramClient,
+				settings.SpeetchToTextSettings.ModelId);
+		});
+
+		//var liveSchema = new LiveSchema()
+		//{
+		//	Model = _settings.SpeetchToTextSettings.ModelId,
+		//	Encoding = "linear16",
+		//	SampleRate = 16000,
+		//	Punctuate = true,
+		//	SmartFormat = true,
+		//	InterimResults = true,
+		//	UtteranceEnd = "1000",
+		//	VadEvents = true,
+		//};
+
+
+	}
+
 
 	private static SettingsManager CreateSettingsManager()
 	{

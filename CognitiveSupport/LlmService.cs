@@ -1,72 +1,69 @@
 ﻿using OpenAI;
 using OpenAI.Interfaces;
 using OpenAI.Managers;
-using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
-using static OpenAI.ObjectModels.SharedModels.IOpenAiModels;
 
-namespace CognitiveSupport
+namespace CognitiveSupport;
+
+public class LlmService : ILlmService
 {
-	public class LlmService : ILlmService
+	private readonly string ApiKey;
+	private readonly string Endpoint;
+	private readonly object _lock = new object();
+	private readonly Dictionary<string, IOpenAIService> _openAIServices;
+
+
+	public LlmService(
+		string apiKey,
+		string azureResourceName,
+		List<LlmSettings.ModelDeploymentIdMap> modelDeploymentIdMaps)
 	{
-		private readonly string ApiKey;
-		private readonly string Endpoint;
-		private readonly object _lock = new object();
-		private readonly Dictionary<string, IOpenAIService> _openAIServices;
+		ApiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+		if (modelDeploymentIdMaps is null || !modelDeploymentIdMaps.Any())
+			throw new ArgumentNullException(nameof(modelDeploymentIdMaps));
 
-
-		public LlmService(
-			string apiKey,
-			string azureResourceName,
-			List<LlmSettings.ModelDeploymentIdMap> modelDeploymentIdMaps)
+		_openAIServices = new Dictionary<string, IOpenAIService>();
+		foreach (var map in modelDeploymentIdMaps)
 		{
-			ApiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-			if (modelDeploymentIdMaps is null || !modelDeploymentIdMaps.Any())
-				throw new ArgumentNullException(nameof(modelDeploymentIdMaps));
-
-			_openAIServices = new Dictionary<string, IOpenAIService>();
-			foreach (var map in modelDeploymentIdMaps)
+			OpenAiOptions options = new OpenAiOptions
 			{
-				OpenAiOptions options = new OpenAiOptions
-				{
-					ApiKey = apiKey,
-					ResourceName = azureResourceName,
-					ProviderType = ProviderType.Azure,
-					DeploymentId = map.DeploymentId,
-				};
-				HttpClient httpClient = new HttpClient();
-				httpClient.Timeout = TimeSpan.FromSeconds(60);
-				_openAIServices[map.ModelName] = new OpenAIService(options, httpClient);
-			}
+				ApiKey = apiKey,
+				ResourceName = azureResourceName,
+				ProviderType = ProviderType.Azure,
+				DeploymentId = map.DeploymentId,
+			};
+			HttpClient httpClient = new HttpClient();
+			httpClient.Timeout = TimeSpan.FromSeconds(60);
+			_openAIServices[map.ModelName] = new OpenAIService(options, httpClient);
 		}
+	}
 
-		public async Task<string> CreateChatCompletion(
-			IList<ChatMessage> messages,
-			string llmModelName,
-			decimal temperature = 0.7m)
+	public async Task<string> CreateChatCompletion(
+		IList<ChatMessage> messages,
+		string llmModelName,
+		decimal temperature = 0.7m)
+	{
+		if (!_openAIServices.ContainsKey(llmModelName))
+			throw new ArgumentException($"{llmModelName} is not one of the configured models. The following are the available, configured models: {string.Join(",", _openAIServices.Keys)}", nameof(llmModelName));
+
+		var service = _openAIServices[llmModelName];
+		var response = await service.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
 		{
-			if (!_openAIServices.ContainsKey(llmModelName))
-				throw new ArgumentException($"{llmModelName} is not one of the configured models. The following are the available, configured models: {string.Join(",", _openAIServices.Keys)}", nameof(llmModelName));
-
-			var service = _openAIServices[llmModelName];
-			var response = await service.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+			Messages = messages,
+			Model = llmModelName,
+			Temperature = (float)temperature,
+		});
+		if (response.Successful)
+		{
+			return response.Choices.First().Message.Content;
+		}
+		else
+		{
+			if (response.Error == null)
 			{
-				Messages = messages,
-				Model = llmModelName,
-				Temperature = (float)temperature,
-			});
-			if (response.Successful)
-			{
-				return response.Choices.First().Message.Content;
+				throw new Exception("Unknown Error");
 			}
-			else
-			{
-				if (response.Error == null)
-				{
-					throw new Exception("Unknown Error");
-				}
-				return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
-			}
+			return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
 		}
 	}
 }
