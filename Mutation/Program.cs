@@ -110,10 +110,12 @@ internal static class Program
 		{
 			var openAIService = x.GetRequiredService<IOpenAIService>();
 
-			return new SpeechToTextService(
+			return new WhisperSpeechToTextService(
 				openAIService,
 				settings.SpeetchToTextSettings.ModelId);
 		});
+
+
 
 		builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 
