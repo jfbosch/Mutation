@@ -6,9 +6,6 @@ using Microsoft.Extensions.Hosting;
 using OpenAI;
 using OpenAI.Interfaces;
 using OpenAI.Managers;
-using Polly;
-using Polly.Timeout;
-using System.Net;
 
 namespace Mutation;
 
@@ -150,22 +147,7 @@ internal static class Program
 				deepgramClient,
 				settings.SpeetchToTextSettings.ModelId);
 		});
-
-		//var liveSchema = new LiveSchema()
-		//{
-		//	Model = _settings.SpeetchToTextSettings.ModelId,
-		//	Encoding = "linear16",
-		//	SampleRate = 16000,
-		//	Punctuate = true,
-		//	SmartFormat = true,
-		//	InterimResults = true,
-		//	UtteranceEnd = "1000",
-		//	VadEvents = true,
-		//};
-
-
 	}
-
 
 	private static SettingsManager CreateSettingsManager()
 	{
