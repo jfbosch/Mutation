@@ -1,6 +1,12 @@
-﻿using OpenAI.Interfaces;
+﻿using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
+using OpenAI.Interfaces;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
+using Polly.Contrib.WaitAndRetry;
+using Polly;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using Polly.Timeout;
+using Polly.Extensions.Http;
 
 namespace CognitiveSupport;
 
@@ -23,14 +29,20 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 		string audioffilePath)
 	{
 		var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
-		var response = await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
+
+		var delay = Backoff.LinearBackoff(TimeSpan.FromMicroseconds(5), retryCount: 1, factor: 1);
+		var retryPolicy = Policy
+			.Handle<HttpRequestException>()
+			.Or<TimeoutRejectedException>()
+				.WaitAndRetryAsync(delay);
+
+		//BeepFail(args.AttemptNumber);
+
+		var response = await retryPolicy.ExecuteAsync(async () =>
 		{
-			Prompt = speechToTextPrompt,
-			FileName = Path.GetFileName(audioffilePath),
-			File = audioBytes,
-			Model = _modelId,
-			ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson
-		});
+			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes).ConfigureAwait(false);
+		}).ConfigureAwait(false);
+
 		if (response.Successful)
 		{
 			return response.Text;
@@ -43,5 +55,17 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 			}
 			return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
 		}
+	}
+
+	private async Task<OpenAI.ObjectModels.ResponseModels.AudioCreateTranscriptionResponse> TranscribeViaWhisper(string speechToTextPrompt, string audioffilePath, byte[] audioBytes)
+	{
+		return await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
+		{
+			Prompt = speechToTextPrompt,
+			FileName = Path.GetFileName(audioffilePath),
+			File = audioBytes,
+			Model = _modelId,
+			ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson
+		});
 	}
 }
