@@ -11,6 +11,7 @@
     <PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="3.0.3" />
     <PackageReference Include="Deepgram" Version="4.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="morelinq" Version="4.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="StringExtensionsLibrary" Version="1.0.0" />
     <PackageReference Include="System.Speech" Version="8.0.0" />

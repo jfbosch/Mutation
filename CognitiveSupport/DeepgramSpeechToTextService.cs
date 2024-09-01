@@ -1,4 +1,5 @@
 ﻿using Deepgram.Models.Listen.v1.REST;
+using MoreLinq;
 using System.Text.RegularExpressions;
 
 namespace CognitiveSupport;
@@ -21,20 +22,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 		string speechToTextPrompt,
 		string audioffilePath)
 	{
-		List<string> keywords = new();
-
-		string pattern = @"(?<=\bnames:\s*).*?(?=\.)";
-		Match match = Regex.Match(speechToTextPrompt, pattern, RegexOptions.IgnoreCase);
-		if (match.Success)
-		{
-			string namesString = match.Value.Trim();
-			keywords = namesString.Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-				// Use intencifier to boost detection.
-				.Select(n => $"{n}:4")
-				.ToList();
-		}
-		else
-			keywords = null;
+		List<string> keywords = ParseKeywords(speechToTextPrompt);
 
 		var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
 
@@ -54,5 +42,31 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 
 		return response.Results.Channels?.FirstOrDefault()?.Alternatives?.FirstOrDefault().Transcript
 			?? "(no transcript available)";
+	}
+
+	private static List<string> ParseKeywords(string speechToTextPrompt)
+	{
+		if (speechToTextPrompt == null)
+			speechToTextPrompt = string.Empty;
+
+		string pattern = @"(?<=\bkeywords:\s*).*?(?=\.)";
+		Match match = Regex.Match(speechToTextPrompt, pattern, RegexOptions.IgnoreCase);
+		if (match.Success)
+		{
+			string keywordsString = match.Value.Trim();
+			var keywords = keywordsString.Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+				.Select(n =>
+				{
+					//If the keyword already contains an intensifier, return it as is. Else add an intensifier of 1. 
+					//https://developers.deepgram.com/docs/keywords
+					return n.IndexOf(":") > 0 ?
+						n :
+						$"{n}1";
+				})
+				.ToList();
+			return keywords;
+		}
+		else
+			return null;
 	}
 }
