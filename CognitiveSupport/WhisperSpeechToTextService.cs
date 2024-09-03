@@ -1,12 +1,9 @@
-﻿using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
-using OpenAI.Interfaces;
+﻿using OpenAI.Interfaces;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
-using Polly.Contrib.WaitAndRetry;
 using Polly;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
-using Polly.Extensions.Http;
 
 namespace CognitiveSupport;
 
@@ -29,19 +26,36 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 		string audioffilePath)
 	{
 		var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
+		const string AttemptKey = "Attempt";
 
-		var delay = Backoff.LinearBackoff(TimeSpan.FromMicroseconds(5), retryCount: 1, factor: 1);
+		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
 		var retryPolicy = Policy
 			.Handle<HttpRequestException>()
 			.Or<TimeoutRejectedException>()
-				.WaitAndRetryAsync(delay);
+			.Or<TaskCanceledException>()
+				.WaitAndRetryAsync(
+					delay,
+					onRetry: (exception, timeSpan, attemptNumber, context) =>
+					{
+						int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+						context[AttemptKey] = ++attempt;
+					}
+				);
 
-		//BeepFail(args.AttemptNumber);
-
-		var response = await retryPolicy.ExecuteAsync(async () =>
+		var context = new Context();
+		context[AttemptKey] = 1;
+		var response = await retryPolicy.ExecuteAsync(async (context, token) =>
 		{
-			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes).ConfigureAwait(false);
-		}).ConfigureAwait(false);
+			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
+
+			if (attempt > 0)
+#pragma warning disable CA1416 // Validate platform compatibility
+				Console.Beep(400 + (100 * attempt), 100);
+#pragma warning restore CA1416 // Validate platform compatibility
+
+			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes, cts.Token).ConfigureAwait(false);
+		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
 
 		if (response.Successful)
 		{
@@ -57,7 +71,11 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 		}
 	}
 
-	private async Task<OpenAI.ObjectModels.ResponseModels.AudioCreateTranscriptionResponse> TranscribeViaWhisper(string speechToTextPrompt, string audioffilePath, byte[] audioBytes)
+	private async Task<OpenAI.ObjectModels.ResponseModels.AudioCreateTranscriptionResponse> TranscribeViaWhisper(
+		string speechToTextPrompt,
+		string audioffilePath,
+		byte[] audioBytes,
+		CancellationToken cancellationToken)
 	{
 		return await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
 		{
@@ -66,6 +84,6 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 			File = audioBytes,
 			Model = _modelId,
 			ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson
-		});
+		}, cancellationToken);
 	}
 }

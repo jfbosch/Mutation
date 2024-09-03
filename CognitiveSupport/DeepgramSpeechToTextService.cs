@@ -1,9 +1,8 @@
 ﻿using Deepgram.Models.Listen.v1.REST;
+using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
-using Polly;
 using System.Text.RegularExpressions;
-using System.Threading;
 
 namespace CognitiveSupport;
 
@@ -54,6 +53,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 #pragma warning disable CA1416 // Validate platform compatibility
 				Console.Beep(400 + (100 * attempt), 100);
 #pragma warning restore CA1416 // Validate platform compatibility
+
 			return await TranscribeViaDeepgram(keywords, audioBytes, cts).ConfigureAwait(false);
 		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
 
