@@ -1,13 +1,11 @@
 ﻿using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
+using Deepgram;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
 using OpenAI.Interfaces;
 using OpenAI.Managers;
-using Polly;
-using Polly.Timeout;
-using System.Net;
 
 namespace Mutation;
 
@@ -62,30 +60,7 @@ internal static class Program
 
 
 		const string OpenAiHttpClient = "openai-http-client";
-		builder.Services.AddHttpClient(OpenAiHttpClient)
-			.AddStandardResilienceHandler(options =>
-			{
-				options.Retry.ShouldHandle = async (args) =>
-					 args.Outcome switch
-					 {
-						 { Exception: TimeoutRejectedException } => true,
-						 { Exception: HttpRequestException } => true,
-						 { Result: { StatusCode: HttpStatusCode.InternalServerError } } => true,
-						 _ => false
-					 };
-				options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
-				options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
-				options.Retry.MaxRetryAttempts = 4;
-				options.Retry.BackoffType = DelayBackoffType.Exponential;
-				options.Retry.Delay = TimeSpan.FromMilliseconds(50);
-
-				options.Retry.OnRetry = async args =>
-				{
-					BeepFail(args.AttemptNumber);
-				};
-
-			});
-
+		builder.Services.AddHttpClient(OpenAiHttpClient);
 
 		builder.Services.AddSingleton<IOpenAIService>(x =>
 		{
@@ -105,20 +80,49 @@ internal static class Program
 		});
 
 
-		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		switch (settings.SpeetchToTextSettings.Service)
 		{
-			var openAIService = x.GetRequiredService<IOpenAIService>();
+			case SpeechToTextServices.OpenAiWhisper:
+				AddWhisperSpeechToTextService(builder, settings);
+				break;
+			case SpeechToTextServices.Deepgram:
+				AddDeepgramSpeechToTextService(builder, settings);
+				break;
+			default:
+				throw new NotSupportedException($"The SpeetchToText service '{settings.SpeetchToTextSettings.Service}' is not supported.");
+		}
 
-			return new SpeechToTextService(
-				openAIService,
-				settings.SpeetchToTextSettings.ModelId);
-		});
 
 		builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 
 		builder.Services.AddSingleton<MutationForm>();
 
 		return builder;
+	}
+
+	private static void AddWhisperSpeechToTextService(HostApplicationBuilder builder, Settings settings)
+	{
+		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		{
+			var openAIService = x.GetRequiredService<IOpenAIService>();
+
+			return new WhisperSpeechToTextService(
+				openAIService,
+				settings.SpeetchToTextSettings.ModelId);
+		});
+	}
+
+	private static void AddDeepgramSpeechToTextService(HostApplicationBuilder builder, Settings settings)
+	{
+		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		{
+			Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient = ClientFactory.CreateListenRESTClient(
+				settings.SpeetchToTextSettings.ApiKey);
+
+			return new DeepgramSpeechToTextService(
+				deepgramClient,
+				settings.SpeetchToTextSettings.ModelId);
+		});
 	}
 
 	private static SettingsManager CreateSettingsManager()

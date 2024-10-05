@@ -105,6 +105,15 @@ internal class SettingsManager : ISettingsManager
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
 			somethingWasMissing = true;
 		}
+		if (speechToTextSettings.Service == SpeechToTextServices.None)
+		{
+			speechToTextSettings.Service = SpeechToTextServices.OpenAiWhisper;
+		}
+		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextHotKey))
+		{
+			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
+			somethingWasMissing = true;
+		}
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.ApiKey))
 		{
 			speechToTextSettings.ApiKey = PlaceholderValue;

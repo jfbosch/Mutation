@@ -616,6 +616,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void MutationForm_Load(object sender, EventArgs e)
 		{
 			RestoreWindowLocationAndSizeFromSettings();
+
+			txtSpeechToTextService.Text =
+				$"{this._settings.SpeetchToTextSettings.Service}: {this._settings.SpeetchToTextSettings.ModelId}";
 		}
 
 		private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)

@@ -51,6 +51,8 @@
 			splitContainerLlmProcessing = new SplitContainer();
 			chkFormattedTranscriptAppend = new CheckBox();
 			cmbInsertInto3rdPartyApplication = new ComboBox();
+			lblReviewTemperature = new Label();
+			cmbReviewTemperature = new ComboBox();
 			btnApplySelectedReviewIssues = new Button();
 			dgvReview = new DataGridView();
 			lblReviewTranscriptPrompt = new Label();
@@ -62,8 +64,9 @@
 			radAutoPunctuation = new RadioButton();
 			gbPunctuation = new GroupBox();
 			radManualPunctuation = new RadioButton();
-			cmbReviewTemperature = new ComboBox();
-			lblReviewTemperature = new Label();
+			label1 = new Label();
+			lblSpeechToTextService = new Label();
+			txtSpeechToTextService = new TextBox();
 			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).BeginInit();
 			splitContainerLlmProcessing.Panel1.SuspendLayout();
 			splitContainerLlmProcessing.Panel2.SuspendLayout();
@@ -330,6 +333,25 @@
 			cmbInsertInto3rdPartyApplication.Size = new Size(254, 23);
 			cmbInsertInto3rdPartyApplication.TabIndex = 18;
 			// 
+			// lblReviewTemperature
+			// 
+			lblReviewTemperature.AutoSize = true;
+			lblReviewTemperature.Location = new Point(197, 95);
+			lblReviewTemperature.Margin = new Padding(4, 0, 4, 0);
+			lblReviewTemperature.Name = "lblReviewTemperature";
+			lblReviewTemperature.Size = new Size(73, 15);
+			lblReviewTemperature.TabIndex = 24;
+			lblReviewTemperature.Text = "Temperature";
+			// 
+			// cmbReviewTemperature
+			// 
+			cmbReviewTemperature.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			cmbReviewTemperature.FormattingEnabled = true;
+			cmbReviewTemperature.Location = new Point(277, 92);
+			cmbReviewTemperature.Name = "cmbReviewTemperature";
+			cmbReviewTemperature.Size = new Size(43, 23);
+			cmbReviewTemperature.TabIndex = 21;
+			// 
 			// btnApplySelectedReviewIssues
 			// 
 			btnApplySelectedReviewIssues.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -452,30 +474,41 @@
 			radManualPunctuation.Text = "Manual Punctuation";
 			radManualPunctuation.UseVisualStyleBackColor = true;
 			// 
-			// cmbReviewTemperature
+			// label1
 			// 
-			cmbReviewTemperature.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			cmbReviewTemperature.FormattingEnabled = true;
-			cmbReviewTemperature.Location = new Point(277, 92);
-			cmbReviewTemperature.Name = "cmbReviewTemperature";
-			cmbReviewTemperature.Size = new Size(43, 23);
-			cmbReviewTemperature.TabIndex = 21;
+			label1.AutoSize = true;
+			label1.Location = new Point(575, 410);
+			label1.Margin = new Padding(4, 0, 4, 0);
+			label1.Name = "label1";
+			label1.Size = new Size(127, 15);
+			label1.TabIndex = 21;
+			label1.Text = "Speech To Text Prompt";
 			// 
-			// lblReviewTemperature
+			// lblSpeechToTextService
 			// 
-			lblReviewTemperature.AutoSize = true;
-			lblReviewTemperature.Location = new Point(197, 95);
-			lblReviewTemperature.Margin = new Padding(4, 0, 4, 0);
-			lblReviewTemperature.Name = "lblReviewTemperature";
-			lblReviewTemperature.Size = new Size(73, 15);
-			lblReviewTemperature.TabIndex = 24;
-			lblReviewTemperature.Text = "Temperature";
+			lblSpeechToTextService.AutoSize = true;
+			lblSpeechToTextService.Location = new Point(18, 220);
+			lblSpeechToTextService.Name = "lblSpeechToTextService";
+			lblSpeechToTextService.Size = new Size(47, 15);
+			lblSpeechToTextService.TabIndex = 22;
+			lblSpeechToTextService.Text = "Service:";
+			// 
+			// txtSpeechToTextService
+			// 
+			txtSpeechToTextService.Location = new Point(71, 217);
+			txtSpeechToTextService.Name = "txtSpeechToTextService";
+			txtSpeechToTextService.ReadOnly = true;
+			txtSpeechToTextService.Size = new Size(174, 23);
+			txtSpeechToTextService.TabIndex = 23;
 			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1184, 711);
+			Controls.Add(txtSpeechToTextService);
+			Controls.Add(lblSpeechToTextService);
+			Controls.Add(label1);
 			Controls.Add(gbPunctuation);
 			Controls.Add(splitContainerLlmProcessing);
 			Controls.Add(btnSpeechToTextRecord);
@@ -547,6 +580,9 @@
 		private CheckBox chkFormattedTranscriptAppend;
 		private Label lblReviewTemperature;
 		private ComboBox cmbReviewTemperature;
+		private Label label1;
+		private Label lblSpeechToTextService;
+		private TextBox txtSpeechToTextService;
 	}
 }
 
