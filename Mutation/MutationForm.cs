@@ -497,10 +497,21 @@ The model may also leave out common filler words in the audio. If you want to ke
 			foreach (var mapping in _settings.HotKeyRouterSettings.Mappings)
 			{
 				Hotkey fromHotKey = MapHotKey(mapping.FromHotKey);
-				fromHotKey.Pressed += delegate { SendKeys.SendWait(mapping.ToHotKey); };
+				fromHotKey.Pressed += delegate { SendKeysAfterDelay(mapping.ToHotKey, 10); };
 				if (TryRegisterHotkey(fromHotKey))
 					this.HotKeyRouterFromEntries.Add(fromHotKey);
 			}
+		}
+
+		private static void SendKeysAfterDelay(
+			string hotkey,
+			int delayMs)
+		{
+			System.Threading.Tasks.Task.Run(async () =>
+			{
+				await System.Threading.Tasks.Task.Delay(delayMs);
+				System.Windows.Forms.SendKeys.SendWait(hotkey);
+			});
 		}
 
 		private void TextToSpeech()
@@ -586,7 +597,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 				.ToList();
 			string mainKeyString = keyStrings.Last();
 			mainKeyString = NormalizeKeyString(mainKeyString);
-
 			hotKey.KeyCode = Enum.Parse<Keys>(mainKeyString, true);
 
 			if (keyStrings.Contains("ALT"))
@@ -702,12 +712,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 					{
 						case DictationInsertOption.SendKeys:
 							BeepStart();
-							SendKeys.Send(text);
+							System.Windows.Forms.SendKeys.Send(text);
 							break;
 						case DictationInsertOption.Paste:
 							Thread.Sleep(200); // Wait for text to arrive on clipboard.
 							BeepStart();
-							SendKeys.SendWait("^v");
+							System.Windows.Forms.SendKeys.SendWait("^v");
 							break;
 					}
 				}
