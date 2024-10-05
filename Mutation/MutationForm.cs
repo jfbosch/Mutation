@@ -9,6 +9,8 @@ using ScreenCapturing;
 using StringExtensionLibrary;
 using System.ComponentModel;
 using System.Drawing.Imaging;
+using System.Globalization;
+using System.Runtime;
 
 namespace Mutation
 {
@@ -42,6 +44,8 @@ namespace Mutation
 		private Hotkey _hkTextToSpeech { get; set; }
 		private ITextToSpeechService _textToSpeechService;
 
+		private List<Hotkey> HotKeyRouterFromEntries { get; set; } = new();
+
 		public MutationForm(
 			ISettingsManager settingsManager,
 			Settings settings,
@@ -56,8 +60,8 @@ namespace Mutation
 			this._coreAudioController = coreAudioController ?? throw new ArgumentNullException(nameof(coreAudioController));
 			this._ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
 			this._speechToTextService = speechToTextService ?? throw new ArgumentNullException(nameof(speechToTextService));
-			this._textToSpeechService  = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
-			this._llmService = llmService  ?? throw new ArgumentNullException(nameof(llmService));
+			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
+			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
 
 			InitializeComponent();
 			InitializeAudioControls();
@@ -309,6 +313,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			HookupHotKeySpeechToText();
 			HookupHotKeyTextToSpeech();
+
+			HookupHotKeyRouter();
 		}
 
 		private void HookupHotKeyScreenshot()
@@ -486,6 +492,17 @@ The model may also leave out common filler words in the audio. If you want to ke
 			//lblTextToSpeech.Text = $"Text to Speech: {_hkTextToSpeech}";
 		}
 
+		private void HookupHotKeyRouter()
+		{
+			foreach (var mapping in _settings.HotKeyRouterSettings.Mappings)
+			{
+				Hotkey fromHotKey = MapHotKey(mapping.FromHotKey);
+				fromHotKey.Pressed += delegate { SendKeys.SendWait(mapping.ToHotKey); };
+				if (TryRegisterHotkey(fromHotKey))
+					this.HotKeyRouterFromEntries.Add(fromHotKey);
+			}
+		}
+
 		private void TextToSpeech()
 		{
 			string text = Clipboard.GetText();
@@ -568,6 +585,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 				.Select(k => k.ToUpper())
 				.ToList();
 			string mainKeyString = keyStrings.Last();
+			mainKeyString = NormalizeKeyString(mainKeyString);
+
 			hotKey.KeyCode = Enum.Parse<Keys>(mainKeyString, true);
 
 			if (keyStrings.Contains("ALT"))
@@ -582,15 +601,34 @@ The model may also leave out common filler words in the audio. If you want to ke
 			return hotKey;
 		}
 
-		private void TryRegisterHotkey(Hotkey hotKey)
+		private static string NormalizeKeyString(string keyString)
+		{
+			keyString = keyString
+				.Replace("{", "")
+				.Replace("}", "");
+
+			return keyString.ToLowerInvariant() switch
+			{
+				"del" => "delete",
+				"ins" => "insert",
+				_ => keyString
+			};
+
+		}
+
+		private bool TryRegisterHotkey(Hotkey hotKey)
 		{
 			if (!hotKey.GetCanRegister(this))
 			{
 				this.Activate();
 				MessageBox.Show($"Oops, looks like attempts to register the hotkey {hotKey} will fail or throw an exception.");
+				return false;
 			}
 			else
+			{
 				hotKey.Register(this);
+				return true;
+			}
 		}
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)

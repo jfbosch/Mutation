@@ -373,6 +373,16 @@ When you are asked to apply revision corrections, you should do the following:
 			somethingWasMissing = true;
 		}
 
+		if (settings.HotKeyRouterSettings is null || !settings.HotKeyRouterSettings.Mappings.Any())
+		{
+			settings.HotKeyRouterSettings = new();
+			// Add a sample hotkey router mapping.
+			settings.HotKeyRouterSettings.Mappings.Add
+			(
+				new HotKeyRouterSettings.HotKeyRouterMap("CONTROL+SHIFT+ALT+8", "CONTROL+SHIFT+ALT+9")
+			);
+		}
+
 		return somethingWasMissing;
 	}
 
