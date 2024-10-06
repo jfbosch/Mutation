@@ -497,7 +497,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			foreach (var mapping in _settings.HotKeyRouterSettings.Mappings)
 			{
 				Hotkey fromHotKey = MapHotKey(mapping.FromHotKey);
-				fromHotKey.Pressed += delegate { SendKeysAfterDelay(mapping.ToHotKey, 10); };
+				fromHotKey.Pressed += delegate { SendKeysAfterDelay(mapping.ToHotKey, 25); };
 				if (TryRegisterHotkey(fromHotKey))
 					this.HotKeyRouterFromEntries.Add(fromHotKey);
 			}
