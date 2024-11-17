@@ -8,10 +8,8 @@ public class OcrService : IOcrService
 {
 	private string SubscriptionKey { get; init; }
 	private string Endpoint { get; init; }
-
-	private ComputerVisionClient client;
-
-	private readonly object _lock = new object();
+	private ComputerVisionClient ComputerVisionClient { get; init;  }
+	private readonly object _lock = new();
 
 	public OcrService(
 		string? subscriptionKey,
@@ -19,13 +17,13 @@ public class OcrService : IOcrService
 	{
 		SubscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
 		Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
-		client = Authenticate(Endpoint, SubscriptionKey);
+		ComputerVisionClient = Authenticate(Endpoint, SubscriptionKey);
 	}
 
 	public async Task<string> ExtractText(
 		Stream imageStream)
 	{
-		return await ReadFile(client, imageStream).ConfigureAwait(false);
+		return await ReadFile(imageStream).ConfigureAwait(false);
 	}
 
 
@@ -48,14 +46,13 @@ public class OcrService : IOcrService
 	 * READ FILE - URL 
 	 * Extracts text. 
 	 */
-	async Task<string> ReadFile(
-		ComputerVisionClient client,
+	private async Task<string> ReadFile(
 		Stream imageStream)
 	{
 		Console.WriteLine("----------------------------------------------------------");
 		Console.WriteLine("READ FROM file");
 
-		var textHeaders = await client.ReadInStreamAsync(imageStream).ConfigureAwait(false);
+		var textHeaders = await this.ComputerVisionClient.ReadInStreamAsync(imageStream).ConfigureAwait(false);
 
 		// After the request, get the operation location (operation ID)
 		string operationLocation = textHeaders.OperationLocation;
@@ -73,7 +70,7 @@ public class OcrService : IOcrService
 		Console.WriteLine();
 		do
 		{
-			results = await client.GetReadResultAsync(Guid.Parse(operationId)).ConfigureAwait(false);
+			results = await this.ComputerVisionClient.GetReadResultAsync(Guid.Parse(operationId)).ConfigureAwait(false);
 		}
 		while ((results.Status == OperationStatusCodes.Running
 			|| results.Status == OperationStatusCodes.NotStarted));
