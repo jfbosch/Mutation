@@ -49,11 +49,12 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
 			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, cts.Token);
 
 			if (attempt > 0)
 				this.Beep(attempt);
 
-			return await TranscribeViaDeepgram(keywords, audioBytes, cts).ConfigureAwait(false);
+			return await TranscribeViaDeepgram(keywords, audioBytes, linkedCts).ConfigureAwait(false);
 		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
 
 		return response.Results.Channels?.FirstOrDefault()?.Alternatives?.FirstOrDefault().Transcript
@@ -63,7 +64,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 	private async Task<SyncResponse> TranscribeViaDeepgram(
 		List<string> keywords,
 		byte[] audioBytes,
-		CancellationTokenSource cancellationToken)
+		CancellationTokenSource cancellationTokenSource)
 	{
 		var response = await _deepgramClient.TranscribeFile(
 		  audioBytes,
@@ -77,7 +78,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 			  Measurements = true,
 			  SmartFormat = true,
 			  //Diarize = true,
-		  }, cancellationToken = cancellationToken);
+		  }, cancellationTokenSource = cancellationTokenSource);
 		return response;
 	}
 

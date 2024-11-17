@@ -67,11 +67,13 @@ public class OcrService : IOcrService
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
 			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(7.5 * attempt));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, cts.Token);
 
 			if (attempt > 0)
 				this.Beep(attempt);
 
-			return await ReadFileInternal(imageStream, cts.Token).ConfigureAwait(false);
+			return await ReadFileInternal(imageStream, linkedCts.Token).ConfigureAwait(false);
+
 		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
 
 		return response;

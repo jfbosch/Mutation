@@ -50,11 +50,12 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
 			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, cts.Token);
 
 			if (attempt > 0)
 				this.Beep(attempt);
 
-			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes, cts.Token).ConfigureAwait(false);
+			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes, linkedCts.Token).ConfigureAwait(false);
 		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
 
 		if (response.Successful)
