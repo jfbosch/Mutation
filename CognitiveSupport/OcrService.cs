@@ -1,5 +1,9 @@
-﻿using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
+﻿using CognitiveSupport.Extensions;
+using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
+using Polly;
+using Polly.Contrib.WaitAndRetry;
+using Polly.Timeout;
 using System.Text;
 
 namespace CognitiveSupport;
@@ -8,7 +12,7 @@ public class OcrService : IOcrService
 {
 	private string SubscriptionKey { get; init; }
 	private string Endpoint { get; init; }
-	private ComputerVisionClient ComputerVisionClient { get; init;  }
+	private ComputerVisionClient ComputerVisionClient { get; init; }
 	private readonly object _lock = new();
 
 	public OcrService(
@@ -17,7 +21,7 @@ public class OcrService : IOcrService
 	{
 		SubscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
 		Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
-		ComputerVisionClient = Authenticate(Endpoint, SubscriptionKey);
+		ComputerVisionClient = CreateComputerVisionClient(Endpoint, SubscriptionKey);
 	}
 
 	public async Task<string> ExtractText(
@@ -26,12 +30,9 @@ public class OcrService : IOcrService
 		return await ReadFile(imageStream).ConfigureAwait(false);
 	}
 
-
-	/*
-	 * AUTHENTICATE
-	 * Creates a Computer Vision client used by each example.
-	 */
-	ComputerVisionClient Authenticate(string endpoint, string key)
+	private ComputerVisionClient CreateComputerVisionClient(
+		string endpoint,
+		string key)
 	{
 		ComputerVisionClient client =
 			new ComputerVisionClient(new ApiKeyServiceClientCredentials(key))
@@ -41,55 +42,97 @@ public class OcrService : IOcrService
 		return client;
 	}
 
-
-	/*
-	 * READ FILE - URL 
-	 * Extracts text. 
-	 */
 	private async Task<string> ReadFile(
 		Stream imageStream)
 	{
-		Console.WriteLine("----------------------------------------------------------");
-		Console.WriteLine("READ FROM file");
+		const string AttemptKey = "Attempt";
+		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
+		var retryPolicy = Policy
+			.Handle<HttpRequestException>()
+			.Or<TimeoutRejectedException>()
+			.Or<TaskCanceledException>()
+			.WaitAndRetryAsync(
+				delay,
+				onRetry: (exception, timeSpan, attemptNumber, context) =>
+				{
+					int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+					context[AttemptKey] = ++attempt;
+				}
+			);
 
-		var textHeaders = await this.ComputerVisionClient.ReadInStreamAsync(imageStream).ConfigureAwait(false);
+		var context = new Context();
+		context[AttemptKey] = 1;
 
-		// After the request, get the operation location (operation ID)
-		string operationLocation = textHeaders.OperationLocation;
-		Thread.Sleep(500);
-		Console.WriteLine($"operationLocation {operationLocation}");
+		string response = await retryPolicy.ExecuteAsync(async (context, token) =>
+		{
+			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
 
-		// Retrieve the URI where the extracted text will be stored from the Operation-Location header.
-		// We only need the ID and not the full URL
+			if (attempt > 0)
+				this.Beep(attempt);
+
+			return await ReadFileInternal(imageStream, cts.Token).ConfigureAwait(false);
+		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
+
+		return response;
+	}
+
+
+	private async Task<string> ReadFileInternal(
+		Stream imageStream,
+		CancellationToken cancellationToken)
+	{
+		const int delayMilliseconds = 500;
 		const int numberOfCharsInOperationId = 36;
+
+		Log("----------------------------------------------------------");
+		Log("READ FROM file");
+
+		var textHeaders = await this.ComputerVisionClient.ReadInStreamAsync(imageStream, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+		string operationLocation = textHeaders.OperationLocation;
+		await Task.Delay(delayMilliseconds, cancellationToken).ConfigureAwait(false);
+		Log($"operationLocation {operationLocation}");
+
 		string operationId = operationLocation.Substring(operationLocation.Length - numberOfCharsInOperationId);
 
-		// Extract the text
+		var results = await GetReadOperationResultAsync(operationId, cancellationToken).ConfigureAwait(false);
+
+		return ExtractTextFromResults(results);
+	}
+
+	private async Task<ReadOperationResult> GetReadOperationResultAsync(string operationId, CancellationToken cancellationToken)
+	{
 		ReadOperationResult results;
-		Console.WriteLine($"Extracting text from image...");
-		Console.WriteLine();
 		do
 		{
-			results = await this.ComputerVisionClient.GetReadResultAsync(Guid.Parse(operationId)).ConfigureAwait(false);
+			results = await this.ComputerVisionClient.GetReadResultAsync(Guid.Parse(operationId), cancellationToken).ConfigureAwait(false);
 		}
-		while ((results.Status == OperationStatusCodes.Running
-			|| results.Status == OperationStatusCodes.NotStarted));
+		while (results.Status == OperationStatusCodes.Running || results.Status == OperationStatusCodes.NotStarted);
 
-		// Display the found text.
-		Console.WriteLine();
+		return results;
+	}
+
+	private string ExtractTextFromResults(ReadOperationResult results)
+	{
 		StringBuilder sb = new();
 		var textUrlFileResults = results.AnalyzeResult.ReadResults;
 		foreach (ReadResult page in textUrlFileResults)
 		{
 			foreach (Line line in page.Lines)
 			{
-				Console.WriteLine(line.Text);
+				Log(line.Text);
 				sb.AppendLine(line.Text);
 			}
 		}
-		Console.WriteLine();
+		Log(string.Empty);
 
 		return sb.ToString();
 	}
 
+	private void Log(string message)
+	{
+		// Replace this with a proper logging mechanism
+		Console.WriteLine(message);
+	}
 }
