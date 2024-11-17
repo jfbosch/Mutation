@@ -66,7 +66,7 @@ public class OcrService : IOcrService
 		string response = await retryPolicy.ExecuteAsync(async (context, token) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
+			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(7.5 * attempt));
 
 			if (attempt > 0)
 				this.Beep(attempt);
