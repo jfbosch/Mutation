@@ -1,4 +1,5 @@
-﻿using OpenAI.Interfaces;
+﻿using CognitiveSupport.Extensions;
+using OpenAI.Interfaces;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using Polly;
@@ -44,17 +45,17 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 
 		var context = new Context();
 		context[AttemptKey] = 1;
+		
 		var response = await retryPolicy.ExecuteAsync(async (context, token) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
 			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, cts.Token);
 
 			if (attempt > 0)
-#pragma warning disable CA1416 // Validate platform compatibility
-				Console.Beep(400 + (100 * attempt), 100);
-#pragma warning restore CA1416 // Validate platform compatibility
+				this.Beep(attempt);
 
-			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes, cts.Token).ConfigureAwait(false);
+			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes, linkedCts.Token).ConfigureAwait(false);
 		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
 
 		if (response.Successful)

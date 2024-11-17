@@ -9,8 +9,6 @@ using ScreenCapturing;
 using StringExtensionLibrary;
 using System.ComponentModel;
 using System.Drawing.Imaging;
-using System.Globalization;
-using System.Runtime;
 
 namespace Mutation
 {
@@ -406,7 +404,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				if (image is null)
 					// Sometimes we are too quick for the image to have shown up on the clipboard, so, waita  short while and try again.
-					await Task.Delay(100);
+					await Task.Delay(200);
 
 				if (image is not null)
 				{
@@ -415,24 +413,16 @@ The model may also leave out common filler words in the audio. If you want to ke
 					imageStream.Seek(0, SeekOrigin.Begin);
 					string text = await this._ocrService.ExtractText(imageStream).ConfigureAwait(true);
 
-					//MessageBox.Show(text, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
-
 					SetTextToClipboard(text);
 					txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
 
 					BeepSuccess();
-
-					//using MessageForm msgForm = new MessageForm();
-					//msgForm.Show();
-					//msgForm.Activate();
 				}
 				else
 				{
 					BeepFail();
 
 					txtOcr.Text = "No image found on the clipboard.";
-					//this.Activate();
-					//MessageBox.Show("No image found on the clipboard.");
 				}
 			}
 			catch (Exception ex)
@@ -440,10 +430,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 				string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
 				txtOcr.Text = msg;
 
-				BeepFail();
 
-				//this.Activate();
-				//MessageBox.Show(this, msg, "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				BeepFail();
+				SetTextToClipboard(msg);
 			}
 		}
 
