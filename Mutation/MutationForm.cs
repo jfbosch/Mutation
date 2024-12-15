@@ -581,14 +581,20 @@ The model may also leave out common filler words in the audio. If you want to ke
 			{
 				// This was an intentional cancellation by the user, so only beep the failure, but don't show an error message. 
 				BeepFail();
+
+				txtSpeechToText.Text = "Transcription cancelled by user.";
+				txtSpeechToText.ReadOnly = false;
+
+				btnSpeechToTextRecord.Text = "&Record";
+				btnSpeechToTextRecord.Enabled = true;
 			}
 			catch (Exception ex)
 			{
 				BeepFail();
 
 				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
-				txtSpeechToText.ReadOnly = true;
 				txtSpeechToText.Text = msg;
+				txtSpeechToText.ReadOnly = false;
 
 				btnSpeechToTextRecord.Text = "&Record";
 				btnSpeechToTextRecord.Enabled = true;
