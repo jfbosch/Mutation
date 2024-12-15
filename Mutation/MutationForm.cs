@@ -28,7 +28,6 @@ namespace Mutation
 
 		private Hotkey _hkSpeechToText { get; set; }
 		private ISpeechToTextService _speechToTextService { get; set; }
-		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
 		private AudioRecorder _audioRecorder { get; set; }
 		private SpeechToTextState _speechToTextState { get; init; }
 
@@ -537,7 +536,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				string audioFilePath = Path.Combine(sessionsDirectory, "mutation_recording.mp3");
 
-				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
+				await this._speechToTextState.AudioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
 					if (!this._speechToTextState.RecordingAudio)
 					{
@@ -611,7 +610,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 			finally
 			{
-				_audioRecorderLock.Release();
+				this._speechToTextState.AudioRecorderLock.Release();
 			}
 		}
 

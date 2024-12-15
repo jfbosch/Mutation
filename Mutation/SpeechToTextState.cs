@@ -4,11 +4,13 @@ namespace Mutation
 {
 	internal class SpeechToTextState
 	{
-		private Func<AudioRecorder> GetAudioRecorder;
+		internal SemaphoreSlim AudioRecorderLock { get; } = new SemaphoreSlim(1, 1);
 
+		private Func<AudioRecorder> GetAudioRecorder;
 		internal bool RecordingAudio => GetAudioRecorder() != null;
-		internal bool TranscribingAudio => TranscriptionCancellationTokenSource != null;
+
 		internal CancellationTokenSource? TranscriptionCancellationTokenSource { get; set; }
+		internal bool TranscribingAudio => TranscriptionCancellationTokenSource != null;
 
 		public SpeechToTextState(
 			Func<AudioRecorder> getAudioRecorder)
