@@ -24,8 +24,12 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 
 	public async Task<string> ConvertAudioToText(
 		string speechToTextPrompt,
-		string audioffilePath)
+		string audioffilePath,
+		CancellationToken overallCancellationToken)
 	{
+		if (string.IsNullOrEmpty(audioffilePath))
+			throw new ArgumentException($"'{nameof(audioffilePath)}' cannot be null or empty.", nameof(audioffilePath));
+
 		var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
 		const string AttemptKey = "Attempt";
 
@@ -46,17 +50,17 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 		var context = new Context();
 		context[AttemptKey] = 1;
 		
-		var response = await retryPolicy.ExecuteAsync(async (context, token) =>
+		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
-			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, cts.Token);
+			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
 			if (attempt > 0)
 				this.Beep(attempt);
 
 			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes, linkedCts.Token).ConfigureAwait(false);
-		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
+		}, context, overallCancellationToken).ConfigureAwait(false);
 
 		if (response.Successful)
 		{

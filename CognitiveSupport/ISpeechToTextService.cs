@@ -2,5 +2,5 @@
 
 public interface ISpeechToTextService
 {
-	Task<string> ConvertAudioToText(string speechToTextPrompt, string audioffilePath);
+	Task<string> ConvertAudioToText(string speechToTextPrompt, string audioffilePath, CancellationToken overallCancellationToken);
 }

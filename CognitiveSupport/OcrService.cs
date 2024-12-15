@@ -25,9 +25,10 @@ public class OcrService : IOcrService
 	}
 
 	public async Task<string> ExtractText(
-		Stream imageStream)
+		Stream imageStream,
+		CancellationToken overallCancellationToken)
 	{
-		return await ReadFile(imageStream).ConfigureAwait(false);
+		return await ReadFile(imageStream, overallCancellationToken).ConfigureAwait(false);
 	}
 
 	private ComputerVisionClient CreateComputerVisionClient(
@@ -43,7 +44,8 @@ public class OcrService : IOcrService
 	}
 
 	private async Task<string> ReadFile(
-		Stream imageStream)
+		Stream imageStream,
+		CancellationToken overallCancellationToken)
 	{
 		const string AttemptKey = "Attempt";
 		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
@@ -63,18 +65,18 @@ public class OcrService : IOcrService
 		var context = new Context();
 		context[AttemptKey] = 1;
 
-		string response = await retryPolicy.ExecuteAsync(async (context, token) =>
+		string response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			var cts = new CancellationTokenSource(TimeSpan.FromSeconds(7.5 * attempt));
-			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, cts.Token);
+			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(7.5 * attempt));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
 			if (attempt > 0)
 				this.Beep(attempt);
 
 			return await ReadFileInternal(imageStream, linkedCts.Token).ConfigureAwait(false);
 
-		}, context, new CancellationTokenSource().Token).ConfigureAwait(false);
+		}, context, overallCancellationToken).ConfigureAwait(false);
 
 		return response;
 	}

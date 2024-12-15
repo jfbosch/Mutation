@@ -28,14 +28,14 @@ namespace Mutation
 
 		private Hotkey _hkSpeechToText { get; set; }
 		private ISpeechToTextService _speechToTextService { get; set; }
-		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
 		private AudioRecorder _audioRecorder { get; set; }
-		private bool RecordingAudio => _audioRecorder != null;
+		private SpeechToTextState _speechToTextState { get; init; }
 
 		private Hotkey _hkScreenshot;
 		private Hotkey _hkScreenshotOcr;
 		private Hotkey _hkOcr;
 		private IOcrService _ocrService { get; set; }
+		private OcrState _ocrState { get; init; } = new();
 
 		private ILlmService _llmService { get; set; }
 
@@ -60,6 +60,8 @@ namespace Mutation
 			this._speechToTextService = speechToTextService ?? throw new ArgumentNullException(nameof(speechToTextService));
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+			this._speechToTextState = new SpeechToTextState(() => _audioRecorder);
+
 
 			InitializeComponent();
 			InitializeAudioControls();
@@ -358,7 +360,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hkScreenshotOcr}";
 		}
 
-		private void TakeScreenshotAndExtractText()
+		private async void TakeScreenshotAndExtractText()
 		{
 			if (_activeScreenCaptureForm is not null)
 			{
@@ -380,7 +382,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 					_activeScreenCaptureForm = null;
 
-					ExtractText(GetClipboardImage());
+					await ExtractTextViaOcrFromClipboardImage();
 				}
 			}
 		}
@@ -388,62 +390,102 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void HookupHotKeyOcr()
 		{
 			_hkOcr = MapHotKey(_settings.AzureComputerVisionSettings.OcrHotKey);
-			_hkOcr.Pressed += delegate { ExtractText(GetClipboardImage()); };
+			_hkOcr.Pressed += delegate
+			{
+				ExtractTextViaOcrFromClipboardImage();
+			};
 			TryRegisterHotkey(_hkOcr);
 
 			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
 		}
 
-		private async Task ExtractText(Image image)
+		private async Task ExtractTextViaOcrFromClipboardImage()
 		{
+			if (_ocrState.BusyWithTextExtraction)
+			{
+				_ocrState.StopTextExtraction();
+				return;
+			}
+
+			var image = TryGetClipboardImage();
+			if (image is null)
+			{
+				BeepFail();
+
+				this.Activate();
+				MessageBox.Show("No image found on the clipboard.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+
+			try
+			{
+				_ocrState.StartTextExtraction();
+				await ExtractTextViaOcr(TryGetClipboardImage());
+			}
+			finally
+			{
+				_ocrState.StopTextExtraction();
+			}
+		}
+
+		private async Task ExtractTextViaOcr(
+			Image image)
+		{
+			if (image is null)
+			{
+				txtOcr.Text = "No image provided to perform OCR on.";
+				return;
+			}
+
 			try
 			{
 				BeepStart();
 
 				txtOcr.Text = "Running OCR on image";
 
-				if (image is null)
-					// Sometimes we are too quick for the image to have shown up on the clipboard, so, waita  short while and try again.
-					await Task.Delay(200);
+				using MemoryStream imageStream = new MemoryStream();
+				image.Save(imageStream, ImageFormat.Jpeg);
+				imageStream.Seek(0, SeekOrigin.Begin);
+				string text = await this._ocrService.ExtractText(imageStream, _ocrState.OcrCancellationTokenSource.Token).ConfigureAwait(true);
 
-				if (image is not null)
-				{
-					using MemoryStream imageStream = new MemoryStream();
-					image.Save(imageStream, ImageFormat.Jpeg);
-					imageStream.Seek(0, SeekOrigin.Begin);
-					string text = await this._ocrService.ExtractText(imageStream).ConfigureAwait(true);
+				SetTextToClipboard(text);
+				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
 
-					SetTextToClipboard(text);
-					txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
+				BeepSuccess();
+			}
+			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
+			{
+				// This was an intentional cancellation by the user, so only beep the failure, but don't show an error message. 
+				BeepFail();
 
-					BeepSuccess();
-				}
-				else
-				{
-					BeepFail();
-
-					txtOcr.Text = "No image found on the clipboard.";
-				}
+				txtOcr.Text = "OCR cancelled by user.";
+				SetTextToClipboard(txtOcr.Text);
 			}
 			catch (Exception ex)
 			{
 				string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
 				txtOcr.Text = msg;
 
-
 				BeepFail();
 				SetTextToClipboard(msg);
 			}
 		}
 
-		public Image GetClipboardImage()
+		public Image TryGetClipboardImage()
 		{
-			Image returnImage = null;
-			if (Clipboard.ContainsImage())
+			int attempts = 5;
+
+			while (attempts > 0)
 			{
-				returnImage = Clipboard.GetImage();
+				if (Clipboard.ContainsImage())
+				{
+					return Clipboard.GetImage();
+				}
+
+				attempts--;
+				Thread.Sleep(100);
 			}
-			return returnImage;
+
+			return null;
 		}
 
 		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
@@ -513,15 +555,22 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
+				if (this._speechToTextState.TranscribingAudio)
+				{
+					this._speechToTextState.StopTranscription();
+					//BeepFail();
+					return;
+				}
+
 				string sessionsDirectory = Path.Combine(_settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
 				if (!Directory.Exists(sessionsDirectory))
 					Directory.CreateDirectory(sessionsDirectory);
 
 				string audioFilePath = Path.Combine(sessionsDirectory, "mutation_recording.mp3");
 
-				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
+				await this._speechToTextState.AudioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
-					if (!RecordingAudio)
+					if (!this._speechToTextState.RecordingAudio)
 					{
 						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Recording microphone...";
@@ -546,24 +595,44 @@ The model may also leave out common filler words in the audio. If you want to ke
 						btnSpeechToTextRecord.Text = "Processing";
 						btnSpeechToTextRecord.Enabled = false;
 
-						string text = await this._speechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
+						string text = "";
+						_speechToTextState.StartTranscription();
+						try
+						{
+							text = await this._speechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath, this._speechToTextState.TranscriptionCancellationTokenSource.Token).ConfigureAwait(true);
+						}
+						finally
+						{
+							_speechToTextState.StopTranscription();
 
-						txtSpeechToText.ReadOnly = false;
-						txtSpeechToText.Text = $"{text}";
+							txtSpeechToText.ReadOnly = false;
+							txtSpeechToText.Text = $"{text}";
 
-						btnSpeechToTextRecord.Text = "&Record";
-						btnSpeechToTextRecord.Enabled = true;
+							btnSpeechToTextRecord.Text = "&Record";
+							btnSpeechToTextRecord.Enabled = true;
+						}
 					}
 				}
 
+			}
+			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
+			{
+				// This was an intentional cancellation by the user, so only beep the failure, but don't show an error message. 
+				BeepFail();
+
+				txtSpeechToText.Text = "Transcription cancelled by user.";
+				txtSpeechToText.ReadOnly = false;
+
+				btnSpeechToTextRecord.Text = "&Record";
+				btnSpeechToTextRecord.Enabled = true;
 			}
 			catch (Exception ex)
 			{
 				BeepFail();
 
 				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
-				txtSpeechToText.ReadOnly = true;
 				txtSpeechToText.Text = msg;
+				txtSpeechToText.ReadOnly = false;
 
 				btnSpeechToTextRecord.Text = "&Record";
 				btnSpeechToTextRecord.Enabled = true;
@@ -573,7 +642,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 			finally
 			{
-				_audioRecorderLock.Release();
+				this._speechToTextState.AudioRecorderLock.Release();
 			}
 		}
 

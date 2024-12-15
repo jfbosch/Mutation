@@ -2,5 +2,5 @@
 
 public interface IOcrService
 {
-	Task<string> ExtractText(Stream imageStream);
+	Task<string> ExtractText(Stream imageStream, CancellationToken overallCancellationToken);
 }
