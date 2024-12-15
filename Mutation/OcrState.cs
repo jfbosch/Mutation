@@ -4,28 +4,23 @@ namespace Mutation
 {
 	internal class OcrState
 	{
-		private Func<AudioRecorder> GetAudioRecorder;
+		internal bool BusyWithTextExtraction => OcrCancellationTokenSource != null;
+		internal CancellationTokenSource? OcrCancellationTokenSource { get; set; }
 
-		internal bool RecordingAudio => GetAudioRecorder() != null;
-		internal bool TranscribingAudio => TranscriptionCancellationTokenSource != null;
-		internal CancellationTokenSource? TranscriptionCancellationTokenSource { get; set; }
-
-		public OcrState(
-			Func<AudioRecorder> getAudioRecorder)
+		public OcrState()
 		{
-			GetAudioRecorder = getAudioRecorder ?? throw new ArgumentNullException(nameof(getAudioRecorder));
 		}
 
-		internal void StartTranscription()
+		internal void StartTextExtraction()
 		{
-			this.TranscriptionCancellationTokenSource = new();
+			this.OcrCancellationTokenSource = new();
 		}
 
-		internal void StopTranscription()
+		internal void StopTextExtraction()
 		{
-			if (this.TranscriptionCancellationTokenSource is not null)
-				this.TranscriptionCancellationTokenSource.Cancel();
-			this.TranscriptionCancellationTokenSource = null;
+			if (this.OcrCancellationTokenSource is not null)
+				this.OcrCancellationTokenSource.Cancel();
+			this.OcrCancellationTokenSource = null;
 		}
 
 
