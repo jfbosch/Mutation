@@ -360,7 +360,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hkScreenshotOcr}";
 		}
 
-		private void TakeScreenshotAndExtractText()
+		private async void TakeScreenshotAndExtractText()
 		{
 			if (_activeScreenCaptureForm is not null)
 			{
@@ -382,7 +382,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 					_activeScreenCaptureForm = null;
 
-					ExtractText(GetClipboardImage());
+					await ExtractTextViaOcr(GetClipboardImage());
 				}
 			}
 		}
@@ -390,44 +390,38 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void HookupHotKeyOcr()
 		{
 			_hkOcr = MapHotKey(_settings.AzureComputerVisionSettings.OcrHotKey);
-			_hkOcr.Pressed += delegate { ExtractText(GetClipboardImage()); };
+			_hkOcr.Pressed += delegate { ExtractTextViaOcr(GetClipboardImage()); };
 			TryRegisterHotkey(_hkOcr);
 
 			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
 		}
 
-		private async Task ExtractText(Image image)
+		private async Task ExtractTextViaOcr(
+			Image image)
 		{
+			if (image is null)
+			{
+				txtOcr.Text = "No image provided to perform OCR on.";
+				return;
+			}
+
 			try
 			{
 				BeepStart();
 
 				txtOcr.Text = "Running OCR on image";
 
-				if (image is null)
-					// Sometimes we are too quick for the image to have shown up on the clipboard, so, waita  short while and try again.
-					await Task.Delay(200);
+				using MemoryStream imageStream = new MemoryStream();
+				image.Save(imageStream, ImageFormat.Jpeg);
+				imageStream.Seek(0, SeekOrigin.Begin);
+				//TODO: Instead of just declaring a cancellation token source here that never gets canceled, change it so that we are tracking whether we are busy with an OCR operation or not. And if so, when the hotkey gets pressed again, the current operation should get cancelled. 
+				CancellationTokenSource cts = new();
+				string text = await this._ocrService.ExtractText(imageStream, cts.Token).ConfigureAwait(true);
 
-				if (image is not null)
-				{
-					using MemoryStream imageStream = new MemoryStream();
-					image.Save(imageStream, ImageFormat.Jpeg);
-					imageStream.Seek(0, SeekOrigin.Begin);
-					//TODO: Instead of just declaring a cancellation token source here that never gets canceled, change it so that we are tracking whether we are busy with an OCR operation or not. And if so, when the hotkey gets pressed again, the current operation should get cancelled. 
-					CancellationTokenSource cts = new();
-					string text = await this._ocrService.ExtractText(imageStream, cts.Token).ConfigureAwait(true);
+				SetTextToClipboard(text);
+				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
 
-					SetTextToClipboard(text);
-					txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
-
-					BeepSuccess();
-				}
-				else
-				{
-					BeepFail();
-
-					txtOcr.Text = "No image found on the clipboard.";
-				}
+				BeepSuccess();
 			}
 			catch (Exception ex)
 			{
@@ -442,12 +436,25 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		public Image GetClipboardImage()
 		{
-			Image returnImage = null;
-			if (Clipboard.ContainsImage())
+			int attempts = 5;
+
+			while (attempts > 0)
 			{
-				returnImage = Clipboard.GetImage();
+				if (Clipboard.ContainsImage())
+				{
+					return Clipboard.GetImage();
+				}
+
+				attempts--;
+				Thread.Sleep(100);
 			}
-			return returnImage;
+
+			BeepFail();
+
+			this.Activate();
+			MessageBox.Show("No image found on the clipboard.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+			return null;
 		}
 
 		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
