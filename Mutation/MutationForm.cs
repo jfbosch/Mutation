@@ -30,7 +30,7 @@ namespace Mutation
 		private ISpeechToTextService _speechToTextService { get; set; }
 		private SemaphoreSlim _audioRecorderLock = new SemaphoreSlim(1, 1);
 		private AudioRecorder _audioRecorder { get; set; }
-		private bool RecordingAudio => _audioRecorder != null;
+		private SpeechToTextState _speechToTextState { get; init; }
 
 		private Hotkey _hkScreenshot;
 		private Hotkey _hkScreenshotOcr;
@@ -60,6 +60,8 @@ namespace Mutation
 			this._speechToTextService = speechToTextService ?? throw new ArgumentNullException(nameof(speechToTextService));
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+			this._speechToTextState = new SpeechToTextState(() => _audioRecorder);
+
 
 			InitializeComponent();
 			InitializeAudioControls();
@@ -411,7 +413,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 					using MemoryStream imageStream = new MemoryStream();
 					image.Save(imageStream, ImageFormat.Jpeg);
 					imageStream.Seek(0, SeekOrigin.Begin);
-					string text = await this._ocrService.ExtractText(imageStream).ConfigureAwait(true);
+					//TODO: Instead of just declaring a cancellation token source here that never gets canceled, change it so that we are tracking whether we are busy with an OCR operation or not. And if so, when the hotkey gets pressed again, the current operation should get cancelled. 
+					CancellationTokenSource cts = new();
+					string text = await this._ocrService.ExtractText(imageStream, cts.Token).ConfigureAwait(true);
 
 					SetTextToClipboard(text);
 					txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
@@ -513,6 +517,13 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			try
 			{
+				if (this._speechToTextState.TranscribingAudio)
+				{
+					this._speechToTextState.StopTranscription();
+					//BeepFail();
+					return;
+				}
+
 				string sessionsDirectory = Path.Combine(_settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
 				if (!Directory.Exists(sessionsDirectory))
 					Directory.CreateDirectory(sessionsDirectory);
@@ -521,7 +532,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				await _audioRecorderLock.WaitAsync().ConfigureAwait(true);
 				{
-					if (!RecordingAudio)
+					if (!this._speechToTextState.RecordingAudio)
 					{
 						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Recording microphone...";
@@ -546,16 +557,30 @@ The model may also leave out common filler words in the audio. If you want to ke
 						btnSpeechToTextRecord.Text = "Processing";
 						btnSpeechToTextRecord.Enabled = false;
 
-						string text = await this._speechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath).ConfigureAwait(true);
+						string text = "";
+						_speechToTextState.StartTranscription();
+						try
+						{
+							text = await this._speechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath, this._speechToTextState.TranscriptionCancellationTokenSource.Token).ConfigureAwait(true);
+						}
+						finally
+						{
+							_speechToTextState.StopTranscription();
 
-						txtSpeechToText.ReadOnly = false;
-						txtSpeechToText.Text = $"{text}";
+							txtSpeechToText.ReadOnly = false;
+							txtSpeechToText.Text = $"{text}";
 
-						btnSpeechToTextRecord.Text = "&Record";
-						btnSpeechToTextRecord.Enabled = true;
+							btnSpeechToTextRecord.Text = "&Record";
+							btnSpeechToTextRecord.Enabled = true;
+						}
 					}
 				}
 
+			}
+			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
+			{
+				// This was an intentional cancellation by the user, so only beep the failure, but don't show an error message. 
+				BeepFail();
 			}
 			catch (Exception ex)
 			{
