@@ -35,6 +35,7 @@ public class Settings
 
 public class AudioSettings
 {
+	public string ActiveCaptureDeviceFullName { get; set; }
 	public string MicrophoneToggleMuteHotKey { get; set; }
 
 	public AudioSettings()
@@ -87,7 +88,6 @@ public class AzureComputerVisionSettings
 
 public class SpeetchToTextSettings
 {
-	public string ActiveCaptureDeviceFullName { get; set; }
 	public SpeechToTextServices Service { get; set; }
 	public string SpeechToTextHotKey { get; set; }
 	public string ApiKey { get; set; }

@@ -254,7 +254,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			foreach (CaptureDeviceComboItem item in cmbActiveMicrophone.Items)
 			{
-				if (item.CaptureDevice.FullName == _settings.SpeetchToTextSettings.ActiveCaptureDeviceFullName)
+				if (item.CaptureDevice.FullName == _settings.AudioSettings.ActiveCaptureDeviceFullName)
 				{
 					cmbActiveMicrophone.SelectedItem = item;
 					break;
@@ -1021,7 +1021,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			{
 				_microphone = selectedItem.CaptureDevice;
 				SelectCaptureDeviceForNAudioBasedRecording();
-				_settings.SpeetchToTextSettings.ActiveCaptureDeviceFullName = _microphone.FullName;
+				_settings.AudioSettings.ActiveCaptureDeviceFullName = _microphone.FullName;
 			}
 			else
 				MessageBox.Show($"Selected item is not a {nameof(CaptureDeviceComboItem)}.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
