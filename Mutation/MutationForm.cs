@@ -22,7 +22,7 @@ namespace Mutation
 		private Hotkey _hkToggleMicMute;
 		private bool _isMuted = false;
 		private CoreAudioController _coreAudioController;
-		private IEnumerable<CoreAudioDevice> _devices;
+		private IEnumerable<CoreAudioDevice> _captureDevices;
 		private CoreAudioDevice _microphone { get; set; }
 		private int _defaultCaptureDeviceIndex = -1;
 
@@ -219,12 +219,23 @@ The model may also leave out common filler words in the audio. If you want to ke
 		internal void InitializeAudioControls()
 		{
 			txtActiveMic.Text = "(Initializing...)";
+
 			Application.DoEvents();
 
-			_devices = _coreAudioController.GetDevices(DeviceType.Capture, DeviceState.Active);
-			var defaultMicDevice = _devices
+			_captureDevices = _coreAudioController.GetDevices(DeviceType.Capture, DeviceState.Active);
+			cmbActiveMicrophone.Items.Clear();
+			_captureDevices
+				.ToList()
+				.ForEach(m => cmbActiveMicrophone.Items.Add(new CaptureDeviceComboItem
+				{
+					Id = m.FullName,
+					CaptureDevice = m,
+				}));
+
+
+			var defaultMicDevice = _captureDevices
 				.FirstOrDefault(x => x.IsDefaultDevice);
-			if (defaultMicDevice != null)
+			if (defaultMicDevice is not null)
 			{
 				this._microphone = defaultMicDevice;
 
@@ -234,7 +245,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				// "Krisp Michrophone (Krisp Audio)". This has the device name, but also contains a suffix.
 				// So, we do a starts with match to find the mic we are looking for using the default device name followed by a space and a (
 
-				string startsWithNameToMatch = defaultMicDevice.Name + " (";
+				string startsWithNameToMatch = $"{defaultMicDevice.Name} (";
 				int deviceCount = WaveIn.DeviceCount;
 				bool micMatchFound = false;
 				for (int i = 0; i < deviceCount; i++)
@@ -258,7 +269,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				if (!micMatchFound)
 					MessageBox.Show($"No michrophone match found for {this._microphone.Name}");
 
-				FeedbackToUser();
+				FeedbackMicrophoneStateToUser();
 			}
 			else
 			{
@@ -272,14 +283,14 @@ The model may also leave out common filler words in the audio. If you want to ke
 			lock (this)
 			{
 				_isMuted = !_isMuted;
-				foreach (var mic in _devices)
+				foreach (var mic in _captureDevices)
 					mic.Mute(_isMuted);
 
-				FeedbackToUser();
+				FeedbackMicrophoneStateToUser();
 			}
 		}
 
-		private void FeedbackToUser()
+		private void FeedbackMicrophoneStateToUser()
 		{
 			lock (this)
 			{
@@ -299,7 +310,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 				txtActiveMic.Text = this._microphone.Name;
 
 				int i = 1;
-				txtAllMics.Text = string.Join(Environment.NewLine, _devices.Select(m => $"{i++}) {m.FullName}{(m.IsMuted ? "       - muted" : "")}").ToArray());
+				txtAllMics.Text = string.Join(Environment.NewLine, _captureDevices.Select(m => $"{i++}) {m.FullName}{(m.IsMuted ? "       - muted" : "")}").ToArray());
+
+				cmbActiveMicrophone.BeginUpdate();
+				cmbActiveMicrophone.EndUpdate();
+				cmbActiveMicrophone.SelectedIndex = cmbActiveMicrophone.SelectedIndex;
 			}
 		}
 
@@ -958,6 +973,17 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void dgvReview_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
 		{
 
+		}
+
+		private void cmbActiveMicrophone_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			var selectedItem = cmbActiveMicrophone.SelectedItem as CaptureDeviceComboItem;
+			if (selectedItem is not null)
+			{
+				_microphone = selectedItem.CaptureDevice;
+			}
+			else
+				MessageBox.Show($"Selected item is not a {nameof(CaptureDeviceComboItem)}.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 	}
 }
