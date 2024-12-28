@@ -218,7 +218,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		internal void InitializeAudioControls()
 		{
-			txtActiveMic.Text = "(Initializing...)";
+			txtActiveMicrophoneMuteState.Text = "(Initializing...)";
 
 			Application.DoEvents();
 
@@ -244,7 +244,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				}
 				else
 				{
-					txtActiveMic.Text = "(Unable to find device)";
+					txtActiveMicrophoneMuteState.Text = "(Unable to find device)";
 					BeepFail();
 				}
 			}
@@ -347,7 +347,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					BeepUnmuted();
 				}
 
-				txtActiveMic.Text = this._microphone.Name;
+				txtActiveMicrophoneMuteState.Text = this._microphone.IsMuted ? "Muted" : "Unmuted";
 
 				int i = 1;
 				txtAllMics.Text = string.Join(Environment.NewLine, _captureDevices.Select(m => $"{i++}) {m.FullName}{(m.IsMuted ? "       - muted" : "")}").ToArray());
@@ -1022,6 +1022,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				_microphone = selectedItem.CaptureDevice;
 				SelectCaptureDeviceForNAudioBasedRecording();
 				_settings.AudioSettings.ActiveCaptureDeviceFullName = _microphone.FullName;
+				FeedbackMicrophoneStateToUser();
 			}
 			else
 				MessageBox.Show($"Selected item is not a {nameof(CaptureDeviceComboItem)}.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);

@@ -31,7 +31,7 @@
 			components = new System.ComponentModel.Container();
 			lblActiveMic = new Label();
 			lblToggleMic = new Label();
-			txtActiveMic = new TextBox();
+			txtActiveMicrophoneMuteState = new TextBox();
 			txtAllMics = new TextBox();
 			lblOcrHotKey = new Label();
 			lblSpeechToText = new Label();
@@ -96,15 +96,16 @@
 			lblToggleMic.TabIndex = 2;
 			lblToggleMic.Text = "...";
 			// 
-			// txtActiveMic
+			// txtActiveMicrophoneMuteState
 			// 
-			txtActiveMic.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			txtActiveMic.Location = new Point(439, 12);
-			txtActiveMic.Margin = new Padding(4, 3, 4, 3);
-			txtActiveMic.Name = "txtActiveMic";
-			txtActiveMic.ReadOnly = true;
-			txtActiveMic.Size = new Size(732, 23);
-			txtActiveMic.TabIndex = 1;
+			txtActiveMicrophoneMuteState.AccessibleName = "Active Microphone Mute State";
+			txtActiveMicrophoneMuteState.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			txtActiveMicrophoneMuteState.Location = new Point(551, 13);
+			txtActiveMicrophoneMuteState.Margin = new Padding(4, 3, 4, 3);
+			txtActiveMicrophoneMuteState.Name = "txtActiveMicrophoneMuteState";
+			txtActiveMicrophoneMuteState.ReadOnly = true;
+			txtActiveMicrophoneMuteState.Size = new Size(621, 23);
+			txtActiveMicrophoneMuteState.TabIndex = 2;
 			// 
 			// txtAllMics
 			// 
@@ -510,7 +511,7 @@
 			cmbActiveMicrophone.FormattingEnabled = true;
 			cmbActiveMicrophone.Location = new Point(252, 12);
 			cmbActiveMicrophone.Name = "cmbActiveMicrophone";
-			cmbActiveMicrophone.Size = new Size(178, 23);
+			cmbActiveMicrophone.Size = new Size(292, 23);
 			cmbActiveMicrophone.TabIndex = 1;
 			cmbActiveMicrophone.SelectedIndexChanged += cmbActiveMicrophone_SelectedIndexChanged;
 			// 
@@ -535,7 +536,7 @@
 			Controls.Add(lblSpeechToText);
 			Controls.Add(lblOcrHotKey);
 			Controls.Add(txtAllMics);
-			Controls.Add(txtActiveMic);
+			Controls.Add(txtActiveMicrophoneMuteState);
 			Controls.Add(lblToggleMic);
 			Controls.Add(lblActiveMic);
 			Margin = new Padding(4, 3, 4, 3);
@@ -561,7 +562,7 @@
 
 		private Label lblActiveMic;
 		private Label lblToggleMic;
-		private TextBox txtActiveMic;
+		private TextBox txtActiveMicrophoneMuteState;
 		private TextBox txtAllMics;
 		private Label lblOcrHotKey;
 		private Label lblSpeechToText;
