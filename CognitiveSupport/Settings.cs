@@ -35,6 +35,7 @@ public class Settings
 
 public class AudioSettings
 {
+	public string ActiveCaptureDeviceFullName { get; set; }
 	public string MicrophoneToggleMuteHotKey { get; set; }
 
 	public AudioSettings()

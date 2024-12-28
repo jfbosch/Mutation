@@ -31,7 +31,7 @@
 			components = new System.ComponentModel.Container();
 			lblActiveMic = new Label();
 			lblToggleMic = new Label();
-			txtActiveMic = new TextBox();
+			txtActiveMicrophoneMuteState = new TextBox();
 			txtAllMics = new TextBox();
 			lblOcrHotKey = new Label();
 			lblSpeechToText = new Label();
@@ -67,6 +67,7 @@
 			label1 = new Label();
 			lblSpeechToTextService = new Label();
 			txtSpeechToTextService = new TextBox();
+			cmbActiveMicrophone = new ComboBox();
 			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).BeginInit();
 			splitContainerLlmProcessing.Panel1.SuspendLayout();
 			splitContainerLlmProcessing.Panel2.SuspendLayout();
@@ -95,15 +96,16 @@
 			lblToggleMic.TabIndex = 2;
 			lblToggleMic.Text = "...";
 			// 
-			// txtActiveMic
+			// txtActiveMicrophoneMuteState
 			// 
-			txtActiveMic.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-			txtActiveMic.Location = new Point(252, 12);
-			txtActiveMic.Margin = new Padding(4, 3, 4, 3);
-			txtActiveMic.Name = "txtActiveMic";
-			txtActiveMic.ReadOnly = true;
-			txtActiveMic.Size = new Size(927, 23);
-			txtActiveMic.TabIndex = 1;
+			txtActiveMicrophoneMuteState.AccessibleName = "Active Microphone Mute State";
+			txtActiveMicrophoneMuteState.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+			txtActiveMicrophoneMuteState.Location = new Point(551, 13);
+			txtActiveMicrophoneMuteState.Margin = new Padding(4, 3, 4, 3);
+			txtActiveMicrophoneMuteState.Name = "txtActiveMicrophoneMuteState";
+			txtActiveMicrophoneMuteState.ReadOnly = true;
+			txtActiveMicrophoneMuteState.Size = new Size(621, 23);
+			txtActiveMicrophoneMuteState.TabIndex = 2;
 			// 
 			// txtAllMics
 			// 
@@ -200,7 +202,7 @@
 			lblSpeechToTextPrompt.Location = new Point(18, 199);
 			lblSpeechToTextPrompt.Margin = new Padding(4, 0, 4, 0);
 			lblSpeechToTextPrompt.Name = "lblSpeechToTextPrompt";
-			lblSpeechToTextPrompt.Size = new Size(127, 15);
+			lblSpeechToTextPrompt.Size = new Size(128, 15);
 			lblSpeechToTextPrompt.TabIndex = 8;
 			lblSpeechToTextPrompt.Text = "Speech To Text Prompt";
 			// 
@@ -229,7 +231,7 @@
 			lblFormatTranscriptPrompt.Location = new Point(7, 2);
 			lblFormatTranscriptPrompt.Margin = new Padding(4, 0, 4, 0);
 			lblFormatTranscriptPrompt.Name = "lblFormatTranscriptPrompt";
-			lblFormatTranscriptPrompt.Size = new Size(142, 15);
+			lblFormatTranscriptPrompt.Size = new Size(143, 15);
 			lblFormatTranscriptPrompt.TabIndex = 13;
 			lblFormatTranscriptPrompt.Text = "Format Transcript prompt";
 			lblFormatTranscriptPrompt.Click += lblFormatTranscriptPrompt_Click;
@@ -276,7 +278,7 @@
 			lblFormatTranscriptResponse.Location = new Point(7, 94);
 			lblFormatTranscriptResponse.Margin = new Padding(4, 0, 4, 0);
 			lblFormatTranscriptResponse.Name = "lblFormatTranscriptResponse";
-			lblFormatTranscriptResponse.Size = new Size(116, 15);
+			lblFormatTranscriptResponse.Size = new Size(117, 15);
 			lblFormatTranscriptResponse.TabIndex = 15;
 			lblFormatTranscriptResponse.Text = "Formatted Transcript";
 			// 
@@ -339,7 +341,7 @@
 			lblReviewTemperature.Location = new Point(197, 95);
 			lblReviewTemperature.Margin = new Padding(4, 0, 4, 0);
 			lblReviewTemperature.Name = "lblReviewTemperature";
-			lblReviewTemperature.Size = new Size(73, 15);
+			lblReviewTemperature.Size = new Size(74, 15);
 			lblReviewTemperature.TabIndex = 24;
 			lblReviewTemperature.Text = "Temperature";
 			// 
@@ -380,7 +382,7 @@
 			lblReviewTranscriptPrompt.Location = new Point(4, 3);
 			lblReviewTranscriptPrompt.Margin = new Padding(4, 0, 4, 0);
 			lblReviewTranscriptPrompt.Name = "lblReviewTranscriptPrompt";
-			lblReviewTranscriptPrompt.Size = new Size(141, 15);
+			lblReviewTranscriptPrompt.Size = new Size(142, 15);
 			lblReviewTranscriptPrompt.TabIndex = 18;
 			lblReviewTranscriptPrompt.Text = "Review Transcript prompt";
 			lblReviewTranscriptPrompt.Click += lblReviewTranscriptPrompt_Click;
@@ -480,7 +482,7 @@
 			label1.Location = new Point(575, 410);
 			label1.Margin = new Padding(4, 0, 4, 0);
 			label1.Name = "label1";
-			label1.Size = new Size(127, 15);
+			label1.Size = new Size(128, 15);
 			label1.TabIndex = 21;
 			label1.Text = "Speech To Text Prompt";
 			// 
@@ -501,11 +503,24 @@
 			txtSpeechToTextService.Size = new Size(174, 23);
 			txtSpeechToTextService.TabIndex = 23;
 			// 
+			// cmbActiveMicrophone
+			// 
+			cmbActiveMicrophone.AccessibleName = "Active Microphone";
+			cmbActiveMicrophone.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			cmbActiveMicrophone.DropDownStyle = ComboBoxStyle.DropDownList;
+			cmbActiveMicrophone.FormattingEnabled = true;
+			cmbActiveMicrophone.Location = new Point(252, 12);
+			cmbActiveMicrophone.Name = "cmbActiveMicrophone";
+			cmbActiveMicrophone.Size = new Size(292, 23);
+			cmbActiveMicrophone.TabIndex = 1;
+			cmbActiveMicrophone.SelectedIndexChanged += cmbActiveMicrophone_SelectedIndexChanged;
+			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1184, 711);
+			Controls.Add(cmbActiveMicrophone);
 			Controls.Add(txtSpeechToTextService);
 			Controls.Add(lblSpeechToTextService);
 			Controls.Add(label1);
@@ -521,7 +536,7 @@
 			Controls.Add(lblSpeechToText);
 			Controls.Add(lblOcrHotKey);
 			Controls.Add(txtAllMics);
-			Controls.Add(txtActiveMic);
+			Controls.Add(txtActiveMicrophoneMuteState);
 			Controls.Add(lblToggleMic);
 			Controls.Add(lblActiveMic);
 			Margin = new Padding(4, 3, 4, 3);
@@ -547,7 +562,7 @@
 
 		private Label lblActiveMic;
 		private Label lblToggleMic;
-		private TextBox txtActiveMic;
+		private TextBox txtActiveMicrophoneMuteState;
 		private TextBox txtAllMics;
 		private Label lblOcrHotKey;
 		private Label lblSpeechToText;
@@ -583,6 +598,7 @@
 		private Label label1;
 		private Label lblSpeechToTextService;
 		private TextBox txtSpeechToTextService;
+		private ComboBox cmbActiveMicrophone;
 	}
 }
 
