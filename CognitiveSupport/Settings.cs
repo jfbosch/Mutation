@@ -87,6 +87,7 @@ public class AzureComputerVisionSettings
 
 public class SpeetchToTextSettings
 {
+	public string ActiveCaptureDeviceFullName { get; set; }
 	public SpeechToTextServices Service { get; set; }
 	public string SpeechToTextHotKey { get; set; }
 	public string ApiKey { get; set; }

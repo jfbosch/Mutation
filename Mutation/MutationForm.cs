@@ -24,7 +24,7 @@ namespace Mutation
 		private CoreAudioController _coreAudioController;
 		private IEnumerable<CoreAudioDevice> _captureDevices;
 		private CoreAudioDevice _microphone { get; set; }
-		private int _defaultCaptureDeviceIndex = -1;
+		private int _microphoneDeviceIndex = -1;
 
 		private Hotkey _hkSpeechToText { get; set; }
 		private ISpeechToTextService _speechToTextService { get; set; }
@@ -223,59 +223,99 @@ The model may also leave out common filler words in the audio. If you want to ke
 			Application.DoEvents();
 
 			_captureDevices = _coreAudioController.GetDevices(DeviceType.Capture, DeviceState.Active);
+			PopulateActiveMicrophoneCombo();
+			SetActiveMicrophoneFromSettings();
+			SetActiveMicrophoneToDefaultCaptureDeviceIfNotSet();
+		}
+
+		private void SetActiveMicrophoneToDefaultCaptureDeviceIfNotSet()
+		{
+			if (_microphone is null)
+			{
+				var defaultMicDevice = _captureDevices
+					.FirstOrDefault(x => x.IsDefaultDevice);
+				if (defaultMicDevice is not null)
+				{
+					this._microphone = defaultMicDevice;
+					SelectCaptureDeviceForNAudioBasedRecording();
+					SelectActiveCaptureDeviceInActiveMicrophoneCombo();
+
+					FeedbackMicrophoneStateToUser();
+				}
+				else
+				{
+					txtActiveMic.Text = "(Unable to find device)";
+					BeepFail();
+				}
+			}
+		}
+
+		private void SetActiveMicrophoneFromSettings()
+		{
+			foreach (CaptureDeviceComboItem item in cmbActiveMicrophone.Items)
+			{
+				if (item.CaptureDevice.FullName == _settings.SpeetchToTextSettings.ActiveCaptureDeviceFullName)
+				{
+					cmbActiveMicrophone.SelectedItem = item;
+					break;
+				}
+			}
+		}
+
+		private void PopulateActiveMicrophoneCombo()
+		{
 			cmbActiveMicrophone.Items.Clear();
 			_captureDevices
 				.ToList()
 				.ForEach(m => cmbActiveMicrophone.Items.Add(new CaptureDeviceComboItem
 				{
-					Id = m.FullName,
 					CaptureDevice = m,
 				}));
+		}
 
-
-			var defaultMicDevice = _captureDevices
-				.FirstOrDefault(x => x.IsDefaultDevice);
-			if (defaultMicDevice is not null)
+		private void SelectActiveCaptureDeviceInActiveMicrophoneCombo()
+		{
+			foreach (CaptureDeviceComboItem item in cmbActiveMicrophone.Items)
 			{
-				this._microphone = defaultMicDevice;
-
-				// The AudioSwitcher library, CoreAudioDevice.Name returns a value like
-				// "Krisp Michrophone". This is the name of the device as under Windows recording devices.
-				// While the NAudio library, WaveInEvent.GetCapabilities(i).ProductName, returns a value like
-				// "Krisp Michrophone (Krisp Audio)". This has the device name, but also contains a suffix.
-				// So, we do a starts with match to find the mic we are looking for using the default device name followed by a space and a (
-
-				string startsWithNameToMatch = $"{defaultMicDevice.Name} (";
-				int deviceCount = WaveIn.DeviceCount;
-				bool micMatchFound = false;
-				for (int i = 0; i < deviceCount; i++)
+				if (item.CaptureDevice.FullName == _microphone.FullName)
 				{
-					if (WaveInEvent.GetCapabilities(i).ProductName.StartsWith(startsWithNameToMatch))
-					{
-						micMatchFound = true;
-						_defaultCaptureDeviceIndex = i;
-
-						// Debugging message
-						//MessageBox.Show(
-						//	defaultMicDevice.Name
-						//	+ Environment.NewLine
-						//	+ WaveInEvent.GetCapabilities(i).ProductName
-						//	+ Environment.NewLine
-						//	+ "Device Index: " + _defaultCaptureDeviceIndex);
-
-						break;
-					}
+					cmbActiveMicrophone.SelectedItem = item;
+					break;
 				}
-				if (!micMatchFound)
-					MessageBox.Show($"No michrophone match found for {this._microphone.Name}");
+			}
+		}
 
-				FeedbackMicrophoneStateToUser();
-			}
-			else
+		private void SelectCaptureDeviceForNAudioBasedRecording()
+		{
+			// The AudioSwitcher library, CoreAudioDevice.Name returns a value like
+			// "Krisp Michrophone". This is the name of the device as under Windows recording devices.
+			// While the NAudio library(used for recording to file) property, WaveInEvent.GetCapabilities(i).ProductName, returns a value like
+			// "Krisp Michrophone (Krisp Audio)". This has the device name, but also contains a suffix.
+			// So, we do a starts with match to find the mic we are looking for using the default device name followed by a space and a (
+
+			string startsWithNameToMatch = $"{this._microphone.Name} (";
+			int deviceCount = WaveIn.DeviceCount;
+			bool micMatchFound = false;
+			for (int i = 0; i < deviceCount; i++)
 			{
-				txtActiveMic.Text = "(Unable to find device)";
-				BeepFail();
+				if (WaveInEvent.GetCapabilities(i).ProductName.StartsWith(startsWithNameToMatch))
+				{
+					micMatchFound = true;
+					_microphoneDeviceIndex = i;
+
+					// Debugging message
+					//MessageBox.Show(
+					//	defaultMicDevice.Name
+					//	+ Environment.NewLine
+					//	+ WaveInEvent.GetCapabilities(i).ProductName
+					//	+ Environment.NewLine
+					//	+ "Device Index: " + _microphoneDeviceIndex);
+
+					break;
+				}
 			}
+			if (!micMatchFound)
+				MessageBox.Show($"No michrophone match found for {this._microphone.Name}");
 		}
 
 		public void ToggleMicrophoneMute()
@@ -573,7 +613,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 				if (this._speechToTextState.TranscribingAudio)
 				{
 					this._speechToTextState.StopTranscription();
-					//BeepFail();
 					return;
 				}
 
@@ -591,7 +630,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						txtSpeechToText.Text = "Recording microphone...";
 
 						_audioRecorder = new AudioRecorder();
-						_audioRecorder.StartRecording(_defaultCaptureDeviceIndex, audioFilePath);
+						_audioRecorder.StartRecording(_microphoneDeviceIndex, audioFilePath);
 						btnSpeechToTextRecord.Text = "Stop &Recording";
 
 						BeepStart();
@@ -981,6 +1020,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 			if (selectedItem is not null)
 			{
 				_microphone = selectedItem.CaptureDevice;
+				SelectCaptureDeviceForNAudioBasedRecording();
+				_settings.SpeetchToTextSettings.ActiveCaptureDeviceFullName = _microphone.FullName;
 			}
 			else
 				MessageBox.Show($"Selected item is not a {nameof(CaptureDeviceComboItem)}.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
