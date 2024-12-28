@@ -351,10 +351,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				int i = 1;
 				txtAllMics.Text = string.Join(Environment.NewLine, _captureDevices.Select(m => $"{i++}) {m.FullName}{(m.IsMuted ? "       - muted" : "")}").ToArray());
-
-				cmbActiveMicrophone.BeginUpdate();
-				cmbActiveMicrophone.EndUpdate();
-				cmbActiveMicrophone.SelectedIndex = cmbActiveMicrophone.SelectedIndex;
 			}
 		}
 
