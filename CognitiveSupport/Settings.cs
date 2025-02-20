@@ -66,6 +66,7 @@ public class MainWindowUiSettings
 
 public class AzureComputerVisionSettings
 {
+	public bool InvertScreenshot { get; set; }
 	public string ScreenshotHotKey { get; set; }
 	public string ScreenshotOcrHotKey { get; set; }
 	public string OcrHotKey { get; set; }
