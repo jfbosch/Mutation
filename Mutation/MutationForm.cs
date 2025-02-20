@@ -390,16 +390,49 @@ The model may also leave out common filler words in the audio. If you want to ke
 			using (Graphics g = Graphics.FromImage(screenshot))
 			{
 				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
-				using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(screenshot)))
+				
+				var displayShot = screenshot;
+				using Bitmap invertedScreenshot = InvertScreenshotColors(screenshot);
+				if (_settings.AzureComputerVisionSettings.InvertScreenshot)
+					displayShot = invertedScreenshot;
+
+				using ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(displayShot));
+
+				_activeScreenCaptureForm = screenCaptureForm;
+
+				screenCaptureForm.TopMost = true;
+				screenCaptureForm.ShowDialog();
+
+				_activeScreenCaptureForm = null;
+
+			}
+		}
+
+		private Bitmap InvertScreenshotColors(Bitmap original)
+		{
+			Bitmap inverted = new Bitmap(original.Width, original.Height);
+			using (Graphics g = Graphics.FromImage(inverted))
+			{
+				// Define a color matrix that inverts the RGB values.
+				ColorMatrix invertMatrix = new ColorMatrix(new float[][]
 				{
-					_activeScreenCaptureForm = screenCaptureForm;
+				new float[]{ -1,  0,  0, 0, 0 },
+				new float[]{  0, -1,  0, 0, 0 },
+				new float[]{  0,  0, -1, 0, 0 },
+				new float[]{  0,  0,  0, 1, 0 },
+				new float[]{  1,  1,  1, 0, 1 }
+				});
 
-					screenCaptureForm.TopMost = true;
-					screenCaptureForm.ShowDialog();
-
-					_activeScreenCaptureForm = null;
+				using (ImageAttributes attributes = new ImageAttributes())
+				{
+					attributes.SetColorMatrix(invertMatrix);
+					g.DrawImage(original,
+						 new Rectangle(0, 0, original.Width, original.Height),
+						 0, 0, original.Width, original.Height,
+						 GraphicsUnit.Pixel, attributes);
 				}
 			}
+			return inverted;
 		}
 
 		private void HookupHotKeyScreenshotOcr()
@@ -424,7 +457,13 @@ The model may also leave out common filler words in the audio. If you want to ke
 			using (Graphics g = Graphics.FromImage(screenshot))
 			{
 				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
-				using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(screenshot)))
+
+				var displayShot = screenshot;
+				using Bitmap invertedScreenshot = InvertScreenshotColors(screenshot);
+				if (_settings.AzureComputerVisionSettings.InvertScreenshot)
+					displayShot = invertedScreenshot;
+
+				using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(displayShot)))
 				{
 					_activeScreenCaptureForm = screenCaptureForm;
 
