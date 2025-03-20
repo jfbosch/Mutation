@@ -493,7 +493,7 @@
 			lblSpeechToTextService.Name = "lblSpeechToTextService";
 			lblSpeechToTextService.Size = new Size(47, 15);
 			lblSpeechToTextService.TabIndex = 22;
-			lblSpeechToTextService.Text = "Service:";
+			lblSpeechToTextService.Text = "Provider:";
 			// 
 			// txtSpeechToTextService
 			// 

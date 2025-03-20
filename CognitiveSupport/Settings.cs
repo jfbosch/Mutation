@@ -89,29 +89,22 @@ public class AzureComputerVisionSettings
 
 public class SpeetchToTextSettings
 {
-	public SpeechToTextServices Service { get; set; }
+	public string TempDirectory { get; set; }
 	public string SpeechToTextHotKey { get; set; }
+	public List<SpeetchToTextService> SpeetchToTextServices { get; set; }
+	public string ActiveSpeetchToTextService { get; set; }
+}
+
+public class SpeetchToTextService
+{
+	public string Name { get; set; }
+	public SpeechToTextProviders Provider { get; set; }
 	public string ApiKey { get; set; }
 	public string BaseDomain { get; set; }
 	public string ModelId { get; set; }
-	public string TempDirectory { get; set; }
 	public string SpeechToTextPrompt { get; set; }
-
-	public SpeetchToTextSettings()
-	{
-	}
-
-	public SpeetchToTextSettings(SpeechToTextServices service, string speechToTextHotKey, string apiKey, string baseDomain, string modelId, string tempDirectory, string speechToTextPrompt)
-	{
-		Service = service;
-		SpeechToTextHotKey = speechToTextHotKey;
-		ApiKey = apiKey;
-		BaseDomain = baseDomain;
-		ModelId = modelId;
-		TempDirectory = tempDirectory;
-		SpeechToTextPrompt = speechToTextPrompt;
-	}
 }
+
 
 public class LlmSettings
 {

@@ -15,6 +15,7 @@ namespace Mutation
 	public partial class MutationForm : Form
 	{
 		private ScreenCaptureForm _activeScreenCaptureForm = null;
+		private SpeetchToTextService _activeSpeetchToTextService = null;
 
 		private Settings _settings { get; set; }
 		private ISettingsManager _settingsManager { get; set; }
@@ -66,7 +67,7 @@ namespace Mutation
 			InitializeComponent();
 			InitializeAudioControls();
 
-			txtSpeechToTextPrompt.Text = _settings.SpeetchToTextSettings.SpeechToTextPrompt;
+			txtSpeechToTextPrompt.Text = _activeSpeetchToTextService.SpeechToTextPrompt;
 
 			HookupTooltips();
 
@@ -793,7 +794,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_settings.MainWindowUiSettings.WindowSize = this.Size;
 			_settings.MainWindowUiSettings.WindowLocation = this.Location;
 
-			_settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			_activeSpeetchToTextService.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
 			_settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
 			_settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 			this._settingsManager.SaveSettingsToFile(_settings);
@@ -813,7 +814,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			RestoreWindowLocationAndSizeFromSettings();
 
 			txtSpeechToTextService.Text =
-				$"{this._settings.SpeetchToTextSettings.Service}: {this._settings.SpeetchToTextSettings.ModelId}";
+				$"{ _activeSpeetchToTextService.Provider}: {_activeSpeetchToTextService.ModelId}";
 		}
 
 		private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)

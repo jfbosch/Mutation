@@ -4,6 +4,7 @@ using Newtonsoft.Json.Converters;
 using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
+using System.Xml.Linq;
 
 namespace Mutation;
 
@@ -105,18 +106,38 @@ internal class SettingsManager : ISettingsManager
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
 			somethingWasMissing = true;
 		}
-		if (speechToTextSettings.Service == SpeechToTextServices.None)
+		if (speechToTextSettings.SpeetchToTextServices is null)
 		{
-			speechToTextSettings.Service = SpeechToTextServices.OpenAiWhisper;
+			speechToTextSettings.SpeetchToTextServices = new();
 		}
+		if (!speechToTextSettings.SpeetchToTextServices.Any())
+		{
+			speechToTextSettings.ActiveSpeetchToTextService = "OpenAI Whisper 1";
+			SpeetchToTextService service = new SpeetchToTextService
+			{
+				Name = speechToTextSettings.ActiveSpeetchToTextService,
+				Provider = SpeechToTextProviders.OpenAiWhisper,
+			};
+		}
+		foreach (var s in speechToTextSettings.SpeetchToTextServices)
+		{
+			if (s.Provider == SpeechToTextProviders.None)
+				s.Provider = SpeechToTextProviders.OpenAiWhisper;
+			if (string.IsNullOrWhiteSpace(s.ApiKey))
+			{
+				s.ApiKey = PlaceholderValue;
+				somethingWasMissing = true;
+			}
+			if (string.IsNullOrWhiteSpace(s.SpeechToTextPrompt))
+			{
+				s.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro.";
+				// This is optional, so we don't need to flag that something was missing.
+			}
+		}
+
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextHotKey))
 		{
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
-			somethingWasMissing = true;
-		}
-		if (string.IsNullOrWhiteSpace(speechToTextSettings.ApiKey))
-		{
-			speechToTextSettings.ApiKey = PlaceholderValue;
 			somethingWasMissing = true;
 		}
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.TempDirectory))
@@ -124,13 +145,6 @@ internal class SettingsManager : ISettingsManager
 			speechToTextSettings.TempDirectory = @"C:\Temp\Mutation";
 			somethingWasMissing = true;
 		}
-
-		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextPrompt))
-		{
-			speechToTextSettings.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro.";
-			// This is optional, so we don't need to flag that something was missing.
-		}
-
 
 		//-------------------------------
 		if (settings.LlmSettings is null)
