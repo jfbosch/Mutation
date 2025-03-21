@@ -66,8 +66,8 @@
 			radManualPunctuation = new RadioButton();
 			label1 = new Label();
 			lblSpeechToTextService = new Label();
-			txtSpeechToTextService = new TextBox();
 			cmbActiveMicrophone = new ComboBox();
+			cmbSpeechToTextService = new ComboBox();
 			((System.ComponentModel.ISupportInitialize)splitContainerLlmProcessing).BeginInit();
 			splitContainerLlmProcessing.Panel1.SuspendLayout();
 			splitContainerLlmProcessing.Panel2.SuspendLayout();
@@ -493,15 +493,7 @@
 			lblSpeechToTextService.Name = "lblSpeechToTextService";
 			lblSpeechToTextService.Size = new Size(47, 15);
 			lblSpeechToTextService.TabIndex = 22;
-			lblSpeechToTextService.Text = "Provider:";
-			// 
-			// txtSpeechToTextService
-			// 
-			txtSpeechToTextService.Location = new Point(71, 217);
-			txtSpeechToTextService.Name = "txtSpeechToTextService";
-			txtSpeechToTextService.ReadOnly = true;
-			txtSpeechToTextService.Size = new Size(174, 23);
-			txtSpeechToTextService.TabIndex = 23;
+			lblSpeechToTextService.Text = "Service:";
 			// 
 			// cmbActiveMicrophone
 			// 
@@ -515,13 +507,24 @@
 			cmbActiveMicrophone.TabIndex = 1;
 			cmbActiveMicrophone.SelectedIndexChanged += cmbActiveMicrophone_SelectedIndexChanged;
 			// 
+			// cmbSpeechToTextService
+			// 
+			cmbSpeechToTextService.AccessibleName = "Active Microphone";
+			cmbSpeechToTextService.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+			cmbSpeechToTextService.DropDownStyle = ComboBoxStyle.DropDownList;
+			cmbSpeechToTextService.FormattingEnabled = true;
+			cmbSpeechToTextService.Location = new Point(71, 217);
+			cmbSpeechToTextService.Name = "cmbSpeechToTextService";
+			cmbSpeechToTextService.Size = new Size(176, 23);
+			cmbSpeechToTextService.TabIndex = 24;
+			// 
 			// MutationForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
 			ClientSize = new Size(1184, 711);
+			Controls.Add(cmbSpeechToTextService);
 			Controls.Add(cmbActiveMicrophone);
-			Controls.Add(txtSpeechToTextService);
 			Controls.Add(lblSpeechToTextService);
 			Controls.Add(label1);
 			Controls.Add(gbPunctuation);
@@ -597,8 +600,8 @@
 		private ComboBox cmbReviewTemperature;
 		private Label label1;
 		private Label lblSpeechToTextService;
-		private TextBox txtSpeechToTextService;
 		private ComboBox cmbActiveMicrophone;
+		private ComboBox cmbSpeechToTextService;
 	}
 }
 

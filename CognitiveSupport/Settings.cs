@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using Newtonsoft.Json;
+using System.Drawing;
 
 namespace CognitiveSupport;
 
@@ -91,7 +92,7 @@ public class SpeetchToTextSettings
 {
 	public string TempDirectory { get; set; }
 	public string SpeechToTextHotKey { get; set; }
-	public List<SpeetchToTextService> SpeetchToTextServices { get; set; }
+	public SpeetchToTextService[] Services { get; set; }
 	public string ActiveSpeetchToTextService { get; set; }
 }
 

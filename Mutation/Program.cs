@@ -62,7 +62,7 @@ internal static class Program
 		const string OpenAiHttpClient = "openai-http-client";
 		builder.Services.AddHttpClient(OpenAiHttpClient);
 
-		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.SpeetchToTextServices
+		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.Services
 			.Single(x => x.Name == settings.SpeetchToTextSettings.ActiveSpeetchToTextService);
 
 		builder.Services.AddSingleton<IOpenAIService>(x =>
@@ -105,7 +105,7 @@ internal static class Program
 
 	private static void AddWhisperSpeechToTextService(HostApplicationBuilder builder, Settings settings)
 	{
-		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.SpeetchToTextServices
+		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.Services
 			.Single(x => x.Name == settings.SpeetchToTextSettings.ActiveSpeetchToTextService);
 
 		builder.Services.AddSingleton<ISpeechToTextService>(x =>
@@ -120,7 +120,7 @@ internal static class Program
 
 	private static void AddDeepgramSpeechToTextService(HostApplicationBuilder builder, Settings settings)
 	{
-		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.SpeetchToTextServices
+		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.Services
 			.Single(x => x.Name == settings.SpeetchToTextSettings.ActiveSpeetchToTextService);
 
 		builder.Services.AddSingleton<ISpeechToTextService>(x =>

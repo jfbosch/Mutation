@@ -67,6 +67,10 @@ namespace Mutation
 			InitializeComponent();
 			InitializeAudioControls();
 
+			_activeSpeetchToTextService= _settings.SpeetchToTextSettings.Services
+				.Single(x => x.Name == settings.SpeetchToTextSettings.ActiveSpeetchToTextService);
+
+			PopulateSpeechToTextServiceCombo();
 			txtSpeechToTextPrompt.Text = _activeSpeetchToTextService.SpeechToTextPrompt;
 
 			HookupTooltips();
@@ -274,6 +278,31 @@ The model may also leave out common filler words in the audio. If you want to ke
 				}));
 		}
 
+		private void PopulateSpeechToTextServiceCombo()
+		{
+			cmbSpeechToTextService.Items.Clear();
+			_settings.SpeetchToTextSettings.Services
+				.ToList()
+				.ForEach(m => cmbSpeechToTextService.Items.Add(new SpeechToTextServiceComboItem
+				{
+					SpeetchToTextService = m,
+				}));
+
+			SelectActiveServiceInSpeechToTextServiceCombo();
+		}
+
+		private void SelectActiveServiceInSpeechToTextServiceCombo()
+		{
+			foreach (SpeechToTextServiceComboItem item in cmbSpeechToTextService.Items)
+			{
+				if (item.SpeetchToTextService.Name == _activeSpeetchToTextService.Name)
+				{
+					cmbSpeechToTextService.SelectedItem = item;
+					break;
+				}
+			}
+		}
+
 		private void SelectActiveCaptureDeviceInActiveMicrophoneCombo()
 		{
 			foreach (CaptureDeviceComboItem item in cmbActiveMicrophone.Items)
@@ -391,7 +420,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			using (Graphics g = Graphics.FromImage(screenshot))
 			{
 				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
-				
+
 				var displayShot = screenshot;
 				using Bitmap invertedScreenshot = InvertScreenshotColors(screenshot);
 				if (_settings.AzureComputerVisionSettings.InvertScreenshot)
@@ -812,9 +841,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void MutationForm_Load(object sender, EventArgs e)
 		{
 			RestoreWindowLocationAndSizeFromSettings();
-
-			txtSpeechToTextService.Text =
-				$"{ _activeSpeetchToTextService.Provider}: {_activeSpeetchToTextService.ModelId}";
+			//BookMark??888
+			//cmbSpeechToTextService.Text =
+			//	$"{ _activeSpeetchToTextService.Provider}: {_activeSpeetchToTextService.ModelId}";
 		}
 
 		private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)

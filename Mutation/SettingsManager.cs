@@ -1,10 +1,10 @@
 ﻿using CognitiveSupport;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
-using System.Xml.Linq;
 
 namespace Mutation;
 
@@ -106,11 +106,11 @@ internal class SettingsManager : ISettingsManager
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
 			somethingWasMissing = true;
 		}
-		if (speechToTextSettings.SpeetchToTextServices is null)
+		if (speechToTextSettings.Services is null)
 		{
-			speechToTextSettings.SpeetchToTextServices = new();
+			speechToTextSettings.Services = new SpeetchToTextService[] { };
 		}
-		if (!speechToTextSettings.SpeetchToTextServices.Any())
+		if (!speechToTextSettings.Services.Any())
 		{
 			speechToTextSettings.ActiveSpeetchToTextService = "OpenAI Whisper 1";
 			SpeetchToTextService service = new SpeetchToTextService
@@ -118,8 +118,9 @@ internal class SettingsManager : ISettingsManager
 				Name = speechToTextSettings.ActiveSpeetchToTextService,
 				Provider = SpeechToTextProviders.OpenAiWhisper,
 			};
+			speechToTextSettings.Services.Append(service);
 		}
-		foreach (var s in speechToTextSettings.SpeetchToTextServices)
+		foreach (var s in speechToTextSettings.Services)
 		{
 			if (s.Provider == SpeechToTextProviders.None)
 				s.Provider = SpeechToTextProviders.OpenAiWhisper;
@@ -404,15 +405,44 @@ When you are asked to apply revision corrections, you should do the following:
 	{
 		string json = File.ReadAllText(SettingsFileFullPath);
 
-		Settings settings = JsonConvert.DeserializeObject<Settings>(json, _jsonSerializerSettings);
+		JObject jObj = JObject.Parse(json);
 
-		if (settings.LlmSettings?.TranscriptFormatRules?.Count is 4 or 14)
+		if (!(jObj["SpeetchToTextSettings"] is JObject settings))
+			return;
+
+		// Check if the JSON is already in the desired format.
+		// Here, we assume correctness if a "Services" property (as an array) exists.
+		if (settings["Services"] != null && settings["Services"].Type == JTokenType.Array)
+			return ;
+
+		string providerName = settings.Value<string>("Service") ?? "";
+
+		// Create the new service object and migrate the relevant properties.
+		JObject serviceObj = new JObject
 		{
-			// Get rid of the old defaults.
-			settings.LlmSettings.TranscriptFormatRules.Clear();
-		}
+			["Name"] = providerName,             // Use the provider name as the service Name.
+			["Provider"] = providerName,         // Also set the Provider.
+			["ApiKey"] = settings["ApiKey"],
+			["BaseDomain"] = settings["BaseDomain"],
+			["ModelId"] = settings["ModelId"],
+			["SpeechToTextPrompt"] = settings["SpeechToTextPrompt"]
+		};
 
-		SaveSettingsToFile(settings);
+		// Create a new services array with the service object as the first element.
+		JArray servicesArray = new JArray { serviceObj };
+
+		// Remove the migrated properties from the root of SpeetchToTextSettings.
+		settings.Remove("Service");
+		settings.Remove("ApiKey");
+		settings.Remove("BaseDomain");
+		settings.Remove("ModelId");
+		settings.Remove("SpeechToTextPrompt");
+
+		// Add the new properties: the active service and the services array.
+		settings["ActiveSpeetchToTextService"] = providerName;
+		settings["Services"] = servicesArray;
+
+		File.WriteAllText(SettingsFileFullPath, jObj.ToString(Formatting.Indented), Encoding.UTF8);
 	}
 
 	public void SaveSettingsToFile(Settings settings)
