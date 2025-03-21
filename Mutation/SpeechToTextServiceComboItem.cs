@@ -5,9 +5,10 @@ namespace Mutation;
 
 internal class SpeechToTextServiceComboItem
 {
-	public SpeetchToTextService SpeetchToTextService { get; set; }
+	public SpeetchToTextServiceSettings SpeetchToTextServiceSettings { get; set; }
+	public ISpeechToTextService SpeechToTextService { get; set; }
 	public string Display =>
-		$"{SpeetchToTextService.Name}";
+		$"{SpeetchToTextServiceSettings.Name}";
 
 	public override string ToString()
 	{

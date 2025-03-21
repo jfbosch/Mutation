@@ -10,14 +10,18 @@ namespace CognitiveSupport;
 
 public class WhisperSpeechToTextService : ISpeechToTextService
 {
+	public string ServiceName { get; init; }
+
 	private readonly string _modelId;
 	private readonly object _lock = new object();
 	private readonly IOpenAIService _openAIService;
 
 	public WhisperSpeechToTextService(
+		string serviceName,
 		IOpenAIService openAIService,
 		string modelId)
 	{
+		this.ServiceName = serviceName;
 		_openAIService = openAIService ?? throw new ArgumentNullException(nameof(openAIService));
 		_modelId = modelId ?? throw new ArgumentNullException(nameof(modelId), "Check your Whisper API provider's documentation for supported modelIds. On OpenAI, it's something like 'whisper-1'. On Groq, it's something like 'whisper-large-v3'.");
 	}
@@ -49,7 +53,7 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 
 		var context = new Context();
 		context[AttemptKey] = 1;
-		
+
 		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;

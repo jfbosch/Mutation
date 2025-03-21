@@ -4,17 +4,18 @@ using Deepgram;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
-using OpenAI.Interfaces;
 using OpenAI.Managers;
 
 namespace Mutation;
 
 internal static class Program
 {
+	const string OpenAiHttpClientName = "openai-http-client";
+
 	[STAThread]
 	static void Main()
 	{
-		// To customize application configuration such as set high DPI settings or default font,
+		// To customize application configuration such as set high DPI serviceSettings or default font,
 		// see https://aka.ms/applicationconfiguration.
 
 		Application.EnableVisualStyles();
@@ -59,42 +60,9 @@ internal static class Program
 				settings.LlmSettings.ModelDeploymentIdMaps));
 
 
-		const string OpenAiHttpClient = "openai-http-client";
-		builder.Services.AddHttpClient(OpenAiHttpClient);
+		builder.Services.AddHttpClient(OpenAiHttpClientName);
 
-		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.Services
-			.Single(x => x.Name == settings.SpeetchToTextSettings.ActiveSpeetchToTextService);
-
-		builder.Services.AddSingleton<IOpenAIService>(x =>
-		{
-			string baseDomain = activeSpeetchToTextService.BaseDomain?.Trim();
-			if (baseDomain == "")
-				baseDomain = null;
-
-			OpenAiOptions options = new OpenAiOptions
-			{
-				ApiKey = activeSpeetchToTextService.ApiKey,
-				BaseDomain = baseDomain,
-			};
-
-			IHttpClientFactory httpClientFactory = x.GetRequiredService<IHttpClientFactory>();
-			HttpClient httpClient = httpClientFactory.CreateClient(OpenAiHttpClient);
-			return new OpenAIService(options, httpClient);
-		});
-
-
-		switch (activeSpeetchToTextService.Provider)
-		{
-			case SpeechToTextProviders.OpenAiWhisper:
-				AddWhisperSpeechToTextService(builder, settings);
-				break;
-			case SpeechToTextProviders.Deepgram:
-				AddDeepgramSpeechToTextService(builder, settings);
-				break;
-			default:
-				throw new NotSupportedException($"The SpeetchToText service '{activeSpeetchToTextService.Provider}' is not supported.");
-		}
-
+		AddSpeechToTextServices(builder, settings);
 
 		builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 
@@ -103,35 +71,68 @@ internal static class Program
 		return builder;
 	}
 
-	private static void AddWhisperSpeechToTextService(HostApplicationBuilder builder, Settings settings)
+	private static void AddSpeechToTextServices(
+		HostApplicationBuilder builder,
+		Settings settings)
 	{
-		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.Services
-			.Single(x => x.Name == settings.SpeetchToTextSettings.ActiveSpeetchToTextService);
-
-		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		builder.Services.AddSingleton<ISpeechToTextService[]>(x =>
 		{
-			var openAIService = x.GetRequiredService<IOpenAIService>();
-
-			return new WhisperSpeechToTextService(
-				openAIService,
-				activeSpeetchToTextService.ModelId);
+			List<ISpeechToTextService> speechToTextServices = new();
+			foreach (SpeetchToTextServiceSettings serviceSettings in settings.SpeetchToTextSettings.Services)
+			{
+				switch (serviceSettings.Provider)
+				{
+					case SpeechToTextProviders.OpenAiWhisper:
+						speechToTextServices.Add(CreateWhisperSpeechToTextService(builder, serviceSettings, x));
+						break;
+					case SpeechToTextProviders.Deepgram:
+						speechToTextServices.Add(CreateDeepgramSpeechToTextService(builder, serviceSettings));
+						break;
+					default:
+						throw new NotSupportedException($"The SpeetchToText service '{serviceSettings.Provider}' is not supported.");
+				}
+			}
+			return speechToTextServices.ToArray();
 		});
+
 	}
 
-	private static void AddDeepgramSpeechToTextService(HostApplicationBuilder builder, Settings settings)
+	private static ISpeechToTextService CreateWhisperSpeechToTextService(
+		HostApplicationBuilder builder,
+		SpeetchToTextServiceSettings serviceSettings,
+		IServiceProvider diServiceProvider)
 	{
-		SpeetchToTextService activeSpeetchToTextService = settings.SpeetchToTextSettings.Services
-			.Single(x => x.Name == settings.SpeetchToTextSettings.ActiveSpeetchToTextService);
+		string baseDomain = serviceSettings.BaseDomain?.Trim();
+		if (baseDomain == "")
+			baseDomain = null;
 
-		builder.Services.AddSingleton<ISpeechToTextService>(x =>
+		OpenAiOptions options = new OpenAiOptions
 		{
-			Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient = ClientFactory.CreateListenRESTClient(
-				activeSpeetchToTextService.ApiKey);
+			ApiKey = serviceSettings.ApiKey,
+			BaseDomain = baseDomain,
+		};
 
-			return new DeepgramSpeechToTextService(
-				deepgramClient,
-				activeSpeetchToTextService.ModelId);
-		});
+		IHttpClientFactory httpClientFactory = diServiceProvider.GetRequiredService<IHttpClientFactory>();
+		HttpClient httpClient = httpClientFactory.CreateClient(OpenAiHttpClientName);
+		var openAIService = new OpenAIService(options, httpClient);
+
+		return new WhisperSpeechToTextService(
+			serviceSettings.Name,
+			openAIService,
+			serviceSettings.ModelId);
+	}
+
+	private static ISpeechToTextService CreateDeepgramSpeechToTextService(
+		HostApplicationBuilder builder,
+		SpeetchToTextServiceSettings serviceSettings)
+	{
+		Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient = ClientFactory.CreateListenRESTClient(
+			serviceSettings.ApiKey);
+
+		return new DeepgramSpeechToTextService(
+			serviceSettings.Name,
+			deepgramClient,
+			serviceSettings.ModelId);
 	}
 
 	private static SettingsManager CreateSettingsManager()
@@ -143,9 +144,9 @@ internal static class Program
 			return settingsManager;
 		}
 		catch (Exception ex)
-			when (ex.Message.ToLower().Contains("could not find the settings"))
+			when (ex.Message.ToLower().Contains("could not find the serviceSettings"))
 		{
-			//MessageBox.Show(this, $"Failed to load settings: {ex.Message}", "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			//MessageBox.Show(this, $"Failed to load serviceSettings: {ex.Message}", "Unexpected error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			throw;
 		}
 	}

@@ -9,14 +9,18 @@ namespace CognitiveSupport;
 
 public class DeepgramSpeechToTextService : ISpeechToTextService
 {
+	public string ServiceName { get; init; }
+
 	private readonly string _modelId;
 	private readonly object _lock = new object();
 	private readonly Deepgram.Clients.Interfaces.v1.IListenRESTClient _deepgramClient;
 
 	public DeepgramSpeechToTextService(
+		string serviceName,
 		Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient,
 		string modelId)
 	{
+		ServiceName = serviceName;
 		_deepgramClient = deepgramClient ?? throw new ArgumentNullException(nameof(deepgramClient));
 		_modelId = modelId ?? throw new ArgumentNullException(nameof(modelId), "Check your Whisper API provider's documentation for supported modelIds. On OpenAI, it's something like 'whisper-1'. On Groq, it's something like 'whisper-large-v3'.");
 	}

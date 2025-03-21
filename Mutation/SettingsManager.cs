@@ -108,12 +108,12 @@ internal class SettingsManager : ISettingsManager
 		}
 		if (speechToTextSettings.Services is null)
 		{
-			speechToTextSettings.Services = new SpeetchToTextService[] { };
+			speechToTextSettings.Services = new SpeetchToTextServiceSettings[] { };
 		}
 		if (!speechToTextSettings.Services.Any())
 		{
 			speechToTextSettings.ActiveSpeetchToTextService = "OpenAI Whisper 1";
-			SpeetchToTextService service = new SpeetchToTextService
+			SpeetchToTextServiceSettings service = new SpeetchToTextServiceSettings
 			{
 				Name = speechToTextSettings.ActiveSpeetchToTextService,
 				Provider = SpeechToTextProviders.OpenAiWhisper,

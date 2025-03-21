@@ -92,11 +92,11 @@ public class SpeetchToTextSettings
 {
 	public string TempDirectory { get; set; }
 	public string SpeechToTextHotKey { get; set; }
-	public SpeetchToTextService[] Services { get; set; }
+	public SpeetchToTextServiceSettings[] Services { get; set; }
 	public string ActiveSpeetchToTextService { get; set; }
 }
 
-public class SpeetchToTextService
+public class SpeetchToTextServiceSettings
 {
 	public string Name { get; set; }
 	public SpeechToTextProviders Provider { get; set; }

@@ -517,6 +517,7 @@
 			cmbSpeechToTextService.Name = "cmbSpeechToTextService";
 			cmbSpeechToTextService.Size = new Size(176, 23);
 			cmbSpeechToTextService.TabIndex = 24;
+			cmbSpeechToTextService.SelectedIndexChanged += cmbSpeechToTextService_SelectedIndexChanged;
 			// 
 			// MutationForm
 			// 
