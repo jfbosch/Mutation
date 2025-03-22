@@ -151,6 +151,19 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 
+		var duplicateNames = speechToTextSettings.Services
+			 .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+			 .Where(g => g.Count() > 1)
+			 .Select(g => g.Key)
+			 .ToArray();
+		if (duplicateNames.Any())
+		{
+			throw new InvalidOperationException(
+				 $"Duplicate service names found in SpeetchToTextSettings.Services: {string.Join(", ", duplicateNames)}. " +
+				 "Please ensure each speech-to-text service has a unique name to avoid conflicts.");
+		}
+
+
 		//-------------------------------
 		if (settings.LlmSettings is null)
 		{
