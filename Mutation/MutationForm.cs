@@ -832,6 +832,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_settings.MainWindowUiSettings.WindowLocation = this.Location;
 
 			_activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			_settings.SpeetchToTextSettings.ActiveSpeetchToTextService = _activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.Name;
+
 			_settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
 			_settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 			this._settingsManager.SaveSettingsToFile(_settings);
