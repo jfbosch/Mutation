@@ -13,7 +13,7 @@ The Mutation project is a simple .Net multifaceted tool designed to enhance prod
 #### hotkey that combines the above two to allow the user to select a region of the screen followed by an immediate OCR process using Microsoft Azure Computer Vision and placing the extracted text back on the clipboard.
 Azure Computer Vision seems far superior at OCR than the built-in Windows 10 and 11 OCR engine.
 
-### Speech to Text Conversion using OpenAI Whisper API
+### Speech to Text Conversion using any of the following: OpenAI Whisper, GPT 4o Transcribe, GPT 4o Mini Transcribe, Deepgram nova-2 or nova-3.
 #### Hotkey to start recording the microphone, and when the same hotkey is pressed a second time, converting the speech to text that is placed on the clipboard.
 
 ## Getting Started
@@ -44,21 +44,30 @@ The free tier is quite sufficient for daily use by a single person.
 - Save the JSON file and restart Mutation.
 
 #### Speech to text
-Whisper is an incredibly capable speech-to-text model developed by OpenAI.
-Seem more at: https://platform.openai.com/overview
-This application uses an OpenAI compatible API to allow you to transcribe your voice at random in any application into text onto the clipboard with the press of a hotkey. The resulting text can then be pasted into the application of your choice. Whisper also supports many different languages. Check out the OpenAI site for more information.
+OpenAI has introduced advanced speech-to-text models, gpt-4o-transcribe and gpt-4o-mini-transcribe, enhancing transcription accuracy and language recognition. These models, built upon the GPT-4o architecture, demonstrate significant improvements in word error rates across multiple languages, outperforming previous models like Whisper. They also incorporate noise cancellation and semantic voice activity detection, ensuring more reliable transcriptions even in challenging environments. ​
+https://openai.com/index/introducing-our-next-generation-audio-models/?utm_source=chatgpt.com
+
+Seem more about Whisper at: https://platform.openai.com/overview
+
+This application uses an OpenAI compatible API to allow you to transcribe your voice at random in any application into text onto the clipboard with the press of a hotkey. The resulting text can then be pasted into the application of your choice.
+
 It also has the capability of injecting the transcribed text into any input box in any application that currently has the focus once the transcription completes. 
+
 
 If you want to use the speech-to-text functionality, you will need to create an account with a provider that hosts a whisper API that is compatible with that of OpenAI. 
 
 1. To use OpenAI Proper
-Create an OpenAI API account, add a credit card, configure a budget, generate API keys for the Whisper API, and configure the following in Mutation.json under SpeetchToTextSettings:
+Create an OpenAI API account, add a credit card, configure a budget, generate API keys for the speech to text API, and configure e.g. the following in Mutation.json under SpeetchToTextSettings:
+- "Name" : "OpenAI gpt-4o-transcribe",
+- "Provider" : "OpenAi",
 - "ApiKey" : "<your API key>",
 - "BaseDomain" : "https://api.openai.com/",
-- "ModelId": "whisper-1",
+- "ModelId": "gpt-4o-transcribe",
 
 2. Groq.com
 Create a Groq account, generate an API key, and configure the following in Mutation.json under SpeetchToTextSettings:
+- "Name" : "Groq Whisper 3",
+- - "Provider" : "OpenAi",
 - "ApiKey" : "<your API key>",
 - "BaseDomain" : "https://api.groq.com/openai/",
 - "ModelId": "whisper-large-v3",
@@ -66,6 +75,14 @@ Create a Groq account, generate an API key, and configure the following in Mutat
 Of course, as things stand now, Groq is much faster because of the inference chip they use, and they have a generous daily free quota. 
 
 3. There are probably other providers with compatible APIs that can be used as well. 
+
+Mutation also supports the DeepGram nova-2 and nova-3 model variants. 
+Create a Deepgram account, generate an API key, and configure the following in Mutation.json under SpeetchToTextSettings:
+- "Name" : "Deepgram Nova3",
+- "Provider" : "Deepgram",
+- "ApiKey" : "<your API key>",
+- "BaseDomain" : null,
+- "ModelId": "nova-3",
 
 
 
