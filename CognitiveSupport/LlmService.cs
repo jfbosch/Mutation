@@ -12,7 +12,6 @@ public class LlmService : ILlmService
 	private readonly object _lock = new object();
 	private readonly Dictionary<string, IOpenAIService> _openAIServices;
 
-
 	public LlmService(
 		string apiKey,
 		string azureResourceName,

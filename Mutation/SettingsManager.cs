@@ -1,6 +1,7 @@
 ﻿using CognitiveSupport;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
@@ -105,18 +106,43 @@ internal class SettingsManager : ISettingsManager
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
 			somethingWasMissing = true;
 		}
-		if (speechToTextSettings.Service == SpeechToTextServices.None)
+		if (speechToTextSettings.Services is null)
 		{
-			speechToTextSettings.Service = SpeechToTextServices.OpenAiWhisper;
+			speechToTextSettings.Services = new SpeetchToTextServiceSettings[] { };
+			somethingWasMissing = true;
 		}
+		if (!speechToTextSettings.Services.Any())
+		{
+			speechToTextSettings.ActiveSpeetchToTextService = "OpenAI Whisper 1";
+			SpeetchToTextServiceSettings service = new SpeetchToTextServiceSettings
+			{
+				Name = speechToTextSettings.ActiveSpeetchToTextService,
+				Provider = SpeechToTextProviders.OpenAi,
+				ModelId = "whisper-1",
+				BaseDomain = "https://api.openai.com/",
+			};
+			speechToTextSettings.Services = speechToTextSettings.Services.Append(service).ToArray();
+			somethingWasMissing = true;
+		}
+		foreach (var s in speechToTextSettings.Services)
+		{
+			if (s.Provider == SpeechToTextProviders.None)
+				s.Provider = SpeechToTextProviders.OpenAi;
+			if (string.IsNullOrWhiteSpace(s.ApiKey))
+			{
+				s.ApiKey = PlaceholderValue;
+				somethingWasMissing = true;
+			}
+			if (string.IsNullOrWhiteSpace(s.SpeechToTextPrompt))
+			{
+				s.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro.";
+				// This is optional, so we don't need to flag that something was missing.
+			}
+		}
+
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextHotKey))
 		{
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
-			somethingWasMissing = true;
-		}
-		if (string.IsNullOrWhiteSpace(speechToTextSettings.ApiKey))
-		{
-			speechToTextSettings.ApiKey = PlaceholderValue;
 			somethingWasMissing = true;
 		}
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.TempDirectory))
@@ -124,13 +150,6 @@ internal class SettingsManager : ISettingsManager
 			speechToTextSettings.TempDirectory = @"C:\Temp\Mutation";
 			somethingWasMissing = true;
 		}
-
-		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextPrompt))
-		{
-			speechToTextSettings.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro.";
-			// This is optional, so we don't need to flag that something was missing.
-		}
-
 
 		//-------------------------------
 		if (settings.LlmSettings is null)
@@ -390,15 +409,50 @@ When you are asked to apply revision corrections, you should do the following:
 	{
 		string json = File.ReadAllText(SettingsFileFullPath);
 
-		Settings settings = JsonConvert.DeserializeObject<Settings>(json, _jsonSerializerSettings);
+		JObject jObj = JObject.Parse(json);
 
-		if (settings.LlmSettings?.TranscriptFormatRules?.Count is 4 or 14)
+		if (!(jObj["SpeetchToTextSettings"] is JObject settings))
+			return;
+
+		// Check if the JSON is already in the desired format.
+		// Here, we assume correctness if a "Services" property (as an array) exists.
+		if (settings["Services"] == null || settings["Services"].Type != JTokenType.Array)
 		{
-			// Get rid of the old defaults.
-			settings.LlmSettings.TranscriptFormatRules.Clear();
+			string providerName = settings.Value<string>("Service") ?? "";
+
+			// Create the new service object and migrate the relevant properties.
+			JObject serviceObj = new JObject
+			{
+				["Name"] = providerName,             // Use the provider name as the service Name.
+				["Provider"] = providerName,         // Also set the Provider.
+				["ApiKey"] = settings["ApiKey"],
+				["BaseDomain"] = settings["BaseDomain"],
+				["ModelId"] = settings["ModelId"],
+				["SpeechToTextPrompt"] = settings["SpeechToTextPrompt"]
+			};
+
+			// Create a new services array with the service object as the first element.
+			JArray servicesArray = new JArray { serviceObj };
+
+			// Remove the migrated properties from the root of SpeetchToTextSettings.
+			settings.Remove("Service");
+			settings.Remove("ApiKey");
+			settings.Remove("BaseDomain");
+			settings.Remove("ModelId");
+			settings.Remove("SpeechToTextPrompt");
+
+			// Add the new properties: the active service and the services array.
+			settings["ActiveSpeetchToTextService"] = providerName;
+			settings["Services"] = servicesArray;
 		}
 
-		SaveSettingsToFile(settings);
+		foreach (var service in settings["Services"])
+		{
+			if (service["Provider"]?.ToString() == "OpenAiWhisper")
+				service["Provider"] = "OpenAi";
+		}
+
+		File.WriteAllText(SettingsFileFullPath, jObj.ToString(Formatting.Indented), Encoding.UTF8);
 	}
 
 	public void SaveSettingsToFile(Settings settings)

@@ -15,6 +15,7 @@ namespace Mutation
 	public partial class MutationForm : Form
 	{
 		private ScreenCaptureForm _activeScreenCaptureForm = null;
+		private SpeechToTextServiceComboItem _activeSpeetchToTextServiceComboItem = null;
 
 		private Settings _settings { get; set; }
 		private ISettingsManager _settingsManager { get; set; }
@@ -27,7 +28,7 @@ namespace Mutation
 		private int _microphoneDeviceIndex = -1;
 
 		private Hotkey _hkSpeechToText { get; set; }
-		private ISpeechToTextService _speechToTextService { get; set; }
+		private ISpeechToTextService[] _speechToTextServices { get; set; }
 		private AudioRecorder _audioRecorder { get; set; }
 		private SpeechToTextState _speechToTextState { get; init; }
 
@@ -49,7 +50,7 @@ namespace Mutation
 			Settings settings,
 			CoreAudioController coreAudioController,
 			IOcrService ocrService,
-			ISpeechToTextService speechToTextService,
+			ISpeechToTextService[] speechToTextServices,
 			ITextToSpeechService textToSpeechService,
 			ILlmService llmService)
 		{
@@ -57,7 +58,7 @@ namespace Mutation
 			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
 			this._coreAudioController = coreAudioController ?? throw new ArgumentNullException(nameof(coreAudioController));
 			this._ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
-			this._speechToTextService = speechToTextService ?? throw new ArgumentNullException(nameof(speechToTextService));
+			this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
 			this._speechToTextState = new SpeechToTextState(() => _audioRecorder);
@@ -66,7 +67,7 @@ namespace Mutation
 			InitializeComponent();
 			InitializeAudioControls();
 
-			txtSpeechToTextPrompt.Text = _settings.SpeetchToTextSettings.SpeechToTextPrompt;
+			PopulateSpeechToTextServiceCombo();
 
 			HookupTooltips();
 
@@ -160,7 +161,7 @@ Prompts can be very helpful for correcting specific words or acronyms that the m
 
 Sometimes the model might skip punctuation in the transcript. You can avoid this by using a simple prompt that includes punctuation, such as: ""Hello, welcome to my lecture.""
 
-The model may also leave out common filler words in the audio. If you want to keep the filler words in your transcript, you can use a prompt that contains them: ""Umm, let me think like, hmm... Okay, here's what I'm, like, thinking.""
+The model may also leave out common filler words in the audio. If you want to keep the filler words in your transcript, you can use a prompt that contains them: ""Umm, let me think like, hmm... Okay, here's what I'serviceSettings, like, thinking.""
 ";
 
 			toolTip.SetToolTip(txtSpeechToTextPrompt, speechToTextPromptToolTipMsg);
@@ -271,6 +272,32 @@ The model may also leave out common filler words in the audio. If you want to ke
 				{
 					CaptureDevice = m,
 				}));
+		}
+
+		private void PopulateSpeechToTextServiceCombo()
+		{
+			cmbSpeechToTextService.Items.Clear();
+			_settings.SpeetchToTextSettings.Services
+				.ToList()
+				.ForEach(serviceSettings => cmbSpeechToTextService.Items.Add(new SpeechToTextServiceComboItem
+				{
+					SpeetchToTextServiceSettings = serviceSettings,
+					SpeechToTextService = _speechToTextServices.Single(x => x.ServiceName == serviceSettings.Name),
+				}));
+
+			SelectActiveServiceInSpeechToTextServiceCombo();
+		}
+
+		private void SelectActiveServiceInSpeechToTextServiceCombo()
+		{
+			foreach (SpeechToTextServiceComboItem item in cmbSpeechToTextService.Items)
+			{
+				if (item.SpeetchToTextServiceSettings.Name == _settings.SpeetchToTextSettings.ActiveSpeetchToTextService)
+				{
+					cmbSpeechToTextService.SelectedItem = item;
+					break;
+				}
+			}
 		}
 
 		private void SelectActiveCaptureDeviceInActiveMicrophoneCombo()
@@ -390,7 +417,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			using (Graphics g = Graphics.FromImage(screenshot))
 			{
 				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
-				
+
 				var displayShot = screenshot;
 				using Bitmap invertedScreenshot = InvertScreenshotColors(screenshot);
 				if (_settings.AzureComputerVisionSettings.InvertScreenshot)
@@ -643,6 +670,14 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private async Task SpeechToText()
 		{
+			if (this._activeSpeetchToTextServiceComboItem is null)
+			{
+				MessageBox.Show("No active speech-to-text service selected.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+
+
+
 			try
 			{
 				if (this._speechToTextState.TranscribingAudio)
@@ -688,7 +723,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 						_speechToTextState.StartTranscription();
 						try
 						{
-							text = await this._speechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath, this._speechToTextState.TranscriptionCancellationTokenSource.Token).ConfigureAwait(true);
+							if (this._activeSpeetchToTextServiceComboItem is not null)
+								text = await this._activeSpeetchToTextServiceComboItem.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath, this._speechToTextState.TranscriptionCancellationTokenSource.Token).ConfigureAwait(true);
+							else
+								MessageBox.Show("No active speech-to-text service selected.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 						}
 						finally
 						{
@@ -793,7 +831,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_settings.MainWindowUiSettings.WindowSize = this.Size;
 			_settings.MainWindowUiSettings.WindowLocation = this.Location;
 
-			_settings.SpeetchToTextSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			_activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+			_settings.SpeetchToTextSettings.ActiveSpeetchToTextService = _activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.Name;
+
 			_settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
 			_settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 			this._settingsManager.SaveSettingsToFile(_settings);
@@ -811,9 +851,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void MutationForm_Load(object sender, EventArgs e)
 		{
 			RestoreWindowLocationAndSizeFromSettings();
-
-			txtSpeechToTextService.Text =
-				$"{this._settings.SpeetchToTextSettings.Service}: {this._settings.SpeetchToTextSettings.ModelId}";
+			//BookMark??888
+			//cmbSpeechToTextService.Text =
+			//	$"{ _activeSpeetchToTextServiceComboItem.Provider}: {_activeSpeetchToTextServiceComboItem.ModelId}";
 		}
 
 		private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)
@@ -1061,6 +1101,20 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 			else
 				MessageBox.Show($"Selected item is not a {nameof(CaptureDeviceComboItem)}.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
+
+		private void cmbSpeechToTextService_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			var selectedItem = cmbSpeechToTextService.SelectedItem as SpeechToTextServiceComboItem;
+			if (selectedItem is not null)
+			{
+				_activeSpeetchToTextServiceComboItem = selectedItem;
+				txtSpeechToTextPrompt.Text = _activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.SpeechToTextPrompt;
+			}
+			else
+			{
+				MessageBox.Show($"Selected item is not a {nameof(SpeechToTextServiceComboItem)}.", "Selection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
 		}
 	}
 }

@@ -1,8 +1,8 @@
 ﻿namespace CognitiveSupport;
 
-public enum SpeechToTextServices
+public enum SpeechToTextProviders
 {
 	None = 0,
-	OpenAiWhisper = 1,
+	OpenAi = 1,
 	Deepgram = 2,
 }
