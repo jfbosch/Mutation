@@ -117,7 +117,7 @@ internal class SettingsManager : ISettingsManager
 			SpeetchToTextServiceSettings service = new SpeetchToTextServiceSettings
 			{
 				Name = speechToTextSettings.ActiveSpeetchToTextService,
-				Provider = SpeechToTextProviders.OpenAiWhisper,
+				Provider = SpeechToTextProviders.OpenAi,
 				ModelId = "whisper-1",
 				BaseDomain = "https://api.openai.com/",
 			};
@@ -127,7 +127,7 @@ internal class SettingsManager : ISettingsManager
 		foreach (var s in speechToTextSettings.Services)
 		{
 			if (s.Provider == SpeechToTextProviders.None)
-				s.Provider = SpeechToTextProviders.OpenAiWhisper;
+				s.Provider = SpeechToTextProviders.OpenAi;
 			if (string.IsNullOrWhiteSpace(s.ApiKey))
 			{
 				s.ApiKey = PlaceholderValue;
@@ -416,35 +416,41 @@ When you are asked to apply revision corrections, you should do the following:
 
 		// Check if the JSON is already in the desired format.
 		// Here, we assume correctness if a "Services" property (as an array) exists.
-		if (settings["Services"] != null && settings["Services"].Type == JTokenType.Array)
-			return;
-
-		string providerName = settings.Value<string>("Service") ?? "";
-
-		// Create the new service object and migrate the relevant properties.
-		JObject serviceObj = new JObject
+		if (settings["Services"] == null || settings["Services"].Type != JTokenType.Array)
 		{
-			["Name"] = providerName,             // Use the provider name as the service Name.
-			["Provider"] = providerName,         // Also set the Provider.
-			["ApiKey"] = settings["ApiKey"],
-			["BaseDomain"] = settings["BaseDomain"],
-			["ModelId"] = settings["ModelId"],
-			["SpeechToTextPrompt"] = settings["SpeechToTextPrompt"]
-		};
+			string providerName = settings.Value<string>("Service") ?? "";
 
-		// Create a new services array with the service object as the first element.
-		JArray servicesArray = new JArray { serviceObj };
+			// Create the new service object and migrate the relevant properties.
+			JObject serviceObj = new JObject
+			{
+				["Name"] = providerName,             // Use the provider name as the service Name.
+				["Provider"] = providerName,         // Also set the Provider.
+				["ApiKey"] = settings["ApiKey"],
+				["BaseDomain"] = settings["BaseDomain"],
+				["ModelId"] = settings["ModelId"],
+				["SpeechToTextPrompt"] = settings["SpeechToTextPrompt"]
+			};
 
-		// Remove the migrated properties from the root of SpeetchToTextSettings.
-		settings.Remove("Service");
-		settings.Remove("ApiKey");
-		settings.Remove("BaseDomain");
-		settings.Remove("ModelId");
-		settings.Remove("SpeechToTextPrompt");
+			// Create a new services array with the service object as the first element.
+			JArray servicesArray = new JArray { serviceObj };
 
-		// Add the new properties: the active service and the services array.
-		settings["ActiveSpeetchToTextService"] = providerName;
-		settings["Services"] = servicesArray;
+			// Remove the migrated properties from the root of SpeetchToTextSettings.
+			settings.Remove("Service");
+			settings.Remove("ApiKey");
+			settings.Remove("BaseDomain");
+			settings.Remove("ModelId");
+			settings.Remove("SpeechToTextPrompt");
+
+			// Add the new properties: the active service and the services array.
+			settings["ActiveSpeetchToTextService"] = providerName;
+			settings["Services"] = servicesArray;
+		}
+
+		foreach (var service in settings["Services"])
+		{
+			if (service["Provider"]?.ToString() == "OpenAiWhisper")
+				service["Provider"] = "OpenAi";
+		}
 
 		File.WriteAllText(SettingsFileFullPath, jObj.ToString(Formatting.Indented), Encoding.UTF8);
 	}

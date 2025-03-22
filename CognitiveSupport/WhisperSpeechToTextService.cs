@@ -92,7 +92,7 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 			FileName = Path.GetFileName(audioffilePath),
 			File = audioBytes,
 			Model = _modelId,
-			ResponseFormat = StaticValues.AudioStatics.ResponseFormat.VerboseJson
+			ResponseFormat = StaticValues.AudioStatics.ResponseFormat.Json
 		}, cancellationToken);
 	}
 }

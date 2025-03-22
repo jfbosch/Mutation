@@ -82,7 +82,7 @@ internal static class Program
 			{
 				switch (serviceSettings.Provider)
 				{
-					case SpeechToTextProviders.OpenAiWhisper:
+					case SpeechToTextProviders.OpenAi:
 						speechToTextServices.Add(CreateWhisperSpeechToTextService(builder, serviceSettings, x));
 						break;
 					case SpeechToTextProviders.Deepgram:
