@@ -109,6 +109,7 @@ internal class SettingsManager : ISettingsManager
 		if (speechToTextSettings.Services is null)
 		{
 			speechToTextSettings.Services = new SpeetchToTextServiceSettings[] { };
+			somethingWasMissing = true;
 		}
 		if (!speechToTextSettings.Services.Any())
 		{
@@ -117,8 +118,11 @@ internal class SettingsManager : ISettingsManager
 			{
 				Name = speechToTextSettings.ActiveSpeetchToTextService,
 				Provider = SpeechToTextProviders.OpenAiWhisper,
+				ModelId = "whisper-1",
+				BaseDomain = "https://api.openai.com/",
 			};
-			speechToTextSettings.Services.Append(service);
+			speechToTextSettings.Services = speechToTextSettings.Services.Append(service).ToArray();
+			somethingWasMissing = true;
 		}
 		foreach (var s in speechToTextSettings.Services)
 		{
@@ -413,7 +417,7 @@ When you are asked to apply revision corrections, you should do the following:
 		// Check if the JSON is already in the desired format.
 		// Here, we assume correctness if a "Services" property (as an array) exists.
 		if (settings["Services"] != null && settings["Services"].Type == JTokenType.Array)
-			return ;
+			return;
 
 		string providerName = settings.Value<string>("Service") ?? "";
 
