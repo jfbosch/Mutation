@@ -48,7 +48,7 @@ namespace CognitiveSupport
 				_playerStart = TryLoadPlayer ( settings.AudioSettings.CustomBeepSettings.BeepStartFile );
 				_playerSuccess = TryLoadPlayer ( settings.AudioSettings.CustomBeepSettings.BeepSuccessFile );
 				_playerFailure = TryLoadPlayer ( settings.AudioSettings.CustomBeepSettings.BeepFailureFile );
-				_playerEnd = TryLoadPlayer ( settings.AudioSettings.CustomBeepSettings.BeepEmdFile );
+				_playerEnd = TryLoadPlayer ( settings.AudioSettings.CustomBeepSettings.BeepEndFile );
 			}
 		}
 

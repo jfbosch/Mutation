@@ -988,7 +988,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private static void BeepStart()
 		{
-			Console.Beep(970, 80);
+			BeepPlayer.Play ( BeepType.Start );
 		}
 
 		private static void BeepSuccess()

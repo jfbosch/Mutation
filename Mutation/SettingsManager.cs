@@ -114,9 +114,9 @@ internal class SettingsManager : ISettingsManager
 				audioSettings.CustomBeepSettings.BeepStartFile = "<placeholder-start.wav>";
 				somethingWasMissing = true;
 			}
-			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepEmdFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepEmdFile )?.ToLower ( ) != ".wav" )
+			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepEndFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepEndFile )?.ToLower ( ) != ".wav" )
 			{
-				audioSettings.CustomBeepSettings.BeepEmdFile = "<placeholder-emd.wav>";
+				audioSettings.CustomBeepSettings.BeepEndFile = "<placeholder-emd.wav>";
 				somethingWasMissing = true;
 			}
 		}
