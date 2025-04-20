@@ -87,12 +87,39 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 		var audioSettings = settings.AudioSettings;
-		if (string.IsNullOrWhiteSpace(audioSettings.MicrophoneToggleMuteHotKey))
+		if ( string.IsNullOrWhiteSpace ( audioSettings.MicrophoneToggleMuteHotKey ) )
 		{
 			audioSettings.MicrophoneToggleMuteHotKey = "ALT+Q";
 			somethingWasMissing = true;
 		}
-
+		if ( audioSettings.CustomBeepSettings == null )
+		{
+			audioSettings.CustomBeepSettings = new AudioSettings.CustomBeepSettingsData ( );
+			somethingWasMissing = true;
+		}
+		if ( audioSettings.CustomBeepSettings.UseCustomBeeps )
+		{
+			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepSuccessFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepSuccessFile )?.ToLower ( ) != ".wav" )
+			{
+				audioSettings.CustomBeepSettings.BeepSuccessFile = "<placeholder-success.wav>";
+				somethingWasMissing = true;
+			}
+			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepFailureFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepFailureFile )?.ToLower ( ) != ".wav" )
+			{
+				audioSettings.CustomBeepSettings.BeepFailureFile = "<placeholder-failure.wav>";
+				somethingWasMissing = true;
+			}
+			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepStartFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepStartFile )?.ToLower ( ) != ".wav" )
+			{
+				audioSettings.CustomBeepSettings.BeepStartFile = "<placeholder-start.wav>";
+				somethingWasMissing = true;
+			}
+			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepEmdFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepEmdFile )?.ToLower ( ) != ".wav" )
+			{
+				audioSettings.CustomBeepSettings.BeepEmdFile = "<placeholder-emd.wav>";
+				somethingWasMissing = true;
+			}
+		}
 
 		//----------------------------------
 		if (settings.SpeetchToTextSettings is null)
