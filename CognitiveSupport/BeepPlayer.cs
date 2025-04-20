@@ -34,10 +34,19 @@ namespace CognitiveSupport
 		public const int DefaultEndFrequency = 800;
 		public const int DefaultEndDuration = 50;
 
+		public const int DefaultMuteFrequency = 500;
+		public const int DefaultMuteDuration = 200;
+
+		public const int DefaultUnmuteFrequency = 1300;
+		public const int DefaultUnmuteDuration = 50;
+
 		private static SoundPlayer? _playerStart;
 		private static SoundPlayer? _playerSuccess;
 		private static SoundPlayer? _playerFailure;
 		private static SoundPlayer? _playerEnd;
+		private static SoundPlayer? _playerMute;
+		private static SoundPlayer? _playerUnmute;
+
 		public static IReadOnlyList<string> LastInitializationIssues { get; private set; } = Array.Empty<string> ( );
 
 		public static void Initialize ( Settings settings )
@@ -62,6 +71,14 @@ namespace CognitiveSupport
 				_playerEnd = TryLoadPlayer ( settings.AudioSettings.CustomBeepSettings.BeepEndFile );
 				if ( _playerEnd == null && !string.IsNullOrWhiteSpace ( settings.AudioSettings.CustomBeepSettings.BeepEndFile ) )
 					issues.Add ( $"Could not load end beep file: {settings.AudioSettings.CustomBeepSettings.BeepEndFile}" );
+
+				_playerMute = TryLoadPlayer ( settings.AudioSettings.CustomBeepSettings.BeepMuteFile );
+				if ( _playerMute == null && !string.IsNullOrWhiteSpace ( settings.AudioSettings.CustomBeepSettings.BeepMuteFile ) )
+					issues.Add ( $"Could not load mute beep file: {settings.AudioSettings.CustomBeepSettings.BeepMuteFile}" );
+
+				_playerUnmute = TryLoadPlayer ( settings.AudioSettings.CustomBeepSettings.BeepUnmuteFile );
+				if ( _playerUnmute == null && !string.IsNullOrWhiteSpace ( settings.AudioSettings.CustomBeepSettings.BeepUnmuteFile ) )
+					issues.Add ( $"Could not load unmute beep file: {settings.AudioSettings.CustomBeepSettings.BeepUnmuteFile}" );
 			}
 
 			LastInitializationIssues = issues;
@@ -87,32 +104,22 @@ namespace CognitiveSupport
 			switch ( type )
 			{
 				case BeepType.Start:
-					if ( _playerStart != null )
-					{
-						_playerStart.Play ( );
-						return;
-					}
+					if ( _playerStart != null ) { _playerStart.Play ( ); return; }
 					break;
 				case BeepType.Success:
-					if ( _playerSuccess != null )
-					{
-						_playerSuccess.Play ( );
-						return;
-					}
+					if ( _playerSuccess != null ) { _playerSuccess.Play ( ); return; }
 					break;
 				case BeepType.Failure:
-					if ( _playerFailure != null )
-					{
-						_playerFailure.Play ( );
-						return;
-					}
+					if ( _playerFailure != null ) { _playerFailure.Play ( ); return; }
 					break;
 				case BeepType.End:
-					if ( _playerEnd != null )
-					{
-						_playerEnd.Play ( );
-						return;
-					}
+					if ( _playerEnd != null ) { _playerEnd.Play ( ); return; }
+					break;
+				case BeepType.Mute:
+					if ( _playerMute != null ) { _playerMute.Play ( ); return; }
+					break;
+				case BeepType.Unmute:
+					if ( _playerUnmute != null ) { _playerUnmute.Play ( ); return; }
 					break;
 			}
 
@@ -123,9 +130,7 @@ namespace CognitiveSupport
 					break;
 				case BeepType.Success:
 					foreach ( var (frequency, duration) in DefaultSuccessSequence )
-					{
 						Console.Beep ( frequency, duration );
-					}
 					break;
 				case BeepType.Failure:
 					for ( int i = 0; i < DefaultFailureRepeats; i++ )
@@ -133,6 +138,12 @@ namespace CognitiveSupport
 					break;
 				case BeepType.End:
 					Console.Beep ( DefaultEndFrequency, DefaultEndDuration );
+					break;
+				case BeepType.Mute:
+					Console.Beep ( DefaultMuteFrequency, DefaultMuteDuration );
+					break;
+				case BeepType.Unmute:
+					Console.Beep ( DefaultUnmuteFrequency, DefaultUnmuteDuration );
 					break;
 			}
 		}
