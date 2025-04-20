@@ -712,7 +712,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						_audioRecorder.Dispose();
 						_audioRecorder = null;
 
-						BeepStart();
+						BeepEnd ( );
 
 						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Converting speech to text...";
@@ -990,6 +990,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private static void BeepStart()
 		{
 			BeepPlayer.Play ( BeepType.Start );
+		}
+
+		private static void BeepEnd ( )
+		{
+			BeepPlayer.Play ( BeepType.End );
 		}
 
 		private static void BeepSuccess()
