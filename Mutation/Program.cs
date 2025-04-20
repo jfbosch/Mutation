@@ -169,7 +169,7 @@ internal static class Program
 	private static void BeepFail(int numberOfBeeps = 1)
 	{
 		for (int i = 0; i < numberOfBeeps; i++)
-			Console.Beep(400 + (100 * numberOfBeeps), 100);
+			BeepPlayer.Play ( BeepType.Failure );
 	}
 
 }

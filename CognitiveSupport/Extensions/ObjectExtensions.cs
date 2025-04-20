@@ -7,7 +7,7 @@ public static class ObjectExtensions
 		int attempt)
 	{
 #pragma warning disable CA1416 // Validate platform compatibility
-		Console.Beep(400 + (100 * attempt), 100);
+		BeepPlayer.Play ( BeepType.Failure );
 #pragma warning restore CA1416 // Validate platform compatibility
 	}
 
