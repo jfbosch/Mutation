@@ -527,10 +527,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 			var image = TryGetClipboardImage();
 			if (image is null)
 			{
+				var msg = "No image found on the clipboard after multiple retries.";
+				txtOcr.Text = msg;
+				SetTextToClipboard(msg);
 				BeepFail();
-
-				this.Activate();
-				MessageBox.Show("No image found on the clipboard.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				return;
 			}
 
 			try
@@ -599,7 +600,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				}
 
 				attempts--;
-				Thread.Sleep(100);
+				Thread.Sleep(150);
 			}
 
 			return null;
