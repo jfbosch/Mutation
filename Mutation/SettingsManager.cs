@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
+using System.Windows.Forms;
 
 namespace Mutation;
 
@@ -99,30 +100,92 @@ internal class SettingsManager : ISettingsManager
 		}
 		if ( audioSettings.CustomBeepSettings.UseCustomBeeps )
 		{
-			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepSuccessFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepSuccessFile )?.ToLower ( ) != ".wav" )
+			string[] allowedExtensions = new[] { ".wav" };
+			var beepIssues = new List<string>();
+
+			string successPath = audioSettings.CustomBeepSettings.BeepSuccessFile;
+			if ( string.IsNullOrWhiteSpace ( successPath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( successPath )?.ToLower ( ) ) ||
+				!File.Exists ( successPath ) )
 			{
-				audioSettings.CustomBeepSettings.BeepSuccessFile = "<placeholder-success.wav>";
 				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( successPath ) && Path.GetExtension ( successPath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom success beep must be a .wav file: {successPath}" );
+				else
+					beepIssues.Add ( $"Could not load success beep file: {successPath}" );
 			}
-			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepFailureFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepFailureFile )?.ToLower ( ) != ".wav" )
+
+			string failurePath = audioSettings.CustomBeepSettings.BeepFailureFile;
+			if ( string.IsNullOrWhiteSpace ( failurePath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( failurePath )?.ToLower ( ) ) ||
+				!File.Exists ( failurePath ) )
 			{
-				audioSettings.CustomBeepSettings.BeepFailureFile = "<placeholder-failure.wav>";
 				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( failurePath ) && Path.GetExtension ( failurePath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom failure beep must be a .wav file: {failurePath}" );
+				else
+					beepIssues.Add ( $"Could not load failure beep file: {failurePath}" );
 			}
-			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepStartFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepStartFile )?.ToLower ( ) != ".wav" )
+
+			string startPath = audioSettings.CustomBeepSettings.BeepStartFile;
+			if ( string.IsNullOrWhiteSpace ( startPath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( startPath )?.ToLower ( ) ) ||
+				!File.Exists ( startPath ) )
 			{
-				audioSettings.CustomBeepSettings.BeepStartFile = "<placeholder-start.wav>";
 				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( startPath ) && Path.GetExtension ( startPath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom start beep must be a .wav file: {startPath}" );
+				else
+					beepIssues.Add ( $"Could not load start beep file: {startPath}" );
 			}
-			if ( string.IsNullOrWhiteSpace ( audioSettings.CustomBeepSettings.BeepEndFile ) || Path.GetExtension ( audioSettings.CustomBeepSettings.BeepEndFile )?.ToLower ( ) != ".wav" )
+
+			string endPath = audioSettings.CustomBeepSettings.BeepEndFile;
+			if ( string.IsNullOrWhiteSpace ( endPath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( endPath )?.ToLower ( ) ) ||
+				!File.Exists ( endPath ) )
 			{
-				audioSettings.CustomBeepSettings.BeepEndFile = "<placeholder-emd.wav>";
 				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( endPath ) && Path.GetExtension ( endPath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom end beep must be a .wav file: {endPath}" );
+				else
+					beepIssues.Add ( $"Could not load end beep file: {endPath}" );
+			}
+
+			if ( beepIssues.Any ( ) )
+			{
+				audioSettings.CustomBeepSettings.UseCustomBeeps = false;
+
+				string message =
+					"The following issues were found with the custom beep settings:" + Environment.NewLine + Environment.NewLine +
+					string.Join(Environment.NewLine, beepIssues) + Environment.NewLine + Environment.NewLine +
+					"Falling back to default beep sounds. UseCustomBeeps has been disabled." + Environment.NewLine +  + Environment.NewLine +
+					"To use custom beeps again, fix the issues above and re-enable UseCustomBeeps in the settings file.";
+
+				System.Windows.Forms.MessageBox.Show (
+					message,
+					"Custom Beep Settings Issues",
+					System.Windows.Forms.MessageBoxButtons.OK,
+					System.Windows.Forms.MessageBoxIcon.Warning
+				);
+			}
+			else
+			{
+				System.Windows.Forms.MessageBox.Show (
+					"No issues",
+					"Custom Beep Settings Issues",
+					System.Windows.Forms.MessageBoxButtons.OK,
+					System.Windows.Forms.MessageBoxIcon.Warning
+				);
 			}
 		}
 
+
 		//----------------------------------
-		if (settings.SpeetchToTextSettings is null)
+		if ( settings.SpeetchToTextSettings is null)
 		{
 			settings.SpeetchToTextSettings = new SpeetchToTextSettings();
 			somethingWasMissing = true;
