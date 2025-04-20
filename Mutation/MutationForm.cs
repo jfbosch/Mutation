@@ -978,12 +978,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void BeepMuted()
 		{
-			Console.Beep(500, 200);
+			BeepPlayer.Play ( BeepType.Mute );
 		}
 
 		private void BeepUnmuted()
 		{
-			Console.Beep(1300, 50);
+			BeepPlayer.Play ( BeepType.Unmute );
 		}
 
 		private static void BeepStart()
