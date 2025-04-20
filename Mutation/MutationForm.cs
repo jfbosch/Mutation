@@ -841,6 +841,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			UnregisterHotkey(_hkToggleMicMute);
 			UnregisterHotkey(_hkOcr);
+			BeepPlayer.DisposePlayers ( );
 		}
 
 		private static void UnregisterHotkey(Hotkey hk)
