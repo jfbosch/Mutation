@@ -16,11 +16,9 @@ namespace CognitiveSupport
 
 	public static class BeepPlayer
 	{
-		// Default configuration (all values in Hertz and milliseconds)
 		public const int DefaultStartFrequency = 970;
 		public const int DefaultStartDuration = 80;
 
-		// For Success, we play a sequence of two beeps.
 		public static readonly (int Frequency, int Duration)[] DefaultSuccessSequence = new (int, int)[]
 		{
 			(1050, 40),
@@ -67,7 +65,6 @@ namespace CognitiveSupport
 			LastInitializationIssues = issues;
 		}
 
-
 		private static SoundPlayer? TryLoadPlayer ( string? filePath )
 		{
 			if ( !string.IsNullOrWhiteSpace ( filePath ) && File.Exists ( filePath ) )
@@ -85,7 +82,6 @@ namespace CognitiveSupport
 
 		public static void Play ( BeepType type )
 		{
-			// Play custom beep if available, otherwise use our defaults.
 			switch ( type )
 			{
 				case BeepType.Start:
@@ -118,7 +114,6 @@ namespace CognitiveSupport
 					break;
 			}
 
-			// Otherwise, use our defaults:
 			switch ( type )
 			{
 				case BeepType.Start:

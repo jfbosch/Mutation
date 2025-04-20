@@ -162,7 +162,7 @@ internal class SettingsManager : ISettingsManager
 				string message =
 					"The following issues were found with the custom beep settings:" + Environment.NewLine + Environment.NewLine +
 					string.Join(Environment.NewLine, beepIssues) + Environment.NewLine + Environment.NewLine +
-					"Falling back to default beep sounds. UseCustomBeeps has been disabled." + Environment.NewLine +  + Environment.NewLine +
+					"Falling back to default beep sounds. UseCustomBeeps has been disabled." + Environment.NewLine +  Environment.NewLine +
 					"To use custom beeps again, fix the issues above and re-enable UseCustomBeeps in the settings file.";
 
 				System.Windows.Forms.MessageBox.Show (
