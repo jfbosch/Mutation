@@ -155,6 +155,32 @@ internal class SettingsManager : ISettingsManager
 					beepIssues.Add ( $"Could not load end beep file: {endPath}" );
 			}
 
+			string mutePath = audioSettings.CustomBeepSettings.BeepMuteFile;
+			if ( string.IsNullOrWhiteSpace ( mutePath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( mutePath )?.ToLower ( ) ) ||
+				!File.Exists ( mutePath ) )
+			{
+				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( mutePath ) && Path.GetExtension ( mutePath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom mute beep must be a .wav file: {mutePath}" );
+				else
+					beepIssues.Add ( $"Could not load mute beep file: {mutePath}" );
+			}
+
+			string unmutePath = audioSettings.CustomBeepSettings.BeepUnmuteFile;
+			if ( string.IsNullOrWhiteSpace ( unmutePath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( unmutePath )?.ToLower ( ) ) ||
+				!File.Exists ( unmutePath ) )
+			{
+				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( unmutePath ) && Path.GetExtension ( unmutePath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom unmute beep must be a .wav file: {unmutePath}" );
+				else
+					beepIssues.Add ( $"Could not load unmute beep file: {unmutePath}" );
+			}
+
 			if ( beepIssues.Any ( ) )
 			{
 				audioSettings.CustomBeepSettings.UseCustomBeeps = false;
