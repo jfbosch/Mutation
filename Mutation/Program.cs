@@ -47,6 +47,19 @@ internal static class Program
 		var settings = settingsManager.LoadAndEnsureSettings();
 		BeepPlayer.Initialize ( settings );
 
+		if ( BeepPlayer.LastInitializationIssues.Count > 0 )
+		{
+			string message = "The following issues were found with the custom beep settings:\n\n" +
+					 string.Join("\n", BeepPlayer.LastInitializationIssues);
+
+			System.Windows.Forms.MessageBox.Show (
+				message,
+				"Custom Beep Settings Issues",
+				System.Windows.Forms.MessageBoxButtons.OK,
+				System.Windows.Forms.MessageBoxIcon.Warning
+			);
+		}
+
 		builder.Services.AddSingleton<ISettingsManager>(settingsManager);
 		builder.Services.AddSingleton<CognitiveSupport.Settings>(settings);
 
