@@ -11,7 +11,9 @@ namespace CognitiveSupport
 		Start,
 		Success,
 		Failure,
-		End
+		End,
+		Mute,
+		Unmute
 	}
 
 	public static class BeepPlayer
