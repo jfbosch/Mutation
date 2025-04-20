@@ -56,6 +56,8 @@ public class AudioSettings
 		public string? BeepFailureFile { get; set; }
 		public string? BeepStartFile { get; set; }
 		public string? BeepEndFile { get; set; }
+		public string? BeepMuteFile { get; set; }
+		public string? BeepUnmuteFile { get; set; }
 	}
 }
 
