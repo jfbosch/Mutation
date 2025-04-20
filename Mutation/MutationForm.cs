@@ -993,14 +993,13 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private static void BeepSuccess()
 		{
-			Console.Beep(1050, 40);
-			Console.Beep(1150, 40);
+			BeepPlayer.Play ( BeepType.Success );
 		}
 
 		private static void BeepFail()
 		{
 			for (int i = 0; i < 3; i++)
-				Console.Beep(300, 100);
+				BeepPlayer.Play ( BeepType.Failure);
 		}
 
 		private async void btnReviewTranscript_Click(object sender, EventArgs e)
