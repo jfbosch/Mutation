@@ -45,6 +45,8 @@ internal static class Program
 
 		var settingsManager = CreateSettingsManager();
 		var settings = settingsManager.LoadAndEnsureSettings();
+		BeepPlayer.Initialize ( settings );
+
 		builder.Services.AddSingleton<ISettingsManager>(settingsManager);
 		builder.Services.AddSingleton<CognitiveSupport.Settings>(settings);
 
