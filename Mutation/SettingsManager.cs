@@ -172,15 +172,6 @@ internal class SettingsManager : ISettingsManager
 					System.Windows.Forms.MessageBoxIcon.Warning
 				);
 			}
-			else
-			{
-				System.Windows.Forms.MessageBox.Show (
-					"No issues",
-					"Custom Beep Settings Issues",
-					System.Windows.Forms.MessageBoxButtons.OK,
-					System.Windows.Forms.MessageBoxIcon.Warning
-				);
-			}
 		}
 
 
