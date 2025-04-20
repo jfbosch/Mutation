@@ -12,5 +12,6 @@
     <PackageReference Include="NAudio.Lame" Version="2.1.0" />
     <PackageReference Include="StringExtensionsLibrary" Version="1.0.0" />
     <PackageReference Include="System.Speech" Version="8.0.0" />
+    <PackageReference Include="System.Windows.Extensions" Version="7.0.0" />
   </ItemGroup>
 </Project>
