@@ -520,6 +520,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			if (_ocrState.BusyWithTextExtraction)
 			{
+				BeepEnd ( );
 				_ocrState.StopTextExtraction();
 				return;
 			}
@@ -573,7 +574,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 			{
 				// This was an intentional cancellation by the user, so only beep the failure, but don't show an error message. 
-				BeepFail();
+				BeepEnd();
 
 				txtOcr.Text = "OCR cancelled by user.";
 				SetTextToClipboard(txtOcr.Text);
@@ -745,8 +746,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 			{
-				// This was an intentional cancellation by the user, so only beep the failure, but don't show an error message. 
-				BeepFail();
+				// This was an intentional cancellation by the user, so only beep the end, but don't show an error message. 
+				BeepEnd();
 
 				txtSpeechToText.Text = "Transcription cancelled by user.";
 				txtSpeechToText.ReadOnly = false;
