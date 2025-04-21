@@ -516,34 +516,33 @@ The model may also leave out common filler words in the audio. If you want to ke
 			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
 		}
 
-		private async Task ExtractTextViaOcrFromClipboardImage ( )
+		private async Task ExtractTextViaOcrFromClipboardImage()
 		{
-			if ( _ocrState.BusyWithTextExtraction )
+			if (_ocrState.BusyWithTextExtraction)
 			{
 				BeepEnd ( );
-				_ocrState.StopTextExtraction ( );
+				_ocrState.StopTextExtraction();
 				return;
 			}
 
 			var image = TryGetClipboardImage();
-			if ( image is null )
+			if (image is null)
 			{
 				var msg = "No image found on the clipboard after multiple retries.";
 				txtOcr.Text = msg;
-				SetTextToClipboard ( msg );
-				BeepFail ( );
+				SetTextToClipboard(msg);
+				BeepFail();
 				return;
 			}
 
 			try
 			{
-				BeepStart ( );
-				_ocrState.StartTextExtraction ( );
-				await ExtractTextViaOcr ( image );
+				_ocrState.StartTextExtraction();
+				await ExtractTextViaOcr(TryGetClipboardImage());
 			}
 			finally
 			{
-				_ocrState.StopTextExtraction ( );
+				_ocrState.StopTextExtraction();
 			}
 		}
 
