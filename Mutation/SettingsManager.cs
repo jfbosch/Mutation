@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
+using System.Windows.Forms;
 
 namespace Mutation;
 
@@ -87,15 +88,121 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 		var audioSettings = settings.AudioSettings;
-		if (string.IsNullOrWhiteSpace(audioSettings.MicrophoneToggleMuteHotKey))
+		if ( string.IsNullOrWhiteSpace ( audioSettings.MicrophoneToggleMuteHotKey ) )
 		{
 			audioSettings.MicrophoneToggleMuteHotKey = "ALT+Q";
 			somethingWasMissing = true;
 		}
+		if ( audioSettings.CustomBeepSettings == null )
+		{
+			audioSettings.CustomBeepSettings = new AudioSettings.CustomBeepSettingsData ( );
+			somethingWasMissing = true;
+		}
+		if ( audioSettings.CustomBeepSettings.UseCustomBeeps )
+		{
+			string[] allowedExtensions = new[] { ".wav" };
+			var beepIssues = new List<string>();
+
+			string successPath = audioSettings.CustomBeepSettings.BeepSuccessFile;
+			if ( string.IsNullOrWhiteSpace ( successPath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( successPath )?.ToLower ( ) ) ||
+				!File.Exists ( successPath ) )
+			{
+				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( successPath ) && Path.GetExtension ( successPath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom success beep must be a .wav file: {successPath}" );
+				else
+					beepIssues.Add ( $"Could not load success beep file: {successPath}" );
+			}
+
+			string failurePath = audioSettings.CustomBeepSettings.BeepFailureFile;
+			if ( string.IsNullOrWhiteSpace ( failurePath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( failurePath )?.ToLower ( ) ) ||
+				!File.Exists ( failurePath ) )
+			{
+				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( failurePath ) && Path.GetExtension ( failurePath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom failure beep must be a .wav file: {failurePath}" );
+				else
+					beepIssues.Add ( $"Could not load failure beep file: {failurePath}" );
+			}
+
+			string startPath = audioSettings.CustomBeepSettings.BeepStartFile;
+			if ( string.IsNullOrWhiteSpace ( startPath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( startPath )?.ToLower ( ) ) ||
+				!File.Exists ( startPath ) )
+			{
+				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( startPath ) && Path.GetExtension ( startPath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom start beep must be a .wav file: {startPath}" );
+				else
+					beepIssues.Add ( $"Could not load start beep file: {startPath}" );
+			}
+
+			string endPath = audioSettings.CustomBeepSettings.BeepEndFile;
+			if ( string.IsNullOrWhiteSpace ( endPath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( endPath )?.ToLower ( ) ) ||
+				!File.Exists ( endPath ) )
+			{
+				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( endPath ) && Path.GetExtension ( endPath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom end beep must be a .wav file: {endPath}" );
+				else
+					beepIssues.Add ( $"Could not load end beep file: {endPath}" );
+			}
+
+			string mutePath = audioSettings.CustomBeepSettings.BeepMuteFile;
+			if ( string.IsNullOrWhiteSpace ( mutePath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( mutePath )?.ToLower ( ) ) ||
+				!File.Exists ( mutePath ) )
+			{
+				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( mutePath ) && Path.GetExtension ( mutePath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom mute beep must be a .wav file: {mutePath}" );
+				else
+					beepIssues.Add ( $"Could not load mute beep file: {mutePath}" );
+			}
+
+			string unmutePath = audioSettings.CustomBeepSettings.BeepUnmuteFile;
+			if ( string.IsNullOrWhiteSpace ( unmutePath ) ||
+				!allowedExtensions.Contains ( Path.GetExtension ( unmutePath )?.ToLower ( ) ) ||
+				!File.Exists ( unmutePath ) )
+			{
+				somethingWasMissing = true;
+
+				if ( !string.IsNullOrWhiteSpace ( unmutePath ) && Path.GetExtension ( unmutePath )?.ToLower ( ) != ".wav" )
+					beepIssues.Add ( $"Custom unmute beep must be a .wav file: {unmutePath}" );
+				else
+					beepIssues.Add ( $"Could not load unmute beep file: {unmutePath}" );
+			}
+
+			if ( beepIssues.Any ( ) )
+			{
+				audioSettings.CustomBeepSettings.UseCustomBeeps = false;
+
+				string message =
+					"The following issues were found with the custom beep settings:" + Environment.NewLine + Environment.NewLine +
+					string.Join(Environment.NewLine, beepIssues) + Environment.NewLine + Environment.NewLine +
+					"Falling back to default beep sounds. UseCustomBeeps has been disabled." + Environment.NewLine +  Environment.NewLine +
+					"To use custom beeps again, fix the issues above and re-enable UseCustomBeeps in the settings file.";
+
+				System.Windows.Forms.MessageBox.Show (
+					message,
+					"Custom Beep Settings Issues",
+					System.Windows.Forms.MessageBoxButtons.OK,
+					System.Windows.Forms.MessageBoxIcon.Warning
+				);
+			}
+		}
 
 
 		//----------------------------------
-		if (settings.SpeetchToTextSettings is null)
+		if ( settings.SpeetchToTextSettings is null)
 		{
 			settings.SpeetchToTextSettings = new SpeetchToTextSettings();
 			somethingWasMissing = true;

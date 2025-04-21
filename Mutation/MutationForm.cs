@@ -712,7 +712,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						_audioRecorder.Dispose();
 						_audioRecorder = null;
 
-						BeepStart();
+						BeepEnd ( );
 
 						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Converting speech to text...";
@@ -841,6 +841,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			UnregisterHotkey(_hkToggleMicMute);
 			UnregisterHotkey(_hkOcr);
+			BeepPlayer.DisposePlayers ( );
 		}
 
 		private static void UnregisterHotkey(Hotkey hk)
@@ -978,29 +979,33 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void BeepMuted()
 		{
-			Console.Beep(500, 200);
+			BeepPlayer.Play ( BeepType.Mute );
 		}
 
 		private void BeepUnmuted()
 		{
-			Console.Beep(1300, 50);
+			BeepPlayer.Play ( BeepType.Unmute );
 		}
 
 		private static void BeepStart()
 		{
-			Console.Beep(970, 80);
+			BeepPlayer.Play ( BeepType.Start );
+		}
+
+		private static void BeepEnd ( )
+		{
+			BeepPlayer.Play ( BeepType.End );
 		}
 
 		private static void BeepSuccess()
 		{
-			Console.Beep(1050, 40);
-			Console.Beep(1150, 40);
+			BeepPlayer.Play ( BeepType.Success );
 		}
 
 		private static void BeepFail()
 		{
 			for (int i = 0; i < 3; i++)
-				Console.Beep(300, 100);
+				BeepPlayer.Play ( BeepType.Failure);
 		}
 
 		private async void btnReviewTranscript_Click(object sender, EventArgs e)

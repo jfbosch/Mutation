@@ -36,16 +36,28 @@ public class Settings
 
 public class AudioSettings
 {
+	private CustomBeepSettingsData customBeepSettings;
+
 	public string ActiveCaptureDeviceFullName { get; set; }
 	public string MicrophoneToggleMuteHotKey { get; set; }
+	public CustomBeepSettingsData CustomBeepSettings { get => customBeepSettings; set => customBeepSettings = value; }
 
-	public AudioSettings()
-	{
-	}
+	public AudioSettings ( ) { }
 
-	public AudioSettings(string microphoneToggleMuteHotKey)
+	public AudioSettings ( string microphoneToggleMuteHotKey )
 	{
 		MicrophoneToggleMuteHotKey = microphoneToggleMuteHotKey;
+	}
+
+	public class CustomBeepSettingsData
+	{
+		public bool UseCustomBeeps { get; set; } = false;
+		public string? BeepSuccessFile { get; set; }
+		public string? BeepFailureFile { get; set; }
+		public string? BeepStartFile { get; set; }
+		public string? BeepEndFile { get; set; }
+		public string? BeepMuteFile { get; set; }
+		public string? BeepUnmuteFile { get; set; }
 	}
 }
 
