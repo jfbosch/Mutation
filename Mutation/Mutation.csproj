@@ -7,6 +7,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="CustomAudioFile\**" />
+    <EmbeddedResource Remove="CustomAudioFile\**" />
+    <None Remove="CustomAudioFile\**" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="AudioSwitcher.AudioApi" Version="3.0.0" />
     <PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="3.0.3" />
     <PackageReference Include="Deepgram" Version="5.1.2" />
