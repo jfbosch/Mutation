@@ -413,6 +413,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 				return;
 			}
 
+			BeepStart ( );
+
 			using (Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
 			using (Graphics g = Graphics.FromImage(screenshot))
 			{
@@ -431,6 +433,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				screenCaptureForm.ShowDialog();
 
 				_activeScreenCaptureForm = null;
+				BeepEnd ( );
 
 			}
 		}
@@ -479,6 +482,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 				_activeScreenCaptureForm?.Activate();
 				return;
 			}
+
+			BeepStart ( );
 
 			using (Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
 			using (Graphics g = Graphics.FromImage(screenshot))
