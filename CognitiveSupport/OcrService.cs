@@ -92,7 +92,13 @@ public class OcrService : IOcrService
 		Log("----------------------------------------------------------");
 		Log("READ FROM file");
 
-		var textHeaders = await this.ComputerVisionClient.ReadInStreamAsync(imageStream, cancellationToken: cancellationToken).ConfigureAwait(false);
+		// OcrService.ReadFileInternal
+
+		var textHeaders = await ComputerVisionClient.ReadInStreamAsync(
+				  imageStream,
+				  readingOrder: "natural",          // <-- keeps columns separate
+				  cancellationToken: cancellationToken)
+			 .ConfigureAwait(false);
 
 		string operationLocation = textHeaders.OperationLocation;
 		await Task.Delay(delayMilliseconds, cancellationToken).ConfigureAwait(false);
