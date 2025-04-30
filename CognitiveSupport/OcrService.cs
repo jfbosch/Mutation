@@ -10,139 +10,114 @@ namespace CognitiveSupport;
 
 public class OcrService : IOcrService
 {
-	private string SubscriptionKey { get; init; }
-	private string Endpoint { get; init; }
-	private ComputerVisionClient ComputerVisionClient { get; init; }
+	private string SubscriptionKey { get; }
+	private string Endpoint { get; }
+	private ComputerVisionClient ComputerVisionClient { get; }
 	private readonly object _lock = new();
 
-	public OcrService(
-		string? subscriptionKey,
-		string? endpoint)
+	public OcrService(string? subscriptionKey, string? endpoint)
 	{
 		SubscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
 		Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
 		ComputerVisionClient = CreateComputerVisionClient(Endpoint, SubscriptionKey);
 	}
 
-	public async Task<string> ExtractText(
-		Stream imageStream,
-		CancellationToken overallCancellationToken)
-	{
-		return await ReadFile(imageStream, overallCancellationToken).ConfigureAwait(false);
-	}
+	public Task<string> ExtractText(Stream imageStream, CancellationToken overallCancellationToken) =>
+		 ReadFile(imageStream, overallCancellationToken);
 
-	private ComputerVisionClient CreateComputerVisionClient(
-		string endpoint,
-		string key)
-	{
-		ComputerVisionClient client =
-			new ComputerVisionClient(new ApiKeyServiceClientCredentials(key))
-			{
-				Endpoint = endpoint
-			};
-		return client;
-	}
+	private static ComputerVisionClient CreateComputerVisionClient(string endpoint, string key) =>
+		 new(new ApiKeyServiceClientCredentials(key)) { Endpoint = endpoint };
 
-	private async Task<string> ReadFile(
-		Stream imageStream,
-		CancellationToken overallCancellationToken)
+	private async Task<string> ReadFile(Stream imageStream, CancellationToken overallCancellationToken)
 	{
-		const string AttemptKey = "Attempt";
+		const string attemptKey = "Attempt";
 		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
+
 		var retryPolicy = Policy
-			.Handle<HttpRequestException>()
-			.Or<TimeoutRejectedException>()
-			.Or<TaskCanceledException>()
-			.WaitAndRetryAsync(
-				delay,
-				onRetry: (exception, timeSpan, attemptNumber, context) =>
-				{
-					int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-					context[AttemptKey] = ++attempt;
-				}
-			);
+			 .Handle<HttpRequestException>()
+			 .Or<TimeoutRejectedException>()
+			 .Or<TaskCanceledException>()
+			 .WaitAndRetryAsync(
+				  delay,
+				  onRetry: (_, __, ___, ctx) =>
+				  {
+					  int attempt = ctx.ContainsKey(attemptKey) ? (int)ctx[attemptKey] : 1;
+					  ctx[attemptKey] = ++attempt;
+				  });
 
-		var context = new Context();
-		context[AttemptKey] = 1;
+		var context = new Context { [attemptKey] = 1 };
 
-		string response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
+		return await retryPolicy.ExecuteAsync(async (ctx, overallToken) =>
 		{
-			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(7.5 * attempt));
-			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
+			int attempt = (int)ctx[attemptKey];
+			using var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(7.5 * attempt));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
 
-			if (attempt > 0)
-				this.Beep(attempt);
+			if (attempt > 0) this.Beep(attempt);
 
 			return await ReadFileInternal(imageStream, linkedCts.Token).ConfigureAwait(false);
 
 		}, context, overallCancellationToken).ConfigureAwait(false);
-
-		return response;
 	}
 
-
-	private async Task<string> ReadFileInternal(
-		Stream imageStream,
-		CancellationToken cancellationToken)
+	private async Task<string> ReadFileInternal(Stream imageStream, CancellationToken cancellationToken)
 	{
-		const int delayMilliseconds = 500;
-		const int numberOfCharsInOperationId = 36;
+		const int operationIdLength = 36;
 
 		Log("----------------------------------------------------------");
 		Log("READ FROM file");
 
-		// OcrService.ReadFileInternal
+		var headers = await ComputerVisionClient.ReadInStreamAsync(
+								imageStream,
+								readingOrder: "natural",
+								cancellationToken: cancellationToken)
+						  .ConfigureAwait(false);
 
-		var textHeaders = await ComputerVisionClient.ReadInStreamAsync(
-				  imageStream,
-				  readingOrder: "natural",          // <-- keeps columns separate
-				  cancellationToken: cancellationToken)
-			 .ConfigureAwait(false);
-
-		string operationLocation = textHeaders.OperationLocation;
-		await Task.Delay(delayMilliseconds, cancellationToken).ConfigureAwait(false);
-		Log($"operationLocation {operationLocation}");
-
-		string operationId = operationLocation.Substring(operationLocation.Length - numberOfCharsInOperationId);
+		string operationId = headers.OperationLocation[^operationIdLength..];
 
 		var results = await GetReadOperationResultAsync(operationId, cancellationToken).ConfigureAwait(false);
 
 		return ExtractTextFromResults(results);
 	}
 
-	private async Task<ReadOperationResult> GetReadOperationResultAsync(string operationId, CancellationToken cancellationToken)
+	private async Task<ReadOperationResult> GetReadOperationResultAsync(
+		string operationId,
+		CancellationToken cancellationToken)
 	{
-		ReadOperationResult results;
-		do
-		{
-			results = await this.ComputerVisionClient.GetReadResultAsync(Guid.Parse(operationId), cancellationToken).ConfigureAwait(false);
-		}
-		while (results.Status == OperationStatusCodes.Running || results.Status == OperationStatusCodes.NotStarted);
+		TimeSpan defaultDelay = TimeSpan.FromMilliseconds(150);
 
-		return results;
+		while (true)
+		{
+			var response = await ComputerVisionClient
+								  .GetReadResultWithHttpMessagesAsync(Guid.Parse(operationId), cancellationToken: cancellationToken)
+								  .ConfigureAwait(false);
+
+			var result = response.Body;
+
+			if (result.Status is OperationStatusCodes.Succeeded or OperationStatusCodes.Failed)
+				return result;
+
+			TimeSpan wait = response.Response.Headers.RetryAfter?.Delta ?? defaultDelay;
+			await Task.Delay(wait, cancellationToken).ConfigureAwait(false);
+		}
 	}
 
-	private string ExtractTextFromResults(ReadOperationResult results)
+	private static string ExtractTextFromResults(ReadOperationResult results)
 	{
-		StringBuilder sb = new();
-		var textUrlFileResults = results.AnalyzeResult.ReadResults;
-		foreach (ReadResult page in textUrlFileResults)
+		var sb = new StringBuilder();
+
+		foreach (ReadResult page in results.AnalyzeResult.ReadResults)
 		{
 			foreach (Line line in page.Lines)
 			{
-				Log(line.Text);
+				Console.WriteLine(line.Text);
 				sb.AppendLine(line.Text);
 			}
 		}
-		Log(string.Empty);
 
+		Console.WriteLine();
 		return sb.ToString();
 	}
 
-	private void Log(string message)
-	{
-		// Replace this with a proper logging mechanism
-		Console.WriteLine(message);
-	}
+	private static void Log(string message) => Console.WriteLine(message);
 }
