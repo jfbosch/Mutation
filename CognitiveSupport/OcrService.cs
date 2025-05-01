@@ -22,13 +22,21 @@ public class OcrService : IOcrService
 		ComputerVisionClient = CreateComputerVisionClient(Endpoint, SubscriptionKey);
 	}
 
-	public Task<string> ExtractText(Stream imageStream, CancellationToken overallCancellationToken) =>
-		 ReadFile(imageStream, overallCancellationToken);
+	public Task<string> ExtractText(
+		OcrReadingOrder ocrReadingOrder,
+		Stream imageStream,
+		CancellationToken overallCancellationToken)
+	{
+		return ReadFile(ocrReadingOrder, imageStream, overallCancellationToken);
+	}
 
 	private static ComputerVisionClient CreateComputerVisionClient(string endpoint, string key) =>
 		 new(new ApiKeyServiceClientCredentials(key)) { Endpoint = endpoint };
 
-	private async Task<string> ReadFile(Stream imageStream, CancellationToken overallCancellationToken)
+	private async Task<string> ReadFile(
+		OcrReadingOrder ocrReadingOrder,
+		Stream imageStream,
+		CancellationToken overallCancellationToken)
 	{
 		const string attemptKey = "Attempt";
 		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
@@ -55,12 +63,15 @@ public class OcrService : IOcrService
 
 			if (attempt > 0) this.Beep(attempt);
 
-			return await ReadFileInternal(imageStream, linkedCts.Token).ConfigureAwait(false);
+			return await ReadFileInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
 
 		}, context, overallCancellationToken).ConfigureAwait(false);
 	}
 
-	private async Task<string> ReadFileInternal(Stream imageStream, CancellationToken cancellationToken)
+	private async Task<string> ReadFileInternal(
+		OcrReadingOrder ocrReadingOrder,
+		Stream imageStream,
+		CancellationToken cancellationToken)
 	{
 		const int operationIdLength = 36;
 
@@ -69,7 +80,7 @@ public class OcrService : IOcrService
 
 		var headers = await ComputerVisionClient.ReadInStreamAsync(
 								imageStream,
-								readingOrder: "natural",
+								readingOrder: ocrReadingOrder.ToEnumMemberValue(),
 								cancellationToken: cancellationToken)
 						  .ConfigureAwait(false);
 

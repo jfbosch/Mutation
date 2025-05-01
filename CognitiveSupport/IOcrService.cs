@@ -2,5 +2,8 @@
 
 public interface IOcrService
 {
-	Task<string> ExtractText(Stream imageStream, CancellationToken overallCancellationToken);
+	Task<string> ExtractText(
+		OcrReadingOrder ocrReadingOrder,
+		Stream imageStream, 
+		CancellationToken overallCancellationToken);
 }

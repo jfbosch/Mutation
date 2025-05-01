@@ -563,7 +563,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				using MemoryStream imageStream = new MemoryStream();
 				image.Save(imageStream, ImageFormat.Jpeg);
 				imageStream.Seek(0, SeekOrigin.Begin);
-				string text = await this._ocrService.ExtractText(imageStream, _ocrState.OcrCancellationTokenSource.Token).ConfigureAwait(true);
+				string text = await this._ocrService.ExtractText(OcrReadingOrder.TopToBottomColumnAware, imageStream, _ocrState.OcrCancellationTokenSource.Token).ConfigureAwait(true);
 
 				SetTextToClipboard(text);
 				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
