@@ -388,7 +388,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			HookupHotKeyOcr();
 			HookupHotKeyScreenshotOcrLeftToRightTopToBottom();
 			HookupHotKeyOcrLeftToRightTopToBottom();
-			
+
 
 			HookupHotKeySpeechToText();
 			HookupHotKeyTextToSpeech();
@@ -568,6 +568,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				txtOcr.Text = msg;
 				SetTextToClipboard(msg);
 				BeepFail();
+				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 				return;
 			}
 
@@ -605,8 +606,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				SetTextToClipboard(text);
 				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
-
 				BeepSuccess();
+				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 50);
 			}
 			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 			{
@@ -615,6 +616,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				txtOcr.Text = "OCR cancelled by user.";
 				SetTextToClipboard(txtOcr.Text);
+
+				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 			}
 			catch (Exception ex)
 			{
@@ -623,6 +626,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				BeepFail();
 				SetTextToClipboard(msg);
+				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 			}
 		}
 
@@ -694,6 +698,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 			string hotkey,
 			int delayMs)
 		{
+			if (string.IsNullOrWhiteSpace(hotkey))
+				return;
+
 			System.Threading.Tasks.Task.Run(async () =>
 			{
 				await System.Threading.Tasks.Task.Delay(delayMs);

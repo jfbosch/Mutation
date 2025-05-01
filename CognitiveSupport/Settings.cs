@@ -85,6 +85,11 @@ public class AzureComputerVisionSettings
 	public string ScreenshotLeftToRightTopToBottomOcrHotKey { get; set; }
 	public string OcrHotKey { get; set; }
 	public string OcrLeftToRightTopToBottomHotKey { get; set; }
+
+	// If this is not null, this hotkey will be sent to the system after an OCR operation completes. 
+	public string? SendKotKeyAfterOcrOperation { get; set; }
+
+
 	public string ApiKey { get; set; }
 	public string Endpoint { get; set; }
 
