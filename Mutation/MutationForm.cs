@@ -34,7 +34,9 @@ namespace Mutation
 
 		private Hotkey _hkScreenshot;
 		private Hotkey _hkScreenshotOcr;
+		private Hotkey _hkScreenshotLeftToRightTopToBottomOcr;
 		private Hotkey _hkOcr;
+		private Hotkey _hkOcrLeftToRightTopToBottom;
 		private IOcrService _ocrService { get; set; }
 		private OcrState _ocrState { get; init; } = new();
 
@@ -97,10 +99,6 @@ namespace Mutation
 			cmbReviewTemperature.DisplayMember = "Text";
 			cmbReviewTemperature.ValueMember = "Value";
 			cmbReviewTemperature.SelectedIndex = 4;
-
-
-			//BookMark??999
-
 		}
 
 		public static string GetEnumDescription(Enum value)
@@ -388,6 +386,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 			HookupHotKeyScreenshot();
 			HookupHotKeyScreenshotOcr();
 			HookupHotKeyOcr();
+			HookupHotKeyScreenshotOcrLeftToRightTopToBottom();
+			HookupHotKeyOcrLeftToRightTopToBottom();
+
 
 			HookupHotKeySpeechToText();
 			HookupHotKeyTextToSpeech();
@@ -465,13 +466,32 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void HookupHotKeyScreenshotOcr()
 		{
 			_hkScreenshotOcr = MapHotKey(_settings.AzureComputerVisionSettings.ScreenshotOcrHotKey);
-			_hkScreenshotOcr.Pressed += delegate { TakeScreenshotAndExtractText(); };
+			_hkScreenshotOcr.Pressed += delegate
+			{
+				TakeScreenshotAndExtractText(OcrReadingOrder.TopToBottomColumnAware);
+			};
 			TryRegisterHotkey(_hkScreenshotOcr);
 
 			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hkScreenshotOcr}";
 		}
 
-		private async void TakeScreenshotAndExtractText()
+		private void HookupHotKeyScreenshotOcrLeftToRightTopToBottom()
+		{
+			_hkScreenshotLeftToRightTopToBottomOcr = MapHotKey(
+				 _settings.AzureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey
+			);
+			_hkScreenshotLeftToRightTopToBottomOcr.Pressed += delegate
+			{
+				TakeScreenshotAndExtractText(OcrReadingOrder.LeftToRightTopToBottom);
+			};
+			TryRegisterHotkey(_hkScreenshotLeftToRightTopToBottomOcr);
+
+			//BookMark??999
+			//lblScreenshotLeftToRightTopToBottomOcrHotKey.Text = $"Screenshot OCR (L→R, T→B): {_hkScreenshotLeftToRightTopToBottomOcr}";
+		}
+
+		private async void TakeScreenshotAndExtractText(
+			OcrReadingOrder ocrReadingOrder)
 		{
 			if (_activeScreenCaptureForm is not null)
 			{
@@ -499,7 +519,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 					_activeScreenCaptureForm = null;
 
-					await ExtractTextViaOcrFromClipboardImage();
+					await ExtractTextViaOcrFromClipboardImage(ocrReadingOrder);
 				}
 			}
 		}
@@ -509,14 +529,31 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_hkOcr = MapHotKey(_settings.AzureComputerVisionSettings.OcrHotKey);
 			_hkOcr.Pressed += delegate
 			{
-				ExtractTextViaOcrFromClipboardImage();
+				ExtractTextViaOcrFromClipboardImage(OcrReadingOrder.TopToBottomColumnAware);
 			};
 			TryRegisterHotkey(_hkOcr);
 
 			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
 		}
 
-		private async Task ExtractTextViaOcrFromClipboardImage()
+		private void HookupHotKeyOcrLeftToRightTopToBottom()
+		{
+			_hkOcrLeftToRightTopToBottom = MapHotKey(
+				 _settings.AzureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey
+			);
+			_hkOcrLeftToRightTopToBottom.Pressed += delegate
+			{
+				ExtractTextViaOcrFromClipboardImage(OcrReadingOrder.LeftToRightTopToBottom);
+			};
+			TryRegisterHotkey(_hkOcrLeftToRightTopToBottom);
+
+			//BookMark??((
+			//lblOcrLeftToRightTopToBottomHotKey.Text =
+			//	 $"OCR Clipboard (L→R, T→B): {_hkOcrLeftToRightTopToBottom}";
+		}
+
+		private async Task ExtractTextViaOcrFromClipboardImage(
+			OcrReadingOrder ocrReadingOrder)
 		{
 			if (_ocrState.BusyWithTextExtraction)
 			{
@@ -531,13 +568,14 @@ The model may also leave out common filler words in the audio. If you want to ke
 				txtOcr.Text = msg;
 				SetTextToClipboard(msg);
 				BeepFail();
+				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 				return;
 			}
 
 			try
 			{
 				_ocrState.StartTextExtraction();
-				await ExtractTextViaOcr(TryGetClipboardImage());
+				await ExtractTextViaOcr(ocrReadingOrder, TryGetClipboardImage());
 			}
 			finally
 			{
@@ -546,6 +584,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 
 		private async Task ExtractTextViaOcr(
+			OcrReadingOrder ocrReadingOrder,
 			Image image)
 		{
 			if (image is null)
@@ -563,12 +602,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 				using MemoryStream imageStream = new MemoryStream();
 				image.Save(imageStream, ImageFormat.Jpeg);
 				imageStream.Seek(0, SeekOrigin.Begin);
-				string text = await this._ocrService.ExtractText(imageStream, _ocrState.OcrCancellationTokenSource.Token).ConfigureAwait(true);
+				string text = await this._ocrService.ExtractText(ocrReadingOrder, imageStream, _ocrState.OcrCancellationTokenSource.Token).ConfigureAwait(true);
 
 				SetTextToClipboard(text);
 				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
-
 				BeepSuccess();
+				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 50);
 			}
 			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 			{
@@ -577,6 +616,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				txtOcr.Text = "OCR cancelled by user.";
 				SetTextToClipboard(txtOcr.Text);
+
+				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 			}
 			catch (Exception ex)
 			{
@@ -585,6 +626,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				BeepFail();
 				SetTextToClipboard(msg);
+				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 			}
 		}
 
@@ -656,6 +698,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 			string hotkey,
 			int delayMs)
 		{
+			if (string.IsNullOrWhiteSpace(hotkey))
+				return;
+
 			System.Threading.Tasks.Task.Run(async () =>
 			{
 				await System.Threading.Tasks.Task.Delay(delayMs);
@@ -676,8 +721,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 				MessageBox.Show("No active speech-to-text service selected.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				return;
 			}
-
-
 
 			try
 			{
@@ -712,7 +755,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						_audioRecorder.Dispose();
 						_audioRecorder = null;
 
-						BeepEnd ( );
+						BeepEnd();
 
 						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Converting speech to text...";
@@ -841,7 +884,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			UnregisterHotkey(_hkToggleMicMute);
 			UnregisterHotkey(_hkOcr);
-			BeepPlayer.DisposePlayers ( );
+			BeepPlayer.DisposePlayers();
 		}
 
 		private static void UnregisterHotkey(Hotkey hk)
@@ -913,6 +956,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 
 			BeepSuccess();
+			SendKeysAfterDelay(_settings.SpeetchToTextSettings.SendKotKeyAfterTranscriptionOperation, 50);
 		}
 
 		private async Task FormatSpeechToTextTranscriptWithLlm()
@@ -979,33 +1023,33 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void BeepMuted()
 		{
-			BeepPlayer.Play ( BeepType.Mute );
+			BeepPlayer.Play(BeepType.Mute);
 		}
 
 		private void BeepUnmuted()
 		{
-			BeepPlayer.Play ( BeepType.Unmute );
+			BeepPlayer.Play(BeepType.Unmute);
 		}
 
 		private static void BeepStart()
 		{
-			BeepPlayer.Play ( BeepType.Start );
+			BeepPlayer.Play(BeepType.Start);
 		}
 
-		private static void BeepEnd ( )
+		private static void BeepEnd()
 		{
-			BeepPlayer.Play ( BeepType.End );
+			BeepPlayer.Play(BeepType.End);
 		}
 
 		private static void BeepSuccess()
 		{
-			BeepPlayer.Play ( BeepType.Success );
+			BeepPlayer.Play(BeepType.Success);
 		}
 
 		private static void BeepFail()
 		{
 			for (int i = 0; i < 3; i++)
-				BeepPlayer.Play ( BeepType.Failure);
+				BeepPlayer.Play(BeepType.Failure);
 		}
 
 		private async void btnReviewTranscript_Click(object sender, EventArgs e)

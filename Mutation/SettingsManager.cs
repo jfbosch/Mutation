@@ -52,11 +52,6 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 		var azureComputerVisionSettings = settings.AzureComputerVisionSettings;
-		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.OcrHotKey))
-		{
-			azureComputerVisionSettings.OcrHotKey = "ALT+J";
-			somethingWasMissing = true;
-		}
 
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotHotKey))
 		{
@@ -64,11 +59,28 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.OcrHotKey))
+		{
+			azureComputerVisionSettings.OcrHotKey = "ALT+J";
+			somethingWasMissing = true;
+		}
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotOcrHotKey))
 		{
 			azureComputerVisionSettings.ScreenshotOcrHotKey = "SHIFT+ALT+J";
 			somethingWasMissing = true;
 		}
+
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey))
+		{
+			azureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey = "ALT+K";
+			somethingWasMissing = true;
+		}
+		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey))
+		{
+			azureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey = "SHIFT+ALT+E";
+			somethingWasMissing = true;
+		}
+
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ApiKey))
 		{
 			azureComputerVisionSettings.ApiKey = PlaceholderValue;

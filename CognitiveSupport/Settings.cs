@@ -42,9 +42,9 @@ public class AudioSettings
 	public string MicrophoneToggleMuteHotKey { get; set; }
 	public CustomBeepSettingsData CustomBeepSettings { get => customBeepSettings; set => customBeepSettings = value; }
 
-	public AudioSettings ( ) { }
+	public AudioSettings() { }
 
-	public AudioSettings ( string microphoneToggleMuteHotKey )
+	public AudioSettings(string microphoneToggleMuteHotKey)
 	{
 		MicrophoneToggleMuteHotKey = microphoneToggleMuteHotKey;
 	}
@@ -82,21 +82,19 @@ public class AzureComputerVisionSettings
 	public bool InvertScreenshot { get; set; }
 	public string ScreenshotHotKey { get; set; }
 	public string ScreenshotOcrHotKey { get; set; }
+	public string ScreenshotLeftToRightTopToBottomOcrHotKey { get; set; }
 	public string OcrHotKey { get; set; }
+	public string OcrLeftToRightTopToBottomHotKey { get; set; }
+
+	// If this is not null, this hotkey will be sent to the system after an OCR operation completes. 
+	public string? SendKotKeyAfterOcrOperation { get; set; }
+
+
 	public string ApiKey { get; set; }
 	public string Endpoint { get; set; }
 
 	public AzureComputerVisionSettings()
 	{
-	}
-
-	public AzureComputerVisionSettings(string screenshotHotKey, string screenshotOcrHotKey, string ocrHotKey, string apiKey, string endpoint)
-	{
-		ScreenshotHotKey = screenshotHotKey;
-		ScreenshotOcrHotKey = screenshotOcrHotKey;
-		OcrHotKey = ocrHotKey;
-		ApiKey = apiKey;
-		Endpoint = endpoint;
 	}
 }
 
@@ -104,6 +102,10 @@ public class SpeetchToTextSettings
 {
 	public string TempDirectory { get; set; }
 	public string SpeechToTextHotKey { get; set; }
+
+	// If this is not null, this hotkey will be sent to the system after a transcription operation completes. 
+	public string? SendKotKeyAfterTranscriptionOperation { get; set; }
+
 	public SpeetchToTextServiceSettings[] Services { get; set; }
 	public string ActiveSpeetchToTextService { get; set; }
 }

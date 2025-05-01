@@ -1,118 +1,121 @@
 # Mutation
 
 ## Introduction
-The Mutation project is a simple .Net multifaceted tool designed to enhance productivity and accessibility for users via configurable, global hotkeys. Leveraging various technologies and cloud services, the application offers several features, including microphone toggle, screen capture, Optical Character Recognition (OCR), Speech to Text conversion, and transcript review with the ChatGPT 4 LLM.
+Mutation is a .NET multifaceted tool that boosts productivity and accessibility through configurable global hotkeys. It lets you toggle microphones, capture screens, run Optical Character Recognition (OCR), convert speech to text, and review transcripts with the ChatGPT-4 LLM—using Azure Vision Services, OpenAI, Deepgram, and other APIs under the hood.
 
 ## Features
-### Toggle Microphone Mute
-#### Hotkey that allows the user to mute/unmute all the enabled microphones system wide. Thus, no matter what communications application you are using for your online meetings, and no matter which of your microphones you are using with the various applications, it is very easy to mute and unmute the microphone with a global hotkey.
+### 1. Toggle Microphone Mute  
+Press one hotkey to mute or unmute every enabled microphone system-wide—independent of which meeting app or input device you use.
 
-### Screen Capturing and OCR
-#### Hotkey that allows user to draw a selection rectangle of the region on the screen that is of interest, and copy the resulting screenshot it to the clipboard as an image that can then be pasted into any compatible application.
-#### Hotkey to perform OCR on the image on the clipboard using Microsoft Azure Computer Vision, and puts the extracted text back on to the clipboard.
-#### hotkey that combines the above two to allow the user to select a region of the screen followed by an immediate OCR process using Microsoft Azure Computer Vision and placing the extracted text back on the clipboard.
-Azure Computer Vision seems far superior at OCR than the built-in Windows 10 and 11 OCR engine.
+### 2. Screen Capturing and OCR  
+Mutation supports two OCR reading orders via Azure **Computer Vision** (part of Vision Services):
 
-### Speech to Text Conversion using any of the following: OpenAI Whisper, GPT 4o Transcribe, GPT 4o Mini Transcribe, Deepgram nova-2 or nova-3.
-#### Hotkey to start recording the microphone, and when the same hotkey is pressed a second time, converting the speech to text that is placed on the clipboard.
+* **Natural layout** – reads top-to-bottom within each column, then left-to-right across columns. Best for newspapers, journals, brochures, or any multi-column PDF.  
+* **Basic layout** – reads strictly left-to-right, top-to-bottom. Best for tables, spreadsheets, forms, invoices, or any row-oriented content.
+
+Hotkeys:
+
+* **ScreenshotHotKey** – draw a rectangle; the screenshot goes to the clipboard.  
+* **OcrHotKey** – OCR the clipboard image with **Natural** layout.  
+* **ScreenshotOcrHotKey** – take a screenshot and OCR it with **Natural** layout in one step.  
+* **OcrLeftToRightTopToBottomHotKey** – OCR the clipboard image with **Basic** layout.  
+* **ScreenshotLeftToRightTopToBottomOcrHotKey** – take a screenshot and OCR it with **Basic** layout in one step.
+
+Azure Computer Vision greatly outperforms the Windows 10/11 built-in OCR engine.
+
+### 3. Speech to Text Conversion  
+Press one hotkey to start recording, press it again to stop and send the audio for transcription. Supported providers:
+
+* OpenAI Whisper family (gpt-4o-transcribe, gpt-4o-mini-transcribe)  
+* Deepgram nova-2 / nova-3  
+* Any service exposing an OpenAI-compatible Whisper API
+
+The transcribed text is copied to the clipboard and can optionally be injected into the active text field.
+
+### 4. Transcript Review with ChatGPT  
+Send any block of text to ChatGPT (via Azure OpenAI) for summarisation, proofreading, or rewriting, directly from a hotkey.
 
 ## Getting Started
-You need at least .NET 7 runtime installed, and then you can just run Mutation.exe.
+Install the .NET 7 runtime (or newer) and run **Mutation.exe**. On first launch, the app writes *Mutation.json* and opens it in Notepad for you to configure.
 
-### Configuration / Settings
-All settings are stored in a file called Mutation.json. The first time you run Mutation.exe, it will create the JSON file and will open it in notepad. At that point, you can modify the config values, save it, and then restart mutation.
-All hotkeys are global to the Windows desktop and are configurable in Mutation.json.
+## Configuration / Settings
+All hotkeys are global and fully customisable. Below is a comprehensive example with every section and key.
 
-### Prerequisites
-#### OCR
-If you want to use the OCR functionality, you will need a Microsoft Azure subscription in which a Cognitive Services computer vision resource has been provisioned.
-The free tier is quite sufficient for daily use by a single person.
-#### Steps to provision the computer vision service
-- This assumes you already have an Azure subscription (you can create this for free).
-- In your browser, navigate to https://portal.azure.com
-- Create a New Resource: Click "+ Create a resource," then search for and select "Computer Vision."
-- Configure the Resource: On the "Create" page, enter the following details:
--- Subscription: Choose an available Azure subscription.
--- Resource Group: Select or create the group to contain the Azure AI services resource.
--- Region: Pick the location of the service instance. Note: Location may affect latency but not availability.
--- Name: Input a unique name for the new Computer Vision resource.
--- Pricing Tier: Select the free tier.
-- Deploy: Review the information and click "Create."
-- Access Keys & Endpoint: After deployment, find the keys and endpoint on the "Keys and Endpoint" page.
--- Edit Mutation.json, copy the key into the AzureComputerVisionSettings, SubscriptionKey value
--- Copy the Endpoint URL into the AzureComputerVisionSettings, Endpoint value.
-- Save the JSON file and restart Mutation.
+```json
+{
+  "ToggleMicMuteHotKey": "Ctrl+Shift+M",
+  "ScreenshotHotKey": "Ctrl+Shift+S",
 
-#### Speech to text
-OpenAI has introduced advanced speech-to-text models, gpt-4o-transcribe and gpt-4o-mini-transcribe, enhancing transcription accuracy and language recognition. These models, built upon the GPT-4o architecture, demonstrate significant improvements in word error rates across multiple languages, outperforming previous models like Whisper. They also incorporate noise cancellation and semantic voice activity detection, ensuring more reliable transcriptions even in challenging environments. ​
-https://openai.com/index/introducing-our-next-generation-audio-models/?utm_source=chatgpt.com
+  "AzureComputerVisionSettings": {
+    "SubscriptionKey": "<your Azure key>",
+    "Endpoint": "https://<region>.api.cognitive.microsoft.com/",
+    "OcrHotKey": "Ctrl+Shift+O",
+    "ScreenshotOcrHotKey": "Ctrl+Shift+Q",
+    "OcrLeftToRightTopToBottomHotKey": "Ctrl+Shift+L",
+    "ScreenshotLeftToRightTopToBottomOcrHotKey": "Ctrl+Shift+K",
+    "SendHotKeyAfterOcrOperation": "Ctrl+Alt+C"
+  },
 
-Seem more about Whisper at: https://platform.openai.com/overview
+  "SpeetchToTextSettings": {
+    "StartStopTranscriptionHotKey": "Ctrl+Shift+T",
+    "SendHotKeyAfterTranscriptionOperation": "Ctrl+Alt+V",
+    "Providers": [
+      {
+        "Name": "OpenAI gpt-4o-transcribe",
+        "Provider": "OpenAi",
+        "ApiKey": "<your OpenAI key>",
+        "BaseDomain": "https://api.openai.com/",
+        "ModelId": "gpt-4o-transcribe"
+      },
+      {
+        "Name": "Groq Whisper 3",
+        "Provider": "OpenAi",
+        "ApiKey": "<your Groq key>",
+        "BaseDomain": "https://api.groq.com/openai/",
+        "ModelId": "whisper-large-v3"
+      },
+      {
+        "Name": "Deepgram Nova3",
+        "Provider": "Deepgram",
+        "ApiKey": "<your Deepgram key>",
+        "BaseDomain": null,
+        "ModelId": "nova-3"
+      }
+    ]
+  },
 
-This application uses an OpenAI compatible API to allow you to transcribe your voice at random in any application into text onto the clipboard with the press of a hotkey. The resulting text can then be pasted into the application of your choice.
+  "LlmSettings": {
+    "ApiKey": "<your Azure OpenAI key>",
+    "Endpoint": "https://<resource>.openai.azure.com/",
+    "ModelId": "gpt-4o-turbo"
+  }
+}
+````
 
-It also has the capability of injecting the transcribed text into any input box in any application that currently has the focus once the transcription completes. 
+### Provisioning Azure Computer Vision
 
+1. Sign in to the [Azure Portal](https://portal.azure.com).
+2. **Create a resource** → search for **Computer Vision**.
+3. Choose your subscription, resource group, region, name, and the free pricing tier.
+4. After deployment, copy the **Key** and **Endpoint** into `AzureComputerVisionSettings` and restart Mutation.
 
-If you want to use the speech-to-text functionality, you will need to create an account with a provider that hosts a whisper API that is compatible with that of OpenAI. 
+### Provisioning Speech-to-Text Providers
 
-1. To use OpenAI Proper
-Create an OpenAI API account, add a credit card, configure a budget, generate API keys for the speech to text API, and configure e.g. the following in Mutation.json under SpeetchToTextSettings:
-- "Name" : "OpenAI gpt-4o-transcribe",
-- "Provider" : "OpenAi",
-- "ApiKey" : "<your API key>",
-- "BaseDomain" : "https://api.openai.com/",
-- "ModelId": "gpt-4o-transcribe",
+* Follow each provider’s portal to create an account and API key.
+* Paste the credentials into the relevant object under `SpeetchToTextSettings → Providers`.
 
-2. Groq.com
-Create a Groq account, generate an API key, and configure the following in Mutation.json under SpeetchToTextSettings:
-- "Name" : "Groq Whisper 3",
-- - "Provider" : "OpenAi",
-- "ApiKey" : "<your API key>",
-- "BaseDomain" : "https://api.groq.com/openai/",
-- "ModelId": "whisper-large-v3",
+### Enabling ChatGPT Review
 
-Of course, as things stand now, Groq is much faster because of the inference chip they use, and they have a generous daily free quota. 
-
-3. There are probably other providers with compatible APIs that can be used as well. 
-
-Mutation also supports the DeepGram nova-2 and nova-3 model variants. 
-Create a Deepgram account, generate an API key, and configure the following in Mutation.json under SpeetchToTextSettings:
-- "Name" : "Deepgram Nova3",
-- "Provider" : "Deepgram",
-- "ApiKey" : "<your API key>",
-- "BaseDomain" : null,
-- "ModelId": "nova-3",
-
-
-
-#### Review transcript with ChatGPT API
-
-If you want to use the LLM review capabilities, you will need to provision an Azure OpenAI service on the Azure portal.
-Before you can do that, you have to apply. Here is the application form.
-https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xUOFA5Qk1UWDRBMjg0WFhPMkIzTzhKQ1dWNyQlQCN0PWcu
-
-Once you have been approved, you can join the GPT 4 waiting list as well.
-https://customervoice.microsoft.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR7en2Ais5pxKtso_Pz4b1_xURjE4QlhVUERGQ1NXOTlNT0w1NldTWjJCMSQlQCN0PWcu
-
-Note that you will require an existing Azure subscription ID during the application process. 
-
-Once you have been approved in the Azure portal, which is at portal.azure.com, you can provision a new resource of the type Azure OpenAI, and then you can deploy any of the models that you want to use. Typically, that would be chat-gpt 3. 5 turbo and gpt 4. You will require the API key as well as the name that you named the Azure OpenAI resource to configure the feature in Mutation.json 
-under the section called LlmSettings. (First run Mutation.exe to make sure the relevant settings in Mutation.json is created.)
-
-When you deploy a new model, use the exact same deployment name as the model name. I.e. copy and paste it.
-
-Note that there is no cost to just deploy the models. You will be charged for actual topen usage. Do familiarize yourself with the Azure OpenAI API pricing to avoid rude surprises. Specifically, GPT-4 starts getting very expensive very quickly. 
-
-
-
-Lastly, simply run the application, and you'll have access to all the features accessible via hotkeys. You can then use these hotkeys to perform the actions described in the Features section.
+Deploy `gpt-4o` or `gpt-4.1`, or other preferred model, and add the key and endpoint to `LlmSettings`. You pay only for actual **token** usage.
 
 ## Contribute
-Contributions to the project are welcome. Feel free to engage in discussion. Then, if your ideas are in line with the project’s objectives, fork the project, make your changes, and submit a pull request.
+
+Pull requests are welcome—open an issue to discuss ideas first, then fork, commit, and PR.
 
 ## License
-Please refer to the license file in the repository.
+
+See *LICENCE* in the repository.
+
 
 ## Backstory.
 So I got tired of having to learn the hotkeys of all the different online meeting applications that I use for toggling the microphone on and off mute. As a visually impaired computer user, finding the microphone icon visually and clicking on it is not really a viable option. I'm a very heavy AutoHotKey user, and I first tried to build a solution with that, but it was clunky. I then asked a buddy of mine if he has some experience with manipulating the microphone with C#. He didn't, but he quickly put together something in LINQPad to toggle the microphone using the audio switcher library. I then took that code and started a little WinForms application that had the microphone toggle functionality wired up to a global hotkey., and I called it Mutation. As in, I could mute the microphone at any time I wanted, no matter which application I was busy working in. This was incredibly useful, but I once had the situation where Microsoft Teams was using my second microphone and not the main one, and so when I thought I was muted with mutation, the second mic was still active and the person on the call heard while I was talking to someone locally. Luckily, it wasn't too embarrassing. I then updated mutation to list all the detected microphones and to mute and unmute them all on the toggle. In that way, I could be sure that when I wanted it muted, it was definitely muted across my system, across all the microphones. This capability became indispensable to me in my daily usage and meetings.
