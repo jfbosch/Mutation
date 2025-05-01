@@ -42,9 +42,9 @@ public class AudioSettings
 	public string MicrophoneToggleMuteHotKey { get; set; }
 	public CustomBeepSettingsData CustomBeepSettings { get => customBeepSettings; set => customBeepSettings = value; }
 
-	public AudioSettings ( ) { }
+	public AudioSettings() { }
 
-	public AudioSettings ( string microphoneToggleMuteHotKey )
+	public AudioSettings(string microphoneToggleMuteHotKey)
 	{
 		MicrophoneToggleMuteHotKey = microphoneToggleMuteHotKey;
 	}
@@ -82,21 +82,14 @@ public class AzureComputerVisionSettings
 	public bool InvertScreenshot { get; set; }
 	public string ScreenshotHotKey { get; set; }
 	public string ScreenshotOcrHotKey { get; set; }
+	public string ScreenshotLeftToRightTopToBottomOcrHotKey { get; set; }
 	public string OcrHotKey { get; set; }
+	public string OcrLeftToRightTopToBottomHotKey { get; set; }
 	public string ApiKey { get; set; }
 	public string Endpoint { get; set; }
 
 	public AzureComputerVisionSettings()
 	{
-	}
-
-	public AzureComputerVisionSettings(string screenshotHotKey, string screenshotOcrHotKey, string ocrHotKey, string apiKey, string endpoint)
-	{
-		ScreenshotHotKey = screenshotHotKey;
-		ScreenshotOcrHotKey = screenshotOcrHotKey;
-		OcrHotKey = ocrHotKey;
-		ApiKey = apiKey;
-		Endpoint = endpoint;
 	}
 }
 

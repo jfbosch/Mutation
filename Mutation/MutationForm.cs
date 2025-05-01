@@ -34,7 +34,9 @@ namespace Mutation
 
 		private Hotkey _hkScreenshot;
 		private Hotkey _hkScreenshotOcr;
+		private Hotkey _hkScreenshotLeftToRightTopToBottomOcr;
 		private Hotkey _hkOcr;
+		private Hotkey _hkOcrLeftToRightTopToBottom;
 		private IOcrService _ocrService { get; set; }
 		private OcrState _ocrState { get; init; } = new();
 
@@ -97,10 +99,6 @@ namespace Mutation
 			cmbReviewTemperature.DisplayMember = "Text";
 			cmbReviewTemperature.ValueMember = "Value";
 			cmbReviewTemperature.SelectedIndex = 4;
-
-
-			//BookMark??999
-
 		}
 
 		public static string GetEnumDescription(Enum value)
@@ -388,6 +386,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 			HookupHotKeyScreenshot();
 			HookupHotKeyScreenshotOcr();
 			HookupHotKeyOcr();
+			HookupHotKeyScreenshotOcrLeftToRightTopToBottom();
+			HookupHotKeyOcrLeftToRightTopToBottom();
+			
 
 			HookupHotKeySpeechToText();
 			HookupHotKeyTextToSpeech();
@@ -465,13 +466,32 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void HookupHotKeyScreenshotOcr()
 		{
 			_hkScreenshotOcr = MapHotKey(_settings.AzureComputerVisionSettings.ScreenshotOcrHotKey);
-			_hkScreenshotOcr.Pressed += delegate { TakeScreenshotAndExtractText(); };
+			_hkScreenshotOcr.Pressed += delegate
+			{
+				TakeScreenshotAndExtractText(OcrReadingOrder.TopToBottomColumnAware);
+			};
 			TryRegisterHotkey(_hkScreenshotOcr);
 
 			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hkScreenshotOcr}";
 		}
 
-		private async void TakeScreenshotAndExtractText()
+		private void HookupHotKeyScreenshotOcrLeftToRightTopToBottom()
+		{
+			_hkScreenshotLeftToRightTopToBottomOcr = MapHotKey(
+				 _settings.AzureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey
+			);
+			_hkScreenshotLeftToRightTopToBottomOcr.Pressed += delegate
+			{
+				TakeScreenshotAndExtractText(OcrReadingOrder.LeftToRightTopToBottom);
+			};
+			TryRegisterHotkey(_hkScreenshotLeftToRightTopToBottomOcr);
+
+			//BookMark??999
+			//lblScreenshotLeftToRightTopToBottomOcrHotKey.Text = $"Screenshot OCR (L→R, T→B): {_hkScreenshotLeftToRightTopToBottomOcr}";
+		}
+
+		private async void TakeScreenshotAndExtractText(
+			OcrReadingOrder ocrReadingOrder)
 		{
 			if (_activeScreenCaptureForm is not null)
 			{
@@ -499,7 +519,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 					_activeScreenCaptureForm = null;
 
-					await ExtractTextViaOcrFromClipboardImage(OcrReadingOrder.TopToBottomColumnAware);
+					await ExtractTextViaOcrFromClipboardImage(ocrReadingOrder);
 				}
 			}
 		}
@@ -514,6 +534,22 @@ The model may also leave out common filler words in the audio. If you want to ke
 			TryRegisterHotkey(_hkOcr);
 
 			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
+		}
+
+		private void HookupHotKeyOcrLeftToRightTopToBottom()
+		{
+			_hkOcrLeftToRightTopToBottom = MapHotKey(
+				 _settings.AzureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey
+			);
+			_hkOcrLeftToRightTopToBottom.Pressed += delegate
+			{
+				ExtractTextViaOcrFromClipboardImage(OcrReadingOrder.LeftToRightTopToBottom);
+			};
+			TryRegisterHotkey(_hkOcrLeftToRightTopToBottom);
+
+			//BookMark??((
+			//lblOcrLeftToRightTopToBottomHotKey.Text =
+			//	 $"OCR Clipboard (L→R, T→B): {_hkOcrLeftToRightTopToBottom}";
 		}
 
 		private async Task ExtractTextViaOcrFromClipboardImage(
