@@ -102,6 +102,10 @@ public class SpeetchToTextSettings
 {
 	public string TempDirectory { get; set; }
 	public string SpeechToTextHotKey { get; set; }
+
+	// If this is not null, this hotkey will be sent to the system after a transcription operation completes. 
+	public string? SendKotKeyAfterTranscriptionOperation { get; set; }
+
 	public SpeetchToTextServiceSettings[] Services { get; set; }
 	public string ActiveSpeetchToTextService { get; set; }
 }

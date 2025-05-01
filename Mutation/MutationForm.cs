@@ -722,8 +722,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 				return;
 			}
 
-
-
 			try
 			{
 				if (this._speechToTextState.TranscribingAudio)
@@ -958,6 +956,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 
 			BeepSuccess();
+			SendKeysAfterDelay(_settings.SpeetchToTextSettings.SendKotKeyAfterTranscriptionOperation, 50);
 		}
 
 		private async Task FormatSpeechToTextTranscriptWithLlm()
