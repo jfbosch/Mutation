@@ -499,7 +499,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 					_activeScreenCaptureForm = null;
 
-					await ExtractTextViaOcrFromClipboardImage();
+					await ExtractTextViaOcrFromClipboardImage(OcrReadingOrder.TopToBottomColumnAware);
 				}
 			}
 		}
@@ -509,14 +509,15 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_hkOcr = MapHotKey(_settings.AzureComputerVisionSettings.OcrHotKey);
 			_hkOcr.Pressed += delegate
 			{
-				ExtractTextViaOcrFromClipboardImage();
+				ExtractTextViaOcrFromClipboardImage(OcrReadingOrder.TopToBottomColumnAware);
 			};
 			TryRegisterHotkey(_hkOcr);
 
 			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
 		}
 
-		private async Task ExtractTextViaOcrFromClipboardImage()
+		private async Task ExtractTextViaOcrFromClipboardImage(
+			OcrReadingOrder ocrReadingOrder)
 		{
 			if (_ocrState.BusyWithTextExtraction)
 			{
@@ -537,7 +538,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			try
 			{
 				_ocrState.StartTextExtraction();
-				await ExtractTextViaOcr(TryGetClipboardImage());
+				await ExtractTextViaOcr(ocrReadingOrder, TryGetClipboardImage());
 			}
 			finally
 			{
@@ -546,6 +547,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 
 		private async Task ExtractTextViaOcr(
+			OcrReadingOrder ocrReadingOrder,
 			Image image)
 		{
 			if (image is null)
@@ -563,7 +565,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				using MemoryStream imageStream = new MemoryStream();
 				image.Save(imageStream, ImageFormat.Jpeg);
 				imageStream.Seek(0, SeekOrigin.Begin);
-				string text = await this._ocrService.ExtractText(OcrReadingOrder.TopToBottomColumnAware, imageStream, _ocrState.OcrCancellationTokenSource.Token).ConfigureAwait(true);
+				string text = await this._ocrService.ExtractText(ocrReadingOrder, imageStream, _ocrState.OcrCancellationTokenSource.Token).ConfigureAwait(true);
 
 				SetTextToClipboard(text);
 				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
@@ -712,7 +714,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 						_audioRecorder.Dispose();
 						_audioRecorder = null;
 
-						BeepEnd ( );
+						BeepEnd();
 
 						txtSpeechToText.ReadOnly = true;
 						txtSpeechToText.Text = "Converting speech to text...";
@@ -841,7 +843,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			UnregisterHotkey(_hkToggleMicMute);
 			UnregisterHotkey(_hkOcr);
-			BeepPlayer.DisposePlayers ( );
+			BeepPlayer.DisposePlayers();
 		}
 
 		private static void UnregisterHotkey(Hotkey hk)
@@ -979,33 +981,33 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void BeepMuted()
 		{
-			BeepPlayer.Play ( BeepType.Mute );
+			BeepPlayer.Play(BeepType.Mute);
 		}
 
 		private void BeepUnmuted()
 		{
-			BeepPlayer.Play ( BeepType.Unmute );
+			BeepPlayer.Play(BeepType.Unmute);
 		}
 
 		private static void BeepStart()
 		{
-			BeepPlayer.Play ( BeepType.Start );
+			BeepPlayer.Play(BeepType.Start);
 		}
 
-		private static void BeepEnd ( )
+		private static void BeepEnd()
 		{
-			BeepPlayer.Play ( BeepType.End );
+			BeepPlayer.Play(BeepType.End);
 		}
 
 		private static void BeepSuccess()
 		{
-			BeepPlayer.Play ( BeepType.Success );
+			BeepPlayer.Play(BeepType.Success);
 		}
 
 		private static void BeepFail()
 		{
 			for (int i = 0; i < 3; i++)
-				BeepPlayer.Play ( BeepType.Failure);
+				BeepPlayer.Play(BeepType.Failure);
 		}
 
 		private async void btnReviewTranscript_Click(object sender, EventArgs e)
