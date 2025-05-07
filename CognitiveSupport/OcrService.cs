@@ -4,12 +4,19 @@ using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Text;
 
 namespace CognitiveSupport;
 
 public class OcrService : IOcrService
 {
+	private const int RetryDelayMilliseconds = 500;
+	private const double TimeoutMultiplier = 7.5;
+	private const int MinimumImageWidth = 50;
+	private const int MinimumImageHeight = 50;
+
 	private string SubscriptionKey { get; }
 	private string Endpoint { get; }
 	private ComputerVisionClient ComputerVisionClient { get; }
@@ -27,56 +34,111 @@ public class OcrService : IOcrService
 		Stream imageStream,
 		CancellationToken overallCancellationToken)
 	{
-		return ReadFile(ocrReadingOrder, imageStream, overallCancellationToken);
+		return Read(ocrReadingOrder, imageStream, overallCancellationToken);
 	}
 
 	private static ComputerVisionClient CreateComputerVisionClient(string endpoint, string key) =>
 		 new(new ApiKeyServiceClientCredentials(key)) { Endpoint = endpoint };
 
-	private async Task<string> ReadFile(
+	private static Context CreateRetryContext() => new() { ["Attempt"] = 1 };
+
+	private static AsyncPolicy CreateRetryPolicy() =>
+		Policy
+			.Handle<HttpRequestException>()
+			.Or<TimeoutRejectedException>()
+			.Or<TaskCanceledException>()
+			.WaitAndRetryAsync(
+				Backoff.LinearBackoff(TimeSpan.FromMilliseconds(RetryDelayMilliseconds), retryCount: 3, factor: 1),
+				onRetry: (_, __, ___, ctx) =>
+				{
+					int attempt = ctx.ContainsKey("Attempt") ? (int)ctx["Attempt"] : 1;
+					ctx["Attempt"] = ++attempt;
+				});
+
+	private static CancellationTokenSource CreateLinkedCancellationTokenSource(int attempt, CancellationToken overallToken)
+	{
+		var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutMultiplier * attempt));
+		return CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
+	}
+
+	private async Task<string> ExecuteReadInternal(
+		OcrReadingOrder ocrReadingOrder,
+		Stream imageStream,
+		Context context,
+		CancellationToken overallCancellationToken)
+	{
+		int attempt = (int)context["Attempt"];
+		using var linkedCts = CreateLinkedCancellationTokenSource(attempt, overallCancellationToken);
+
+		try
+		{
+			if (attempt > 0) this.Beep(attempt);
+
+			imageStream.Seek(0, SeekOrigin.Begin);
+
+			return await ReadInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
+		}
+		finally
+		{
+			linkedCts.Dispose();
+		}
+	}
+
+	private async Task<string> Read(
 		OcrReadingOrder ocrReadingOrder,
 		Stream imageStream,
 		CancellationToken overallCancellationToken)
 	{
-		const string attemptKey = "Attempt";
-		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
+		var retryPolicy = CreateRetryPolicy();
+		var context = CreateRetryContext();
 
-		var retryPolicy = Policy
-			 .Handle<HttpRequestException>()
-			 .Or<TimeoutRejectedException>()
-			 .Or<TaskCanceledException>()
-			 .WaitAndRetryAsync(
-				  delay,
-				  onRetry: (_, __, ___, ctx) =>
-				  {
-					  int attempt = ctx.ContainsKey(attemptKey) ? (int)ctx[attemptKey] : 1;
-					  ctx[attemptKey] = ++attempt;
-				  });
-
-		var context = new Context { [attemptKey] = 1 };
-
-		return await retryPolicy.ExecuteAsync(async (ctx, overallToken) =>
-		{
-			int attempt = (int)ctx[attemptKey];
-			using var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(7.5 * attempt));
-			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
-
-			if (attempt > 0) this.Beep(attempt);
-
-			return await ReadFileInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
-
-		}, context, overallCancellationToken).ConfigureAwait(false);
+		return await retryPolicy.ExecuteAsync(
+			(ctx, overallToken) => ExecuteReadInternal(ocrReadingOrder, imageStream, ctx, overallToken),
+			context,
+			overallCancellationToken).ConfigureAwait(false);
 	}
 
-	private async Task<string> ReadFileInternal(
+	private Stream EnsureMinimumImageSize(Stream imageStream)
+	{
+		using var image = Image.FromStream(imageStream);
+
+		if (image.Width >= MinimumImageWidth && image.Height >= MinimumImageHeight)
+		{
+			imageStream.Seek(0, SeekOrigin.Begin);
+			return imageStream;
+		}
+
+		int newWidth = Math.Max(MinimumImageWidth, image.Width);
+		int newHeight = Math.Max(MinimumImageHeight, image.Height);
+
+		using var paddedImage = new Bitmap(newWidth, newHeight);
+		using (var graphics = Graphics.FromImage(paddedImage))
+		{
+			graphics.Clear(Color.White);
+			int offsetX = (newWidth - image.Width) / 2;
+			int offsetY = (newHeight - image.Height) / 2;
+			graphics.DrawImage(image, offsetX, offsetY);
+		}
+
+		var paddedStream = new MemoryStream();
+		paddedImage.Save(paddedStream, ImageFormat.Png);
+		paddedStream.Seek(0, SeekOrigin.Begin);
+
+		imageStream.Dispose();
+
+		return paddedStream;
+	}
+
+	private async Task<string> ReadInternal(
 		OcrReadingOrder ocrReadingOrder,
 		Stream imageStream,
 		CancellationToken cancellationToken)
 	{
 		const int operationIdLength = 36;
 
+		imageStream = EnsureMinimumImageSize(imageStream);
+
 		Log("----------------------------------------------------------");
-		Log("READ FROM file");
 
 		var headers = await ComputerVisionClient.ReadInStreamAsync(
 								imageStream,
