@@ -34,7 +34,7 @@ public class OcrService : IOcrService
 		Stream imageStream,
 		CancellationToken overallCancellationToken)
 	{
-		return ReadFile(ocrReadingOrder, imageStream, overallCancellationToken);
+		return Read(ocrReadingOrder, imageStream, overallCancellationToken);
 	}
 
 	private static ComputerVisionClient CreateComputerVisionClient(string endpoint, string key) =>
@@ -61,7 +61,7 @@ public class OcrService : IOcrService
 		return CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
 	}
 
-	private async Task<string> ExecuteReadFileInternal(
+	private async Task<string> ExecuteReadInternal(
 		OcrReadingOrder ocrReadingOrder,
 		Stream imageStream,
 		Context context,
@@ -76,7 +76,7 @@ public class OcrService : IOcrService
 
 			imageStream.Seek(0, SeekOrigin.Begin);
 
-			return await ReadFileInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
+			return await ReadInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
 		}
 		finally
 		{
@@ -84,7 +84,7 @@ public class OcrService : IOcrService
 		}
 	}
 
-	private async Task<string> ReadFile(
+	private async Task<string> Read(
 		OcrReadingOrder ocrReadingOrder,
 		Stream imageStream,
 		CancellationToken overallCancellationToken)
@@ -93,7 +93,7 @@ public class OcrService : IOcrService
 		var context = CreateRetryContext();
 
 		return await retryPolicy.ExecuteAsync(
-			(ctx, overallToken) => ExecuteReadFileInternal(ocrReadingOrder, imageStream, ctx, overallToken),
+			(ctx, overallToken) => ExecuteReadInternal(ocrReadingOrder, imageStream, ctx, overallToken),
 			context,
 			overallCancellationToken).ConfigureAwait(false);
 	}
@@ -129,7 +129,7 @@ public class OcrService : IOcrService
 		return paddedStream;
 	}
 
-	private async Task<string> ReadFileInternal(
+	private async Task<string> ReadInternal(
 		OcrReadingOrder ocrReadingOrder,
 		Stream imageStream,
 		CancellationToken cancellationToken)
