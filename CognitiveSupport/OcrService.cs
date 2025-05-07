@@ -73,6 +73,8 @@ public class OcrService : IOcrService
 		}, context, overallCancellationToken).ConfigureAwait(false);
 	}
 
+	// This method ensures that images meet Azure OCR's minimum size requirement of 50x50 pixels.
+	// If an image is smaller than the required dimensions, it is padded with a neutral background color to comply with the requirement.
 	private Stream EnsureMinimumImageSize(Stream imageStream)
 	{
 		using var image = Image.FromStream(imageStream);
