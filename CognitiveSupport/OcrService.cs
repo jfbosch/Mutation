@@ -5,6 +5,8 @@ using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
 using System.Text;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace CognitiveSupport;
 
@@ -71,6 +73,39 @@ public class OcrService : IOcrService
 		}, context, overallCancellationToken).ConfigureAwait(false);
 	}
 
+	private Stream EnsureMinimumImageSize(Stream imageStream)
+	{
+		using var image = Image.FromStream(imageStream);
+
+		// Check if the image dimensions are already >= 50x50
+		if (image.Width >= 50 && image.Height >= 50)
+		{
+			imageStream.Seek(0, SeekOrigin.Begin); // Reset stream position
+			return imageStream;
+		}
+
+		// Calculate new dimensions and padding
+		int newWidth = Math.Max(50, image.Width);
+		int newHeight = Math.Max(50, image.Height);
+
+		// Create a new canvas with the required dimensions
+		using var paddedImage = new Bitmap(newWidth, newHeight);
+		using (var graphics = Graphics.FromImage(paddedImage))
+		{
+			graphics.Clear(Color.White); // Fill with a neutral background color
+			int offsetX = (newWidth - image.Width) / 2;
+			int offsetY = (newHeight - image.Height) / 2;
+			graphics.DrawImage(image, offsetX, offsetY);
+		}
+
+		// Save the padded image to a new memory stream
+		var paddedStream = new MemoryStream();
+		paddedImage.Save(paddedStream, ImageFormat.Png);
+		paddedStream.Seek(0, SeekOrigin.Begin);
+
+		return paddedStream;
+	}
+
 	private async Task<string> ReadFileInternal(
 		OcrReadingOrder ocrReadingOrder,
 		Stream imageStream,
@@ -78,8 +113,9 @@ public class OcrService : IOcrService
 	{
 		const int operationIdLength = 36;
 
+		imageStream = EnsureMinimumImageSize(imageStream);
+
 		Log("----------------------------------------------------------");
-		Log("READ FROM file");
 
 		var headers = await ComputerVisionClient.ReadInStreamAsync(
 								imageStream,
