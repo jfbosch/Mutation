@@ -12,6 +12,11 @@ namespace CognitiveSupport;
 
 public class OcrService : IOcrService
 {
+	private const int RetryDelayMilliseconds = 500;
+	private const double TimeoutMultiplier = 7.5;
+	private const int MinimumImageWidth = 50;
+	private const int MinimumImageHeight = 50;
+
 	private string SubscriptionKey { get; }
 	private string Endpoint { get; }
 	private ComputerVisionClient ComputerVisionClient { get; }
@@ -41,7 +46,7 @@ public class OcrService : IOcrService
 		CancellationToken overallCancellationToken)
 	{
 		const string attemptKey = "Attempt";
-		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
+		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(RetryDelayMilliseconds), retryCount: 3, factor: 1);
 
 		var retryPolicy = Policy
 			 .Handle<HttpRequestException>()
@@ -60,7 +65,7 @@ public class OcrService : IOcrService
 		return await retryPolicy.ExecuteAsync(async (ctx, overallToken) =>
 		{
 			int attempt = (int)ctx[attemptKey];
-			using var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(7.5 * attempt));
+			using var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutMultiplier * attempt));
 			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
 
 			if (attempt > 0) this.Beep(attempt);
@@ -80,15 +85,15 @@ public class OcrService : IOcrService
 		using var image = Image.FromStream(imageStream);
 
 		// Check if the image dimensions are already >= 50x50
-		if (image.Width >= 50 && image.Height >= 50)
+		if (image.Width >= MinimumImageWidth && image.Height >= MinimumImageHeight)
 		{
 			imageStream.Seek(0, SeekOrigin.Begin); // Reset stream position
 			return imageStream;
 		}
 
 		// Calculate new dimensions and padding
-		int newWidth = Math.Max(50, image.Width);
-		int newHeight = Math.Max(50, image.Height);
+		int newWidth = Math.Max(MinimumImageWidth, image.Width);
+		int newHeight = Math.Max(MinimumImageHeight, image.Height);
 
 		// Create a new canvas with the required dimensions
 		using var paddedImage = new Bitmap(newWidth, newHeight);
