@@ -63,6 +63,9 @@ public class OcrService : IOcrService
 
 			if (attempt > 0) this.Beep(attempt);
 
+			// Reset the stream position before retrying
+			imageStream.Seek(0, SeekOrigin.Begin);
+
 			return await ReadFileInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
 
 		}, context, overallCancellationToken).ConfigureAwait(false);
