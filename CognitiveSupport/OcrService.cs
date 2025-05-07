@@ -4,9 +4,9 @@ using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
-using System.Text;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Text;
 
 namespace CognitiveSupport;
 
@@ -40,84 +40,91 @@ public class OcrService : IOcrService
 	private static ComputerVisionClient CreateComputerVisionClient(string endpoint, string key) =>
 		 new(new ApiKeyServiceClientCredentials(key)) { Endpoint = endpoint };
 
+	private static Context CreateRetryContext() => new() { ["Attempt"] = 1 };
+
+	private static AsyncPolicy CreateRetryPolicy() =>
+		Policy
+			.Handle<HttpRequestException>()
+			.Or<TimeoutRejectedException>()
+			.Or<TaskCanceledException>()
+			.WaitAndRetryAsync(
+				Backoff.LinearBackoff(TimeSpan.FromMilliseconds(RetryDelayMilliseconds), retryCount: 3, factor: 1),
+				onRetry: (_, __, ___, ctx) =>
+				{
+					int attempt = ctx.ContainsKey("Attempt") ? (int)ctx["Attempt"] : 1;
+					ctx["Attempt"] = ++attempt;
+				});
+
+	private static CancellationTokenSource CreateLinkedCancellationTokenSource(int attempt, CancellationToken overallToken)
+	{
+		var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutMultiplier * attempt));
+		return CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
+	}
+
+	private async Task<string> ExecuteReadFileInternal(
+		OcrReadingOrder ocrReadingOrder,
+		Stream imageStream,
+		Context context,
+		CancellationToken overallCancellationToken)
+	{
+		int attempt = (int)context["Attempt"];
+		using var linkedCts = CreateLinkedCancellationTokenSource(attempt, overallCancellationToken);
+
+		try
+		{
+			if (attempt > 0) this.Beep(attempt);
+
+			imageStream.Seek(0, SeekOrigin.Begin);
+
+			return await ReadFileInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
+		}
+		finally
+		{
+			linkedCts.Dispose();
+		}
+	}
+
 	private async Task<string> ReadFile(
 		OcrReadingOrder ocrReadingOrder,
 		Stream imageStream,
 		CancellationToken overallCancellationToken)
 	{
-		const string attemptKey = "Attempt";
-		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(RetryDelayMilliseconds), retryCount: 3, factor: 1);
+		var retryPolicy = CreateRetryPolicy();
+		var context = CreateRetryContext();
 
-		var retryPolicy = Policy
-			 .Handle<HttpRequestException>()
-			 .Or<TimeoutRejectedException>()
-			 .Or<TaskCanceledException>()
-			 .WaitAndRetryAsync(
-				  delay,
-				  onRetry: (_, __, ___, ctx) =>
-				  {
-					  int attempt = ctx.ContainsKey(attemptKey) ? (int)ctx[attemptKey] : 1;
-					  ctx[attemptKey] = ++attempt;
-				  });
-
-		var context = new Context { [attemptKey] = 1 };
-
-		return await retryPolicy.ExecuteAsync(async (ctx, overallToken) =>
-		{
-			int attempt = (int)ctx[attemptKey];
-			using var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutMultiplier * attempt));
-			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
-
-			try
-			{
-				if (attempt > 0) this.Beep(attempt);
-
-				// Reset the stream position before retrying
-				imageStream.Seek(0, SeekOrigin.Begin);
-
-				return await ReadFileInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
-			}
-			finally
-			{
-				perTryCts.Dispose(); // Explicitly dispose of perTryCts
-			}
-
-		}, context, overallCancellationToken).ConfigureAwait(false);
+		return await retryPolicy.ExecuteAsync(
+			(ctx, overallToken) => ExecuteReadFileInternal(ocrReadingOrder, imageStream, ctx, overallToken),
+			context,
+			overallCancellationToken).ConfigureAwait(false);
 	}
 
-	// This method ensures that images meet Azure OCR's minimum size requirement of 50x50 pixels.
-	// If an image is smaller than the required dimensions, it is padded with a neutral background color to comply with the requirement.
 	private Stream EnsureMinimumImageSize(Stream imageStream)
 	{
 		using var image = Image.FromStream(imageStream);
 
-		// Check if the image dimensions are already >= 50x50
 		if (image.Width >= MinimumImageWidth && image.Height >= MinimumImageHeight)
 		{
-			imageStream.Seek(0, SeekOrigin.Begin); // Reset stream position
+			imageStream.Seek(0, SeekOrigin.Begin);
 			return imageStream;
 		}
 
-		// Calculate new dimensions and padding
 		int newWidth = Math.Max(MinimumImageWidth, image.Width);
 		int newHeight = Math.Max(MinimumImageHeight, image.Height);
 
-		// Create a new canvas with the required dimensions
 		using var paddedImage = new Bitmap(newWidth, newHeight);
 		using (var graphics = Graphics.FromImage(paddedImage))
 		{
-			graphics.Clear(Color.White); // Fill with a neutral background color
+			graphics.Clear(Color.White);
 			int offsetX = (newWidth - image.Width) / 2;
 			int offsetY = (newHeight - image.Height) / 2;
 			graphics.DrawImage(image, offsetX, offsetY);
 		}
 
-		// Save the padded image to a new memory stream
 		var paddedStream = new MemoryStream();
 		paddedImage.Save(paddedStream, ImageFormat.Png);
 		paddedStream.Seek(0, SeekOrigin.Begin);
 
-		imageStream.Dispose(); // Dispose of the original stream
+		imageStream.Dispose();
 
 		return paddedStream;
 	}
