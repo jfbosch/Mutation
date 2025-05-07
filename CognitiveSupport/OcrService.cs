@@ -68,12 +68,19 @@ public class OcrService : IOcrService
 			using var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutMultiplier * attempt));
 			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
 
-			if (attempt > 0) this.Beep(attempt);
+			try
+			{
+				if (attempt > 0) this.Beep(attempt);
 
-			// Reset the stream position before retrying
-			imageStream.Seek(0, SeekOrigin.Begin);
+				// Reset the stream position before retrying
+				imageStream.Seek(0, SeekOrigin.Begin);
 
-			return await ReadFileInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
+				return await ReadFileInternal(ocrReadingOrder, imageStream, linkedCts.Token).ConfigureAwait(false);
+			}
+			finally
+			{
+				perTryCts.Dispose(); // Explicitly dispose of perTryCts
+			}
 
 		}, context, overallCancellationToken).ConfigureAwait(false);
 	}
@@ -109,6 +116,8 @@ public class OcrService : IOcrService
 		var paddedStream = new MemoryStream();
 		paddedImage.Save(paddedStream, ImageFormat.Png);
 		paddedStream.Seek(0, SeekOrigin.Begin);
+
+		imageStream.Dispose(); // Dispose of the original stream
 
 		return paddedStream;
 	}
