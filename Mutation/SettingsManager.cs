@@ -5,7 +5,6 @@ using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
-using System.Windows.Forms;
 
 namespace Mutation;
 
@@ -52,6 +51,11 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 		var azureComputerVisionSettings = settings.AzureComputerVisionSettings;
+
+		if (azureComputerVisionSettings.TimeoutSeconds <= 0)
+		{
+			azureComputerVisionSettings.TimeoutSeconds = 10;
+		}
 
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotHotKey))
 		{
@@ -262,7 +266,6 @@ internal class SettingsManager : ISettingsManager
 			if (s.TimeoutSeconds <= 0)
 			{
 				s.TimeoutSeconds = 10;
-				somethingWasMissing = true;
 			}
 		}
 

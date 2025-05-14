@@ -66,7 +66,10 @@ internal static class Program
 		builder.Services.AddSingleton<CoreAudioController>();
 
 		builder.Services.AddSingleton<IOcrService>(
-			new OcrService(settings.AzureComputerVisionSettings?.ApiKey ?? string.Empty, settings.AzureComputerVisionSettings?.Endpoint ?? string.Empty));
+			new OcrService(
+				settings.AzureComputerVisionSettings?.ApiKey ?? string.Empty,
+				settings.AzureComputerVisionSettings?.Endpoint ?? string.Empty,
+				settings.AzureComputerVisionSettings?.TimeoutSeconds ?? 30));
 
 		builder.Services.AddSingleton<ILlmService>(
 			new LlmService(

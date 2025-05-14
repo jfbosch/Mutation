@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System.Drawing;
+﻿using System.Drawing;
 
 namespace CognitiveSupport;
 
@@ -89,9 +88,9 @@ public class AzureComputerVisionSettings
 	// If this is not null, this hotkey will be sent to the system after an OCR operation completes. 
 	public string? SendKotKeyAfterOcrOperation { get; set; }
 
-
 	public string? ApiKey { get; set; }
 	public string? Endpoint { get; set; }
+	public int TimeoutSeconds { get; set; } = 10;
 
 	public AzureComputerVisionSettings()
 	{

@@ -13,20 +13,23 @@ namespace CognitiveSupport;
 public class OcrService : IOcrService
 {
 	private const int RetryDelayMilliseconds = 500;
-	private const double TimeoutMultiplier = 7.5;
+	private const double DefaultTimeoutMultiplier = 7.5;
 	private const int MinimumImageWidth = 50;
 	private const int MinimumImageHeight = 50;
+	private const int MaxTimeoutSeconds = 60;
 
 	private string SubscriptionKey { get; }
 	private string Endpoint { get; }
 	private ComputerVisionClient ComputerVisionClient { get; }
 	private readonly object _lock = new();
+	private readonly int _timeoutSeconds;
 
-	public OcrService(string? subscriptionKey, string? endpoint)
+	public OcrService(string? subscriptionKey, string? endpoint, int timeoutSeconds = 30)
 	{
 		SubscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
 		Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
 		ComputerVisionClient = CreateComputerVisionClient(Endpoint, SubscriptionKey);
+		_timeoutSeconds = Math.Max(1, Math.Min(timeoutSeconds, MaxTimeoutSeconds));
 	}
 
 	public Task<string> ExtractText(
@@ -55,9 +58,11 @@ public class OcrService : IOcrService
 					ctx["Attempt"] = ++attempt;
 				});
 
-	private static CancellationTokenSource CreateLinkedCancellationTokenSource(int attempt, CancellationToken overallToken)
+	private CancellationTokenSource CreateLinkedCancellationTokenSource(int attempt, CancellationToken overallToken)
 	{
-		var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutMultiplier * attempt));
+		// Cap the per-try timeout to avoid excessive waits
+		int perTryTimeout = Math.Max(1, Math.Min(_timeoutSeconds, MaxTimeoutSeconds));
+		var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(perTryTimeout));
 		return CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
 	}
 
