@@ -128,7 +128,7 @@ internal static class Program
 		HttpClient httpClient = httpClientFactory.CreateClient(OpenAiHttpClientName);
 		var openAIService = new OpenAIService(options, httpClient);
 
-		return new WhisperSpeechToTextService(
+		return new OpenAiSpeechToTextService(
 			serviceSettings.Name ?? string.Empty,
 			openAIService,
 			serviceSettings.ModelId ?? string.Empty,

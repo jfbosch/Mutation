@@ -8,7 +8,7 @@ using Polly.Timeout;
 
 namespace CognitiveSupport;
 
-public class WhisperSpeechToTextService : ISpeechToTextService
+public class OpenAiSpeechToTextService : ISpeechToTextService
 {
 	public string ServiceName { get; init; }
 
@@ -17,7 +17,7 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 	private readonly IOpenAIService _openAIService;
 	private readonly int _timeoutSeconds;
 
-	public WhisperSpeechToTextService(
+	public OpenAiSpeechToTextService(
 		string serviceName,
 		IOpenAIService openAIService,
 		string modelId,
