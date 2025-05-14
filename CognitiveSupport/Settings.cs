@@ -5,13 +5,13 @@ namespace CognitiveSupport;
 
 public class Settings
 {
-	public string UserInstructions { get; set; }
+	public string? UserInstructions { get; set; }
 
-	public AudioSettings AudioSettings { get; set; }
-	public AzureComputerVisionSettings AzureComputerVisionSettings { get; set; }
-	public SpeetchToTextSettings SpeetchToTextSettings { get; set; }
-	public LlmSettings LlmSettings { get; set; }
-	public TextToSpeechSettings TextToSpeechSettings { get; set; }
+	public AudioSettings? AudioSettings { get; set; }
+	public AzureComputerVisionSettings? AzureComputerVisionSettings { get; set; }
+	public SpeetchToTextSettings? SpeetchToTextSettings { get; set; }
+	public LlmSettings? LlmSettings { get; set; }
+	public TextToSpeechSettings? TextToSpeechSettings { get; set; }
 
 	public MainWindowUiSettings MainWindowUiSettings { get; set; } = new MainWindowUiSettings();
 
@@ -21,7 +21,7 @@ public class Settings
 	{
 	}
 
-	public Settings(string userInstructions, AudioSettings audioSettings, AzureComputerVisionSettings azureComputerVisionSettings, SpeetchToTextSettings speetchToTextSettings, LlmSettings llmSettings, TextToSpeechSettings textToSpeechSettings, MainWindowUiSettings mainWindowUiSettings, HotKeyRouterSettings hotKeyRouterSettings)
+	public Settings(string? userInstructions, AudioSettings? audioSettings, AzureComputerVisionSettings? azureComputerVisionSettings, SpeetchToTextSettings? speetchToTextSettings, LlmSettings? llmSettings, TextToSpeechSettings? textToSpeechSettings, MainWindowUiSettings mainWindowUiSettings, HotKeyRouterSettings hotKeyRouterSettings)
 	{
 		UserInstructions = userInstructions;
 		AudioSettings = audioSettings;
@@ -36,15 +36,15 @@ public class Settings
 
 public class AudioSettings
 {
-	private CustomBeepSettingsData customBeepSettings;
+	private CustomBeepSettingsData? customBeepSettings;
 
-	public string ActiveCaptureDeviceFullName { get; set; }
-	public string MicrophoneToggleMuteHotKey { get; set; }
-	public CustomBeepSettingsData CustomBeepSettings { get => customBeepSettings; set => customBeepSettings = value; }
+	public string? ActiveCaptureDeviceFullName { get; set; }
+	public string? MicrophoneToggleMuteHotKey { get; set; }
+	public CustomBeepSettingsData? CustomBeepSettings { get => customBeepSettings; set => customBeepSettings = value; }
 
 	public AudioSettings() { }
 
-	public AudioSettings(string microphoneToggleMuteHotKey)
+	public AudioSettings(string? microphoneToggleMuteHotKey)
 	{
 		MicrophoneToggleMuteHotKey = microphoneToggleMuteHotKey;
 	}
@@ -80,18 +80,18 @@ public class MainWindowUiSettings
 public class AzureComputerVisionSettings
 {
 	public bool InvertScreenshot { get; set; }
-	public string ScreenshotHotKey { get; set; }
-	public string ScreenshotOcrHotKey { get; set; }
-	public string ScreenshotLeftToRightTopToBottomOcrHotKey { get; set; }
-	public string OcrHotKey { get; set; }
-	public string OcrLeftToRightTopToBottomHotKey { get; set; }
+	public string? ScreenshotHotKey { get; set; }
+	public string? ScreenshotOcrHotKey { get; set; }
+	public string? ScreenshotLeftToRightTopToBottomOcrHotKey { get; set; }
+	public string? OcrHotKey { get; set; }
+	public string? OcrLeftToRightTopToBottomHotKey { get; set; }
 
 	// If this is not null, this hotkey will be sent to the system after an OCR operation completes. 
 	public string? SendKotKeyAfterOcrOperation { get; set; }
 
 
-	public string ApiKey { get; set; }
-	public string Endpoint { get; set; }
+	public string? ApiKey { get; set; }
+	public string? Endpoint { get; set; }
 
 	public AzureComputerVisionSettings()
 	{
@@ -100,35 +100,35 @@ public class AzureComputerVisionSettings
 
 public class SpeetchToTextSettings
 {
-	public string TempDirectory { get; set; }
-	public string SpeechToTextHotKey { get; set; }
+	public string? TempDirectory { get; set; }
+	public string? SpeechToTextHotKey { get; set; }
 
 	// If this is not null, this hotkey will be sent to the system after a transcription operation completes. 
 	public string? SendKotKeyAfterTranscriptionOperation { get; set; }
 
-	public SpeetchToTextServiceSettings[] Services { get; set; }
-	public string ActiveSpeetchToTextService { get; set; }
+	public SpeetchToTextServiceSettings[]? Services { get; set; }
+	public string? ActiveSpeetchToTextService { get; set; }
 }
 
 public class SpeetchToTextServiceSettings
 {
-	public string Name { get; set; }
+	public string? Name { get; set; }
 	public SpeechToTextProviders Provider { get; set; }
-	public string ApiKey { get; set; }
-	public string BaseDomain { get; set; }
-	public string ModelId { get; set; }
-	public string SpeechToTextPrompt { get; set; }
+	public string? ApiKey { get; set; }
+	public string? BaseDomain { get; set; }
+	public string? ModelId { get; set; }
+	public string? SpeechToTextPrompt { get; set; }
+	public int TimeoutSeconds { get; set; } = 10;
 }
-
 
 public class LlmSettings
 {
-	public string ApiKey { get; set; }
-	public string ResourceName { get; set; }
+	public string? ApiKey { get; set; }
+	public string? ResourceName { get; set; }
 	public List<ModelDeploymentIdMap> ModelDeploymentIdMaps { get; set; }
 	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
-	public string FormatTranscriptPrompt { get; set; }
-	public string ReviewTranscriptPrompt { get; set; }
+	public string? FormatTranscriptPrompt { get; set; }
+	public string? ReviewTranscriptPrompt { get; set; }
 
 	public LlmSettings()
 	{
@@ -136,7 +136,7 @@ public class LlmSettings
 		TranscriptFormatRules = new List<TranscriptFormatRule>();
 	}
 
-	public LlmSettings(string apiKey, string resourceName, List<ModelDeploymentIdMap> modelDeploymentIdMaps, List<TranscriptFormatRule> transcriptFormatRules, string formatTranscriptPrompt, string reviewTranscriptPrompt)
+	public LlmSettings(string? apiKey, string? resourceName, List<ModelDeploymentIdMap> modelDeploymentIdMaps, List<TranscriptFormatRule> transcriptFormatRules, string? formatTranscriptPrompt, string? reviewTranscriptPrompt)
 	{
 		ApiKey = apiKey;
 		ResourceName = resourceName;
@@ -148,14 +148,14 @@ public class LlmSettings
 
 	public class ModelDeploymentIdMap
 	{
-		public string ModelName { get; set; }
-		public string DeploymentId { get; set; }
+		public string? ModelName { get; set; }
+		public string? DeploymentId { get; set; }
 
 		public ModelDeploymentIdMap()
 		{
 		}
 
-		public ModelDeploymentIdMap(string modelName, string deploymentId)
+		public ModelDeploymentIdMap(string? modelName, string? deploymentId)
 		{
 			ModelName = modelName;
 			DeploymentId = deploymentId;
@@ -164,8 +164,8 @@ public class LlmSettings
 
 	public class TranscriptFormatRule
 	{
-		public string Find { get; set; }
-		public string ReplaceWith { get; set; }
+		public string? Find { get; set; }
+		public string? ReplaceWith { get; set; }
 		public bool CaseSensitive { get; set; }
 		public MatchTypeEnum MatchType { get; set; }
 
@@ -173,7 +173,7 @@ public class LlmSettings
 		{
 		}
 
-		public TranscriptFormatRule(string find, string replaceWith, bool caseSensitive, MatchTypeEnum matchType)
+		public TranscriptFormatRule(string? find, string? replaceWith, bool caseSensitive, MatchTypeEnum matchType)
 		{
 			Find = find;
 			ReplaceWith = replaceWith;
@@ -192,13 +192,13 @@ public class LlmSettings
 
 public class TextToSpeechSettings
 {
-	public string TextToSpeechHotKey { get; set; }
+	public string? TextToSpeechHotKey { get; set; }
 
 	public TextToSpeechSettings()
 	{
 	}
 
-	public TextToSpeechSettings(string textToSpeechHotKey)
+	public TextToSpeechSettings(string? textToSpeechHotKey)
 	{
 		TextToSpeechHotKey = textToSpeechHotKey;
 	}
@@ -219,12 +219,12 @@ public class HotKeyRouterSettings
 
 	public class HotKeyRouterMap
 	{
-		public string FromHotKey { get; set; }
-		public string ToHotKey { get; set; }
+		public string? FromHotKey { get; set; }
+		public string? ToHotKey { get; set; }
 
 		public HotKeyRouterMap(
-			string fromHotKey,
-			string toHotKey)
+			string? fromHotKey,
+			string? toHotKey)
 		{
 			FromHotKey = fromHotKey ?? throw new ArgumentNullException(nameof(fromHotKey));
 			ToHotKey = toHotKey ?? throw new ArgumentNullException(nameof(toHotKey));

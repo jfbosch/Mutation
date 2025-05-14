@@ -15,15 +15,18 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 	private readonly string _modelId;
 	private readonly object _lock = new object();
 	private readonly IOpenAIService _openAIService;
+	private readonly int _timeoutSeconds;
 
 	public WhisperSpeechToTextService(
 		string serviceName,
 		IOpenAIService openAIService,
-		string modelId)
+		string modelId,
+		int timeoutSeconds)
 	{
 		this.ServiceName = serviceName;
 		_openAIService = openAIService ?? throw new ArgumentNullException(nameof(openAIService));
 		_modelId = modelId ?? throw new ArgumentNullException(nameof(modelId), "Check your Whisper API provider's documentation for supported modelIds. On OpenAI, it's something like 'whisper-1'. On Groq, it's something like 'whisper-large-v3'.");
+		_timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 10;
 	}
 
 	public async Task<string> ConvertAudioToText(
@@ -57,7 +60,8 @@ public class WhisperSpeechToTextService : ISpeechToTextService
 		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
+			int timeout = Math.Min(_timeoutSeconds * attempt, 60);
+			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
 			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
 			if (attempt > 0)
