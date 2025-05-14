@@ -2,8 +2,8 @@
 {
 	public partial class ScreenCaptureForm : Form
 	{
-		private Bitmap screenshot;
-		private Bitmap overlay; // New overlay for the crosshair
+		private Bitmap? screenshot;
+		private Bitmap? overlay; // New overlay for the crosshair
 		private Rectangle selectedRegion;
 		private Point firstPoint;
 
@@ -34,15 +34,18 @@
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
 			// Clear the overlay
-			using (Graphics gOverlay = Graphics.FromImage(overlay))
+			if (overlay != null)
 			{
-				gOverlay.Clear(Color.Transparent);
-
-				// Draw the crosshair on the overlay
-				using (Pen crosshairPen = new Pen(Color.Green, 1))
+				using (Graphics gOverlay = Graphics.FromImage(overlay))
 				{
-					gOverlay.DrawLine(crosshairPen, e.X, 0, e.X, Height);
-					gOverlay.DrawLine(crosshairPen, 0, e.Y, Width, e.Y);
+					gOverlay.Clear(Color.Transparent);
+
+					// Draw the crosshair on the overlay
+					using (Pen crosshairPen = new Pen(Color.Green, 1))
+					{
+						gOverlay.DrawLine(crosshairPen, e.X, 0, e.X, Height);
+						gOverlay.DrawLine(crosshairPen, 0, e.Y, Width, e.Y);
+					}
 				}
 			}
 
@@ -66,14 +69,17 @@
 
 			if (selectedRegion.Width > 0 && selectedRegion.Height > 0)
 			{
-				using (Bitmap selectedImage = new Bitmap(selectedRegion.Width, selectedRegion.Height))
+				if (screenshot != null)
 				{
-					using (Graphics g = Graphics.FromImage(selectedImage))
+					using (Bitmap selectedImage = new Bitmap(selectedRegion.Width, selectedRegion.Height))
 					{
-						g.DrawImage(screenshot, 0, 0, selectedRegion, GraphicsUnit.Pixel);
-					}
+						using (Graphics g = Graphics.FromImage(selectedImage))
+						{
+							g.DrawImage(screenshot, 0, 0, selectedRegion, GraphicsUnit.Pixel);
+						}
 
-					Clipboard.SetImage(selectedImage); // Copies the image to the clipboard
+						Clipboard.SetImage(selectedImage); // Copies the image to the clipboard
+					}
 				}
 
 				// Revert the cursor to the standard mouse pointer
@@ -85,15 +91,22 @@
 
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			if (screenshot != null) // Check to ensure screenshot is not null
+			if (screenshot != null && overlay != null) // Check to ensure screenshot and overlay are not null
 			{
-				e.Graphics.DrawImage(screenshot, 0, 0);
-				e.Graphics.DrawImage(overlay, 0, 0); // Draw the overlay containing the crosshair
-
-				// Draw the selected region
-				using (Pen pen = new Pen(Color.Red, 2))
+				try
 				{
-					e.Graphics.DrawRectangle(pen, selectedRegion);
+					e.Graphics.DrawImage(screenshot, 0, 0);
+					e.Graphics.DrawImage(overlay, 0, 0); // Draw the overlay containing the crosshair
+
+					// Draw the selected region
+					using (Pen pen = new Pen(Color.Red, 2))
+					{
+						e.Graphics.DrawRectangle(pen, selectedRegion);
+					}
+				}
+				catch (ArgumentException)
+				{
+					// Ignore drawing if the image is disposed or invalid
 				}
 			}
 			base.OnPaint(e);
@@ -102,7 +115,9 @@
 		private void ScreenCaptureForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
 			overlay?.Dispose();
+			overlay = null;
 			screenshot?.Dispose();
+			screenshot = null;
 		}
 	}
 }
