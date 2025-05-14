@@ -94,11 +94,31 @@ public class OcrService : IOcrService
 		Stream imageStream,
 		CancellationToken overallCancellationToken)
 	{
+		// Buffer the stream into a byte array so we can create a new stream for each retry
+		byte[] imageBytes;
+		if (imageStream is MemoryStream ms && ms.TryGetBuffer(out ArraySegment<byte> buffer) && buffer.Array != null)
+		{
+			imageBytes = buffer.Array;
+		}
+		else
+		{
+			using (var tempMs = new MemoryStream())
+			{
+				imageStream.Seek(0, SeekOrigin.Begin);
+				imageStream.CopyTo(tempMs);
+				imageBytes = tempMs.ToArray();
+			}
+		}
+
 		var retryPolicy = CreateRetryPolicy();
 		var context = CreateRetryContext();
 
 		return await retryPolicy.ExecuteAsync(
-			(ctx, overallToken) => ExecuteReadInternal(ocrReadingOrder, imageStream, ctx, overallToken),
+			(ctx, overallToken) =>
+			{
+				var ms = new MemoryStream(imageBytes ?? Array.Empty<byte>(), writable: false);
+				return ExecuteReadInternal(ocrReadingOrder, ms, ctx, overallToken);
+			},
 			context,
 			overallCancellationToken).ConfigureAwait(false);
 	}
@@ -129,7 +149,7 @@ public class OcrService : IOcrService
 		paddedImage.Save(paddedStream, ImageFormat.Png);
 		paddedStream.Seek(0, SeekOrigin.Begin);
 
-		imageStream.Dispose();
+		// Do not dispose imageStream here! Let the caller manage its lifetime.
 
 		return paddedStream;
 	}
