@@ -575,7 +575,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			try
 			{
 				_ocrState.StartTextExtraction();
-				await ExtractTextViaOcr(ocrReadingOrder, TryGetClipboardImage());
+				await ExtractTextViaOcr(ocrReadingOrder, image);
 			}
 			finally
 			{
