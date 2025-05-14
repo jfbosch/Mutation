@@ -5,7 +5,6 @@ using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using System.Diagnostics;
 using System.Text;
-using System.Windows.Forms;
 
 namespace Mutation;
 
@@ -52,6 +51,11 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 		var azureComputerVisionSettings = settings.AzureComputerVisionSettings;
+
+		if (azureComputerVisionSettings.TimeoutSeconds <= 0)
+		{
+			azureComputerVisionSettings.TimeoutSeconds = 10;
+		}
 
 		if (string.IsNullOrWhiteSpace(azureComputerVisionSettings.ScreenshotHotKey))
 		{
@@ -115,7 +119,7 @@ internal class SettingsManager : ISettingsManager
 			string[] allowedExtensions = new[] { ".wav" };
 			var beepIssues = new List<string>();
 
-			string successPath = audioSettings.CustomBeepSettings.BeepSuccessFile;
+			string successPath = audioSettings.CustomBeepSettings?.BeepSuccessFile ?? string.Empty;
 			if ( string.IsNullOrWhiteSpace ( successPath ) ||
 				!allowedExtensions.Contains ( Path.GetExtension ( successPath )?.ToLower ( ) ) ||
 				!File.Exists ( successPath ) )
@@ -128,7 +132,7 @@ internal class SettingsManager : ISettingsManager
 					beepIssues.Add ( $"Could not load success beep file: {successPath}" );
 			}
 
-			string failurePath = audioSettings.CustomBeepSettings.BeepFailureFile;
+			string failurePath = audioSettings.CustomBeepSettings?.BeepFailureFile ?? string.Empty;
 			if ( string.IsNullOrWhiteSpace ( failurePath ) ||
 				!allowedExtensions.Contains ( Path.GetExtension ( failurePath )?.ToLower ( ) ) ||
 				!File.Exists ( failurePath ) )
@@ -141,7 +145,7 @@ internal class SettingsManager : ISettingsManager
 					beepIssues.Add ( $"Could not load failure beep file: {failurePath}" );
 			}
 
-			string startPath = audioSettings.CustomBeepSettings.BeepStartFile;
+			string startPath = audioSettings.CustomBeepSettings?.BeepStartFile ?? string.Empty;
 			if ( string.IsNullOrWhiteSpace ( startPath ) ||
 				!allowedExtensions.Contains ( Path.GetExtension ( startPath )?.ToLower ( ) ) ||
 				!File.Exists ( startPath ) )
@@ -154,7 +158,7 @@ internal class SettingsManager : ISettingsManager
 					beepIssues.Add ( $"Could not load start beep file: {startPath}" );
 			}
 
-			string endPath = audioSettings.CustomBeepSettings.BeepEndFile;
+			string endPath = audioSettings.CustomBeepSettings?.BeepEndFile ?? string.Empty;
 			if ( string.IsNullOrWhiteSpace ( endPath ) ||
 				!allowedExtensions.Contains ( Path.GetExtension ( endPath )?.ToLower ( ) ) ||
 				!File.Exists ( endPath ) )
@@ -167,7 +171,7 @@ internal class SettingsManager : ISettingsManager
 					beepIssues.Add ( $"Could not load end beep file: {endPath}" );
 			}
 
-			string mutePath = audioSettings.CustomBeepSettings.BeepMuteFile;
+			string mutePath = audioSettings.CustomBeepSettings?.BeepMuteFile ?? string.Empty;
 			if ( string.IsNullOrWhiteSpace ( mutePath ) ||
 				!allowedExtensions.Contains ( Path.GetExtension ( mutePath )?.ToLower ( ) ) ||
 				!File.Exists ( mutePath ) )
@@ -180,7 +184,7 @@ internal class SettingsManager : ISettingsManager
 					beepIssues.Add ( $"Could not load mute beep file: {mutePath}" );
 			}
 
-			string unmutePath = audioSettings.CustomBeepSettings.BeepUnmuteFile;
+			string unmutePath = audioSettings.CustomBeepSettings?.BeepUnmuteFile ?? string.Empty;
 			if ( string.IsNullOrWhiteSpace ( unmutePath ) ||
 				!allowedExtensions.Contains ( Path.GetExtension ( unmutePath )?.ToLower ( ) ) ||
 				!File.Exists ( unmutePath ) )
@@ -195,7 +199,8 @@ internal class SettingsManager : ISettingsManager
 
 			if ( beepIssues.Any ( ) )
 			{
-				audioSettings.CustomBeepSettings.UseCustomBeeps = false;
+				if (audioSettings.CustomBeepSettings != null)
+					audioSettings.CustomBeepSettings.UseCustomBeeps = false;
 
 				string message =
 					"The following issues were found with the custom beep settings:" + Environment.NewLine + Environment.NewLine +
@@ -256,6 +261,11 @@ internal class SettingsManager : ISettingsManager
 			{
 				s.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro.";
 				// This is optional, so we don't need to flag that something was missing.
+				//somethingWasMissing = true;
+			}
+			if (s.TimeoutSeconds <= 0)
+			{
+				s.TimeoutSeconds = 10;
 			}
 		}
 

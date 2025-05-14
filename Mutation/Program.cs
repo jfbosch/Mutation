@@ -66,14 +66,16 @@ internal static class Program
 		builder.Services.AddSingleton<CoreAudioController>();
 
 		builder.Services.AddSingleton<IOcrService>(
-			new OcrService(settings.AzureComputerVisionSettings.ApiKey, settings.AzureComputerVisionSettings.Endpoint));
+			new OcrService(
+				settings.AzureComputerVisionSettings?.ApiKey ?? string.Empty,
+				settings.AzureComputerVisionSettings?.Endpoint ?? string.Empty,
+				settings.AzureComputerVisionSettings?.TimeoutSeconds ?? 30));
 
 		builder.Services.AddSingleton<ILlmService>(
 			new LlmService(
-				settings.LlmSettings.ApiKey,
-				settings.LlmSettings.ResourceName,
-				settings.LlmSettings.ModelDeploymentIdMaps));
-
+				settings.LlmSettings?.ApiKey ?? string.Empty,
+				settings.LlmSettings?.ResourceName ?? string.Empty,
+				settings.LlmSettings?.ModelDeploymentIdMaps ?? new List<LlmSettings.ModelDeploymentIdMap>()));
 
 		builder.Services.AddHttpClient(OpenAiHttpClientName);
 
@@ -93,7 +95,8 @@ internal static class Program
 		builder.Services.AddSingleton<ISpeechToTextService[]>(x =>
 		{
 			List<ISpeechToTextService> speechToTextServices = new();
-			foreach (SpeetchToTextServiceSettings serviceSettings in settings.SpeetchToTextSettings.Services)
+			var sttSettings = settings.SpeetchToTextSettings?.Services ?? Array.Empty<SpeetchToTextServiceSettings>();
+			foreach (SpeetchToTextServiceSettings serviceSettings in sttSettings)
 			{
 				switch (serviceSettings.Provider)
 				{
@@ -109,7 +112,6 @@ internal static class Program
 			}
 			return speechToTextServices.ToArray();
 		});
-
 	}
 
 	private static ISpeechToTextService CreateWhisperSpeechToTextService(
@@ -117,13 +119,11 @@ internal static class Program
 		SpeetchToTextServiceSettings serviceSettings,
 		IServiceProvider diServiceProvider)
 	{
-		string baseDomain = serviceSettings.BaseDomain?.Trim();
-		if (baseDomain == "")
-			baseDomain = null;
+		string baseDomain = serviceSettings.BaseDomain?.Trim() ?? string.Empty;
 
 		OpenAiOptions options = new OpenAiOptions
 		{
-			ApiKey = serviceSettings.ApiKey,
+			ApiKey = serviceSettings.ApiKey ?? string.Empty,
 			BaseDomain = baseDomain,
 		};
 
@@ -131,10 +131,11 @@ internal static class Program
 		HttpClient httpClient = httpClientFactory.CreateClient(OpenAiHttpClientName);
 		var openAIService = new OpenAIService(options, httpClient);
 
-		return new WhisperSpeechToTextService(
-			serviceSettings.Name,
+		return new OpenAiSpeechToTextService(
+			serviceSettings.Name ?? string.Empty,
 			openAIService,
-			serviceSettings.ModelId);
+			serviceSettings.ModelId ?? string.Empty,
+			serviceSettings.TimeoutSeconds > 0 ? serviceSettings.TimeoutSeconds : 10);
 	}
 
 	private static ISpeechToTextService CreateDeepgramSpeechToTextService(
@@ -142,12 +143,13 @@ internal static class Program
 		SpeetchToTextServiceSettings serviceSettings)
 	{
 		Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient = ClientFactory.CreateListenRESTClient(
-			serviceSettings.ApiKey);
+			serviceSettings.ApiKey ?? string.Empty);
 
 		return new DeepgramSpeechToTextService(
-			serviceSettings.Name,
+			serviceSettings.Name ?? string.Empty,
 			deepgramClient,
-			serviceSettings.ModelId);
+			serviceSettings.ModelId ?? string.Empty,
+			serviceSettings.TimeoutSeconds > 0 ? serviceSettings.TimeoutSeconds : 10);
 	}
 
 	private static SettingsManager CreateSettingsManager()

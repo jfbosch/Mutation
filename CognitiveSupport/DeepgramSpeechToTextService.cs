@@ -17,15 +17,18 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 	private readonly string _modelId;
 	private readonly object _lock = new object();
 	private readonly Deepgram.Clients.Interfaces.v1.IListenRESTClient _deepgramClient;
+	private readonly int _timeoutSeconds;
 
 	public DeepgramSpeechToTextService(
 		string serviceName,
 		Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient,
-		string modelId)
+		string modelId,
+		int timeoutSeconds = 10)
 	{
 		ServiceName = serviceName;
 		_deepgramClient = deepgramClient ?? throw new ArgumentNullException(nameof(deepgramClient));
 		_modelId = modelId ?? throw new ArgumentNullException(nameof(modelId), "Check your Deepgram API documentation for supported modelIds.");
+		_timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 10;
 	}
 
 	public async Task<string> ConvertAudioToText(
@@ -70,7 +73,8 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(5 * attempt));
+			int timeout = Math.Min(_timeoutSeconds * attempt, 60);
+			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
 			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
 			if (attempt > 0)
