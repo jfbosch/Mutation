@@ -79,11 +79,13 @@ internal static class Program
 
 		builder.Services.AddHttpClient(OpenAiHttpClientName);
 
-		AddSpeechToTextServices(builder, settings);
+                AddSpeechToTextServices(builder, settings);
 
-		builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
+                builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 
-		builder.Services.AddSingleton<MutationForm>();
+                builder.Services.AddSingleton<HotkeyManager>();
+
+                builder.Services.AddSingleton<MutationForm>();
 
 		return builder;
 	}
