@@ -91,6 +91,7 @@ internal static class Program
 
                 builder.Services.AddSingleton<TranscriptFormatter>();
                 builder.Services.AddSingleton<TranscriptReviewer>();
+                builder.Services.AddSingleton<SoundFeedbackManager>();
 
                 builder.Services.AddSingleton<MutationForm>();
 
@@ -177,10 +178,11 @@ internal static class Program
 		}
 	}
 
-	private static void BeepFail(int numberOfBeeps = 1)
-	{
-		for (int i = 0; i < numberOfBeeps; i++)
-			BeepPlayer.Play ( BeepType.Failure );
-	}
+        // legacy method retained for potential console scenarios
+        private static void BeepFail(int numberOfBeeps = 1)
+        {
+                var manager = new SoundFeedbackManager();
+                manager.BeepFailure(numberOfBeeps);
+        }
 
 }

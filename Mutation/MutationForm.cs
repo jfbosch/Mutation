@@ -23,7 +23,8 @@ public partial class MutationForm : Form
 	private TranscriptReviewer _transcriptReviewer;
 
 	private HotkeyManager _hotkeyManager;
-	private UiStateManager _uiStateManager;
+        private UiStateManager _uiStateManager;
+        private readonly SoundFeedbackManager _soundFeedbackManager;
 
 	public MutationForm(
 							ISettingsManager settingsManager,
@@ -36,9 +37,10 @@ public partial class MutationForm : Form
 							ILlmService llmService,
 							TranscriptFormatter transcriptFormatter,
 							TranscriptReviewer transcriptReviewer,
-							HotkeyManager hotkeyManager,
-							UiStateManager uiStateManager)
-	{
+                                                        HotkeyManager hotkeyManager,
+                                                        UiStateManager uiStateManager,
+                                                        SoundFeedbackManager soundFeedbackManager)
+        {
 		this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 		this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
 		this._audioDeviceManager = audioDeviceManager ?? throw new ArgumentNullException(nameof(audioDeviceManager));
@@ -49,9 +51,10 @@ public partial class MutationForm : Form
 		this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
 		this._transcriptFormatter = transcriptFormatter ?? throw new ArgumentNullException(nameof(transcriptFormatter));
 		this._transcriptReviewer = transcriptReviewer ?? throw new ArgumentNullException(nameof(transcriptReviewer));
-		this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
-		this._uiStateManager = uiStateManager ?? throw new ArgumentNullException(nameof(uiStateManager));
-		this._speechToTextManager = new SpeechToTextManager(this._settings);
+                this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
+                this._uiStateManager = uiStateManager ?? throw new ArgumentNullException(nameof(uiStateManager));
+                this._soundFeedbackManager = soundFeedbackManager ?? throw new ArgumentNullException(nameof(soundFeedbackManager));
+                this._speechToTextManager = new SpeechToTextManager(this._settings);
 
 
 		InitializeComponent();
@@ -217,8 +220,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 			else
 			{
-				txtActiveMicrophoneMuteState.Text = "(Unable to find device)";
-				BeepFail();
+                                txtActiveMicrophoneMuteState.Text = "(Unable to find device)";
+                                _soundFeedbackManager.BeepFailure();
 			}
 		}
 	}
@@ -305,14 +308,14 @@ The model may also leave out common filler words in the audio. If you want to ke
 			if (_audioDeviceManager.Microphone?.IsMuted == true)
 			{
 				this.Text = "Mutation - Muted Microphone";
-				this.BackColor = Color.LightGray;
-				BeepMuted();
+                                this.BackColor = Color.LightGray;
+                                _soundFeedbackManager.BeepMuted();
 			}
 			else // unmuted
 			{
 				this.Text = "Mutation - Unmuted Microphone";
-				this.BackColor = Color.WhiteSmoke;
-				BeepUnmuted();
+                                this.BackColor = Color.WhiteSmoke;
+                                _soundFeedbackManager.BeepUnmuted();
 			}
 
 			txtActiveMicrophoneMuteState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
@@ -373,12 +376,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 				txtSpeechToText.Text = "Recording microphone...";
 				btnSpeechToTextRecord.Text = "Stop &Recording";
 
-				await _speechToTextManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex).ConfigureAwait(true);
-				BeepStart();
+                                await _speechToTextManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex).ConfigureAwait(true);
+                                _soundFeedbackManager.BeepStart();
 			}
 			else
 			{
-				BeepEnd();
+                                _soundFeedbackManager.BeepEnd();
 
 				txtSpeechToText.ReadOnly = true;
 				txtSpeechToText.Text = "Converting speech to text...";
@@ -399,7 +402,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 		catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 		{
-			BeepFail();
+                        _soundFeedbackManager.BeepFailure();
 
 			txtSpeechToText.Text = "Transcription cancelled by user.";
 			txtSpeechToText.ReadOnly = false;
@@ -408,7 +411,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 		catch (Exception ex)
 		{
-			BeepFail();
+                        _soundFeedbackManager.BeepFailure();
 
 			string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
 			txtSpeechToText.Text = msg;
@@ -478,27 +481,27 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				switch (selectedOption)
 				{
-					case DictationInsertOption.SendKeys:
-						BeepStart();
+                                        case DictationInsertOption.SendKeys:
+                                                _soundFeedbackManager.BeepStart();
 						System.Windows.Forms.SendKeys.Send(text);
 						break;
 					case DictationInsertOption.Paste:
 						await Task.Delay(200); // Wait for text to arrive on clipboard.
-						BeepStart();
+                                                _soundFeedbackManager.BeepStart();
 						System.Windows.Forms.SendKeys.SendWait("^v");
 						break;
 				}
 			}
 		}
 
-		BeepSuccess();
+                _soundFeedbackManager.BeepSuccess();
 		HotkeyManager.SendKeysAfterDelay(_settings.SpeetchToTextSettings.SendKotKeyAfterTranscriptionOperation, 50);
 	}
 
 	private async Task FormatSpeechToTextTranscriptWithLlm()
 	{
 		txtFormatTranscriptResponse.Text = "Formatting...";
-		BeepStart();
+                _soundFeedbackManager.BeepStart();
 
 		string rawTranscript = txtSpeechToText.Text;
 		string formatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
@@ -506,7 +509,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		string formattedText = await _transcriptFormatter.FormatWithLlmAsync(rawTranscript, formatTranscriptPrompt);
 		txtFormatTranscriptResponse.Text = formattedText;
 
-		BeepSuccess();
+                _soundFeedbackManager.BeepSuccess();
 	}
 
 	private async Task ReviewSpeechToTextTranscriptWithLlm()
@@ -517,7 +520,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		SetReviewGridCaption("Reviewing...");
 
 		dgvReview.Rows.Clear();
-		BeepStart();
+                _soundFeedbackManager.BeepStart();
 
 		string transcript = txtFormatTranscriptResponse.Text;
 		string reviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
@@ -537,7 +540,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		dgvReview.Enabled = true;
 		SetReviewGridCaption("Issue");
 
-		BeepSuccess();
+                _soundFeedbackManager.BeepSuccess();
 	}
 
 	private void SetReviewGridCaption(string text)
@@ -545,36 +548,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 		dgvReview.Columns[1].HeaderCell.Value = text;
 	}
 
-	private void BeepMuted()
-	{
-		BeepPlayer.Play(BeepType.Mute);
-	}
-
-	private void BeepUnmuted()
-	{
-		BeepPlayer.Play(BeepType.Unmute);
-	}
-
-	private static void BeepStart()
-	{
-		BeepPlayer.Play(BeepType.Start);
-	}
-
-	private static void BeepEnd()
-	{
-		BeepPlayer.Play(BeepType.End);
-	}
-
-	private static void BeepSuccess()
-	{
-		BeepPlayer.Play(BeepType.Success);
-	}
-
-	private static void BeepFail()
-	{
-		for (int i = 0; i < 3; i++)
-			BeepPlayer.Play(BeepType.Failure);
-	}
 
 	private async void btnReviewTranscript_Click(object sender, EventArgs e)
 	{
@@ -625,7 +598,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			dgvReview.Enabled = false;
 			SetReviewGridCaption("Applying corrections...");
 
-			BeepStart();
+                        _soundFeedbackManager.BeepStart();
 
 			string transcript = txtFormatTranscriptResponse.Text;
 			string systemPrompt = txtReviewTranscriptPrompt.Text;
@@ -640,7 +613,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			dgvReview.Enabled = true;
 			SetReviewGridCaption("Issue");
 
-			BeepSuccess();
+                        _soundFeedbackManager.BeepSuccess();
 		}
 	}
 

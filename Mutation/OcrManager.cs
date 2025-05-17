@@ -13,14 +13,16 @@ public class OcrManager
         private readonly IOcrService _ocrService;
         private readonly OcrState _ocrState = new();
         private readonly ClipboardManager _clipboardManager;
+        private readonly SoundFeedbackManager _soundFeedbackManager;
 
 	private ScreenCaptureForm? _activeScreenCaptureForm;
 
-        public OcrManager(Settings settings, IOcrService ocrService, ClipboardManager clipboardManager)
+        public OcrManager(Settings settings, IOcrService ocrService, ClipboardManager clipboardManager, SoundFeedbackManager soundFeedbackManager)
         {
                 _settings = settings ?? throw new ArgumentNullException(nameof(settings));
                 _ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
                 _clipboardManager = clipboardManager ?? throw new ArgumentNullException(nameof(clipboardManager));
+                _soundFeedbackManager = soundFeedbackManager ?? throw new ArgumentNullException(nameof(soundFeedbackManager));
         }
 
 	public void TakeScreenshotToClipboard()
@@ -94,7 +96,7 @@ public class OcrManager
                 {
                         string msg = "No image found on the clipboard after multiple retries.";
                         _clipboardManager.SetText(msg);
-			BeepPlayer.Play(BeepType.Failure);
+                        _soundFeedbackManager.BeepFailure();
 			return new OcrResult(false, msg);
 		}
 
@@ -116,7 +118,7 @@ public class OcrManager
 
 		try
 		{
-			BeepPlayer.Play(BeepType.Start);
+                        _soundFeedbackManager.BeepStart();
 
 			using MemoryStream imageStream = new MemoryStream();
 			image.Save(imageStream, ImageFormat.Jpeg);
@@ -124,19 +126,19 @@ public class OcrManager
 			string text = await _ocrService.ExtractText(ocrReadingOrder, imageStream, _ocrState.OcrCancellationTokenSource!.Token).ConfigureAwait(true);
 
                         _clipboardManager.SetText(text);
-			BeepPlayer.Play(BeepType.Success);
+                        _soundFeedbackManager.BeepSuccess();
 			return new OcrResult(true, $"Converted text is on clipboard:{Environment.NewLine}{text}");
 		}
 		catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 		{
-			BeepPlayer.Play(BeepType.Failure);
+                        _soundFeedbackManager.BeepFailure();
                         string msg = "OCR cancelled by user.";
                         _clipboardManager.SetText(msg);
 			return new OcrResult(false, msg);
 		}
 		catch (Exception ex)
 		{
-			BeepPlayer.Play(BeepType.Failure);
+                        _soundFeedbackManager.BeepFailure();
                         string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
                         _clipboardManager.SetText(msg);
 			return new OcrResult(false, msg);
