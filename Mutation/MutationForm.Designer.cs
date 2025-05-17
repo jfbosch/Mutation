@@ -372,9 +372,7 @@
 			dgvReview.Name = "dgvReview";
 			dgvReview.RowTemplate.Height = 25;
 			dgvReview.Size = new Size(240, 150);
-			dgvReview.TabIndex = 20;
-			dgvReview.RowsAdded += dgvReview_RowsAdded;
-			dgvReview.RowsRemoved += dgvReview_RowsRemoved;
+                        dgvReview.TabIndex = 20;
 			// 
 			// lblReviewTranscriptPrompt
 			// 

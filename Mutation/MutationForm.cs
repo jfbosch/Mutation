@@ -8,37 +8,41 @@ public partial class MutationForm : Form
 {
 	private SpeechToTextServiceComboItem? _activeSpeetchToTextServiceComboItem = null;
 
-	private CognitiveSupport.Settings _settings { get; set; }
-	private ISettingsManager _settingsManager { get; set; }
-	private AudioDeviceManager _audioDeviceManager;
-	private ISpeechToTextService[] _speechToTextServices { get; set; }
-	private SpeechToTextManager _speechToTextManager { get; set; }
-	private OcrManager _ocrManager { get; set; }
-	private ClipboardManager _clipboardManager;
+	private readonly CognitiveSupport.Settings _settings;
+	private readonly ISettingsManager _settingsManager;
+	private readonly AudioDeviceManager _audioDeviceManager;
+	private readonly ISpeechToTextService[] _speechToTextServices;
+	private readonly SpeechToTextManager _speechToTextManager;
+	private readonly OcrManager _ocrManager;
+	private readonly ClipboardManager _clipboardManager;
 
-	private ILlmService _llmService { get; set; }
-	private ITextToSpeechService _textToSpeechService;
+	private readonly ILlmService _llmService;
+	private readonly ITextToSpeechService _textToSpeechService;
 
-	private TranscriptFormatter _transcriptFormatter;
-	private TranscriptReviewer _transcriptReviewer;
+	private readonly TranscriptFormatter _transcriptFormatter;
+	private readonly TranscriptReviewer _transcriptReviewer;
 
-	private HotkeyManager _hotkeyManager;
-	private UiStateManager _uiStateManager;
-	private TooltipManager _tooltipManager;
+	private readonly HotkeyManager _hotkeyManager;
+	private readonly UiStateManager _uiStateManager;
+	private readonly TooltipManager _tooltipManager;
+
+	private readonly object _microphoneLock = new();
+
+	private CancellationTokenSource _formatDebounceCts = new();
 
 	public MutationForm(
-							ISettingsManager settingsManager,
-							CognitiveSupport.Settings settings,
-							AudioDeviceManager audioDeviceManager,
-							OcrManager ocrManager,
-							ClipboardManager clipboardManager,
-							ISpeechToTextService[] speechToTextServices,
-							ITextToSpeechService textToSpeechService,
-							ILlmService llmService,
-							TranscriptFormatter transcriptFormatter,
-							TranscriptReviewer transcriptReviewer,
-							HotkeyManager hotkeyManager,
-							UiStateManager uiStateManager)
+		ISettingsManager settingsManager,
+		CognitiveSupport.Settings settings,
+		AudioDeviceManager audioDeviceManager,
+		OcrManager ocrManager,
+		ClipboardManager clipboardManager,
+		ISpeechToTextService[] speechToTextServices,
+		ITextToSpeechService textToSpeechService,
+		ILlmService llmService,
+		TranscriptFormatter transcriptFormatter,
+		TranscriptReviewer transcriptReviewer,
+		HotkeyManager hotkeyManager,
+		UiStateManager uiStateManager)
 	{
 		this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 		this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -75,20 +79,20 @@ public partial class MutationForm : Form
 		foreach (DictationInsertOption option in Enum.GetValues(typeof(DictationInsertOption)))
 		{
 			string description = GetEnumDescription(option);
-			cmbInsertInto3rdPartyApplication.Items.Add(new { Text = description, Value = option });
+			cmbInsertInto3rdPartyApplication.Items.Add(new ComboBoxItem<DictationInsertOption> { Text = description, Value = option });
 		}
-		cmbInsertInto3rdPartyApplication.DisplayMember = "Text";
-		cmbInsertInto3rdPartyApplication.ValueMember = "Value";
+		cmbInsertInto3rdPartyApplication.DisplayMember = nameof(ComboBoxItem<DictationInsertOption>.Text);
+		cmbInsertInto3rdPartyApplication.ValueMember = nameof(ComboBoxItem<DictationInsertOption>.Value);
 		cmbInsertInto3rdPartyApplication.SelectedIndex = 2;
 
 
 		cmbReviewTemperature.DropDownStyle = ComboBoxStyle.DropDownList;
 		for (decimal d = 0.0m; d < 1.9m; d = d + 0.1m)
 		{
-			cmbReviewTemperature.Items.Add(new { Text = $"{d}", Value = d });
+			cmbReviewTemperature.Items.Add(new ComboBoxItem<decimal> { Text = $"{d}", Value = d });
 		}
-		cmbReviewTemperature.DisplayMember = "Text";
-		cmbReviewTemperature.ValueMember = "Value";
+		cmbReviewTemperature.DisplayMember = nameof(ComboBoxItem<decimal>.Text);
+		cmbReviewTemperature.ValueMember = nameof(ComboBoxItem<decimal>.Value);
 		cmbReviewTemperature.SelectedIndex = 4;
 	}
 
@@ -162,8 +166,6 @@ public partial class MutationForm : Form
 	internal void InitializeAudioControls()
 	{
 		txtActiveMicrophoneMuteState.Text = "(Initializing...)";
-
-		Application.DoEvents();
 
 		_audioDeviceManager.RefreshCaptureDevices();
 		PopulateActiveMicrophoneCombo();
@@ -257,7 +259,7 @@ public partial class MutationForm : Form
 
 	public void ToggleMicrophoneMute()
 	{
-		lock (this)
+		lock (_microphoneLock)
 		{
 			_audioDeviceManager.ToggleMute();
 			FeedbackMicrophoneStateToUser();
@@ -266,7 +268,7 @@ public partial class MutationForm : Form
 
 	private void FeedbackMicrophoneStateToUser()
 	{
-		lock (this)
+		lock (_microphoneLock)
 		{
 			if (_audioDeviceManager.Microphone?.IsMuted == true)
 			{
@@ -436,11 +438,9 @@ public partial class MutationForm : Form
 
 		if (!this.ContainsFocus)
 		{
-			var selectedInsertOptionValue = cmbInsertInto3rdPartyApplication.SelectedItem;
-
-			if (selectedInsertOptionValue is not null)
+			if (cmbInsertInto3rdPartyApplication.SelectedItem is ComboBoxItem<DictationInsertOption> insertOptionItem)
 			{
-				DictationInsertOption selectedOption = (DictationInsertOption)((dynamic)selectedInsertOptionValue).Value;
+				DictationInsertOption selectedOption = insertOptionItem.Value;
 
 				switch (selectedOption)
 				{
@@ -488,8 +488,9 @@ public partial class MutationForm : Form
 		string transcript = txtFormatTranscriptResponse.Text;
 		string reviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 
-		var selectedTemperature = cmbReviewTemperature.SelectedItem;
-		decimal temperature = ((dynamic)selectedTemperature).Value;
+		decimal temperature = 0.4m;
+		if (cmbReviewTemperature.SelectedItem is ComboBoxItem<decimal> temperatureItem)
+			temperature = temperatureItem.Value;
 		string review = await _transcriptReviewer.ReviewAsync(transcript, reviewTranscriptPrompt, temperature);
 		txtTranscriptReviewResponse.Text = review;
 		txtTranscriptReviewResponse.ReadOnly = false;
@@ -559,9 +560,22 @@ public partial class MutationForm : Form
 
 	private async void txtSpeechToText_TextChanged(object sender, EventArgs e)
 	{
-		if (!txtSpeechToText.ReadOnly)
+		if (txtSpeechToText.ReadOnly)
+			return;
+
+		_formatDebounceCts.Cancel();
+		_formatDebounceCts = new CancellationTokenSource();
+		var token = _formatDebounceCts.Token;
+
+		try
 		{
-			await FormatSpeechToTextTranscriptWithRules();
+			await Task.Delay(300, token);
+			if (!token.IsCancellationRequested)
+				await FormatSpeechToTextTranscriptWithRules();
+		}
+		catch (TaskCanceledException)
+		{
+			// ignore
 		}
 	}
 
@@ -613,15 +627,6 @@ public partial class MutationForm : Form
 		}
 	}
 
-	private void dgvReview_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
-	{
-
-	}
-
-	private void dgvReview_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
-	{
-
-	}
 
 	private void cmbActiveMicrophone_SelectedIndexChanged(object sender, EventArgs e)
 	{
