@@ -65,6 +65,7 @@ internal static class Program
 
                 builder.Services.AddSingleton<CoreAudioController>();
                 builder.Services.AddSingleton<AudioDeviceManager>();
+                builder.Services.AddSingleton<ClipboardManager>();
 
 		builder.Services.AddSingleton<IOcrService>(
 			new OcrService(
