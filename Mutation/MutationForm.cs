@@ -27,8 +27,7 @@ namespace Mutation
 		private int _microphoneDeviceIndex = -1;
 
 		private ISpeechToTextService[] _speechToTextServices { get; set; }
-		private AudioRecorder _audioRecorder { get; set; }
-		private SpeechToTextState _speechToTextState { get; init; }
+		private SpeechToTextManager _speechToTextManager { get; set; }
 		private IOcrService _ocrService { get; set; }
 		private OcrState _ocrState { get; init; } = new();
 
@@ -55,7 +54,7 @@ namespace Mutation
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
 			this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
-			this._speechToTextState = new SpeechToTextState(() => _audioRecorder);
+			this._speechToTextManager = new SpeechToTextManager(this._settings);
 
 
 			InitializeComponent();
@@ -600,76 +599,48 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			try
 			{
-				if (this._speechToTextState.TranscribingAudio)
+				if (_speechToTextManager.Transcribing)
 				{
-					this._speechToTextState.StopTranscription();
+					_speechToTextManager.CancelTranscription();
 					return;
 				}
 
-				string sessionsDirectory = Path.Combine(_settings.SpeetchToTextSettings.TempDirectory, Constants.SessionsDirectoryName);
-				if (!Directory.Exists(sessionsDirectory))
-					Directory.CreateDirectory(sessionsDirectory);
-
-				string audioFilePath = Path.Combine(sessionsDirectory, "mutation_recording.mp3");
-
-				await this._speechToTextState.AudioRecorderLock.WaitAsync().ConfigureAwait(true);
+				if (!_speechToTextManager.Recording)
 				{
-					if (!this._speechToTextState.RecordingAudio)
-					{
-						txtSpeechToText.ReadOnly = true;
-						txtSpeechToText.Text = "Recording microphone...";
+					txtSpeechToText.ReadOnly = true;
+					txtSpeechToText.Text = "Recording microphone...";
+					btnSpeechToTextRecord.Text = "Stop &Recording";
 
-						_audioRecorder = new AudioRecorder();
-						_audioRecorder.StartRecording(_microphoneDeviceIndex, audioFilePath);
-						btnSpeechToTextRecord.Text = "Stop &Recording";
+					await _speechToTextManager.StartRecordingAsync(_microphoneDeviceIndex).ConfigureAwait(true);
+					BeepStart();
+				}
+				else
+				{
+					BeepEnd();
 
-						BeepStart();
-					}
-					else // Busy recording, so we want to stop it.
-					{
-						_audioRecorder.StopRecording();
-						_audioRecorder.Dispose();
-						_audioRecorder = null;
+					txtSpeechToText.ReadOnly = true;
+					txtSpeechToText.Text = "Converting speech to text...";
+					btnSpeechToTextRecord.Text = "Processing";
+					btnSpeechToTextRecord.Enabled = false;
 
-						BeepEnd();
+					string text = await _speechToTextManager.StopRecordingAndTranscribeAsync(
+							  this._activeSpeetchToTextServiceComboItem.SpeechToTextService,
+							  txtSpeechToTextPrompt.Text,
+							  CancellationToken.None).ConfigureAwait(true);
 
-						txtSpeechToText.ReadOnly = true;
-						txtSpeechToText.Text = "Converting speech to text...";
-
-						btnSpeechToTextRecord.Text = "Processing";
-						btnSpeechToTextRecord.Enabled = false;
-
-						string text = "";
-						_speechToTextState.StartTranscription();
-						try
-						{
-							if (this._activeSpeetchToTextServiceComboItem is not null)
-								text = await this._activeSpeetchToTextServiceComboItem.SpeechToTextService.ConvertAudioToText(txtSpeechToTextPrompt.Text, audioFilePath, this._speechToTextState.TranscriptionCancellationTokenSource.Token).ConfigureAwait(true);
-							else
-								MessageBox.Show("No active speech-to-text service selected.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-						}
-						finally
-						{
-							_speechToTextState.StopTranscription();
-
-							txtSpeechToText.ReadOnly = false;
-							txtSpeechToText.Text = $"{text}";
-
-							btnSpeechToTextRecord.Text = "&Record";
-							btnSpeechToTextRecord.Enabled = true;
-						}
-					}
+					txtSpeechToText.ReadOnly = false;
+					txtSpeechToText.Text = $"{text}";
+					btnSpeechToTextRecord.Text = "&Record";
+					btnSpeechToTextRecord.Enabled = true;
 				}
 
 			}
 			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 			{
-				// This was an intentional cancellation by the user, so only beep the failure, but don't show an error message. 
 				BeepFail();
 
 				txtSpeechToText.Text = "Transcription cancelled by user.";
 				txtSpeechToText.ReadOnly = false;
-
 				btnSpeechToTextRecord.Text = "&Record";
 				btnSpeechToTextRecord.Enabled = true;
 			}
@@ -680,16 +651,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
 				txtSpeechToText.Text = msg;
 				txtSpeechToText.ReadOnly = false;
-
 				btnSpeechToTextRecord.Text = "&Record";
 				btnSpeechToTextRecord.Enabled = true;
 
 				this.Activate();
 				MessageBox.Show(this, msg, "Speech to text error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-			finally
-			{
-				this._speechToTextState.AudioRecorderLock.Release();
 			}
 		}
 
