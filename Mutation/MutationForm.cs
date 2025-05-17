@@ -9,7 +9,6 @@ using ScreenCapturing;
 using StringExtensionLibrary;
 using System.ComponentModel;
 using System.Drawing.Imaging;
-using System.Threading.Tasks;
 
 namespace Mutation
 {
@@ -21,42 +20,42 @@ namespace Mutation
 		private Settings _settings { get; set; }
 		private ISettingsManager _settingsManager { get; set; }
 
-                private bool _isMuted = false;
-                private CoreAudioController _coreAudioController;
-                private IEnumerable<CoreAudioDevice> _captureDevices;
-                private CoreAudioDevice _microphone { get; set; }
-                private int _microphoneDeviceIndex = -1;
+		private bool _isMuted = false;
+		private CoreAudioController _coreAudioController;
+		private IEnumerable<CoreAudioDevice> _captureDevices;
+		private CoreAudioDevice _microphone { get; set; }
+		private int _microphoneDeviceIndex = -1;
 
-                private ISpeechToTextService[] _speechToTextServices { get; set; }
-                private AudioRecorder _audioRecorder { get; set; }
-                private SpeechToTextState _speechToTextState { get; init; }
-                private IOcrService _ocrService { get; set; }
-                private OcrState _ocrState { get; init; } = new();
+		private ISpeechToTextService[] _speechToTextServices { get; set; }
+		private AudioRecorder _audioRecorder { get; set; }
+		private SpeechToTextState _speechToTextState { get; init; }
+		private IOcrService _ocrService { get; set; }
+		private OcrState _ocrState { get; init; } = new();
 
-                private ILlmService _llmService { get; set; }
-                private ITextToSpeechService _textToSpeechService;
+		private ILlmService _llmService { get; set; }
+		private ITextToSpeechService _textToSpeechService;
 
-                private HotkeyManager _hotkeyManager;
+		private HotkeyManager _hotkeyManager;
 
-                public MutationForm(
-                        ISettingsManager settingsManager,
-                        Settings settings,
-                        CoreAudioController coreAudioController,
-                        IOcrService ocrService,
-                        ISpeechToTextService[] speechToTextServices,
-                        ITextToSpeechService textToSpeechService,
-                        ILlmService llmService,
-                        HotkeyManager hotkeyManager)
-                {
+		public MutationForm(
+				  ISettingsManager settingsManager,
+				  Settings settings,
+				  CoreAudioController coreAudioController,
+				  IOcrService ocrService,
+				  ISpeechToTextService[] speechToTextServices,
+				  ITextToSpeechService textToSpeechService,
+				  ILlmService llmService,
+				  HotkeyManager hotkeyManager)
+		{
 			this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
 			this._coreAudioController = coreAudioController ?? throw new ArgumentNullException(nameof(coreAudioController));
 			this._ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
 			this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
-                        this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-                        this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
-                        this._speechToTextState = new SpeechToTextState(() => _audioRecorder);
+			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+			this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
+			this._speechToTextState = new SpeechToTextState(() => _audioRecorder);
 
 
 			InitializeComponent();
@@ -66,19 +65,19 @@ namespace Mutation
 
 			HookupTooltips();
 
-                        _hotkeyManager.RegisterHotkeys(
-                                this,
-                                TakeScreenshotToClipboard,
-                                TakeScreenshotAndExtractText,
-                                ExtractTextViaOcrFromClipboardImage,
-                                ToggleMicrophoneMute,
-                                SpeechToText,
-                                TextToSpeech);
+			_hotkeyManager.RegisterHotkeys(
+					  this,
+					  TakeScreenshotToClipboard,
+					  TakeScreenshotAndExtractText,
+					  ExtractTextViaOcrFromClipboardImage,
+					  ToggleMicrophoneMute,
+					  SpeechToText,
+					  TextToSpeech);
 
-                        lblToggleMic.Text = $"Toggle Microphone Mute: {_hotkeyManager.ToggleMicMuteHotkey}";
-                        lblScreenshotHotKey.Text = $"Screenshot: {_hotkeyManager.ScreenshotHotkey}";
-                        lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hotkeyManager.ScreenshotOcrHotkey}";
-                        lblOcrHotKey.Text = $"OCR Clipboard: {_hotkeyManager.OcrHotkey}";
+			lblToggleMic.Text = $"Toggle Microphone Mute: {_hotkeyManager.ToggleMicMuteHotkey}";
+			lblScreenshotHotKey.Text = $"Screenshot: {_hotkeyManager.ScreenshotHotkey}";
+			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hotkeyManager.ScreenshotOcrHotkey}";
+			lblOcrHotKey.Text = $"OCR Clipboard: {_hotkeyManager.OcrHotkey}";
 
 			txtFormatTranscriptPrompt.Text = this._settings.LlmSettings.FormatTranscriptPrompt;
 			txtReviewTranscriptPrompt.Text = this._settings.LlmSettings.ReviewTranscriptPrompt;
@@ -318,9 +317,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void SelectCaptureDeviceForNAudioBasedRecording()
 		{
 			// The AudioSwitcher library, CoreAudioDevice.Name returns a value like
-                       // "Krisp Microphone". This is the name of the device as under Windows recording devices.
+			// "Krisp Microphone". This is the name of the device as under Windows recording devices.
 			// While the NAudio library(used for recording to file) property, WaveInEvent.GetCapabilities(i).ProductName, returns a value like
-                       // "Krisp Microphone (Krisp Audio)". This has the device name, but also contains a suffix.
+			// "Krisp Microphone (Krisp Audio)". This has the device name, but also contains a suffix.
 			// So, we do a starts with match to find the mic we are looking for using the default device name followed by a space and a (
 
 			string startsWithNameToMatch = $"{this._microphone.Name} (";
@@ -480,23 +479,23 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 
 
-               private async Task ExtractTextViaOcrFromClipboardImage(
-                       OcrReadingOrder ocrReadingOrder)
-               {
-                       if (_ocrState.BusyWithTextExtraction)
-                       {
-                               _ocrState.StopTextExtraction();
-                               return;
-                       }
+		private async Task ExtractTextViaOcrFromClipboardImage(
+				  OcrReadingOrder ocrReadingOrder)
+		{
+			if (_ocrState.BusyWithTextExtraction)
+			{
+				_ocrState.StopTextExtraction();
+				return;
+			}
 
-                       var image = await TryGetClipboardImageAsync();
-                       if (image is null)
-                       {
-                               var msg = "No image found on the clipboard after multiple retries.";
+			var image = await TryGetClipboardImageAsync();
+			if (image is null)
+			{
+				var msg = "No image found on the clipboard after multiple retries.";
 				txtOcr.Text = msg;
 				SetTextToClipboard(msg);
 				BeepFail();
-                                HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
+				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 				return;
 			}
 
@@ -535,7 +534,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				SetTextToClipboard(text);
 				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
 				BeepSuccess();
-                                HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 50);
+				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 50);
 			}
 			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 			{
@@ -545,7 +544,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				txtOcr.Text = "OCR cancelled by user.";
 				SetTextToClipboard(txtOcr.Text);
 
-                                HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
+				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 			}
 			catch (Exception ex)
 			{
@@ -554,27 +553,27 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				BeepFail();
 				SetTextToClipboard(msg);
-                                HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
+				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 			}
 		}
 
-               public async Task<Image?> TryGetClipboardImageAsync()
-               {
-                       int attempts = 5;
+		public async Task<Image?> TryGetClipboardImageAsync()
+		{
+			int attempts = 5;
 
-                       while (attempts > 0)
-                       {
-                               if (Clipboard.ContainsImage())
-                               {
-                                       return Clipboard.GetImage();
-                               }
+			while (attempts > 0)
+			{
+				if (Clipboard.ContainsImage())
+				{
+					return Clipboard.GetImage();
+				}
 
-                               attempts--;
-                               await Task.Delay(150);
-                       }
+				attempts--;
+				await Task.Delay(150);
+			}
 
-                       return null;
-               }
+			return null;
+		}
 
 		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
 		public void SetTextToClipboard(
@@ -707,9 +706,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 			this._settingsManager.SaveSettingsToFile(_settings);
 
-                        _hotkeyManager.UnregisterHotkeys();
-                        BeepPlayer.DisposePlayers();
-                }
+			_hotkeyManager.UnregisterHotkeys();
+			BeepPlayer.DisposePlayers();
+		}
 
 
 		private void MutationForm_Load(object sender, EventArgs e)
@@ -763,17 +762,17 @@ The model may also leave out common filler words in the audio. If you want to ke
 							System.Windows.Forms.SendKeys.Send(text);
 							break;
 						case DictationInsertOption.Paste:
-                                                       await Task.Delay(200); // Wait for text to arrive on clipboard.
-                                                       BeepStart();
-                                                       System.Windows.Forms.SendKeys.SendWait("^v");
-                                                       break;
+							await Task.Delay(200); // Wait for text to arrive on clipboard.
+							BeepStart();
+							System.Windows.Forms.SendKeys.SendWait("^v");
+							break;
 					}
 				}
 			}
 
-                        BeepSuccess();
-                        HotkeyManager.SendKeysAfterDelay(_settings.SpeetchToTextSettings.SendKotKeyAfterTranscriptionOperation, 50);
-                }
+			BeepSuccess();
+			HotkeyManager.SendKeysAfterDelay(_settings.SpeetchToTextSettings.SendKotKeyAfterTranscriptionOperation, 50);
+		}
 
 		private async Task FormatSpeechToTextTranscriptWithLlm()
 		{
