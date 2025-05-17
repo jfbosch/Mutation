@@ -6,7 +6,7 @@ namespace Mutation;
 
 public partial class MutationForm : Form
 {
-	private SpeechToTextServiceComboItem _activeSpeetchToTextServiceComboItem = null;
+	private SpeechToTextServiceComboItem? _activeSpeetchToTextServiceComboItem = null;
 
 	private CognitiveSupport.Settings _settings { get; set; }
 	private ISettingsManager _settingsManager { get; set; }
@@ -66,8 +66,8 @@ public partial class MutationForm : Form
 		lblSpeechToText,
 		lblFormatTranscriptResponse);
 
-		txtFormatTranscriptPrompt.Text = this._settings.LlmSettings.FormatTranscriptPrompt;
-		txtReviewTranscriptPrompt.Text = this._settings.LlmSettings.ReviewTranscriptPrompt;
+		txtFormatTranscriptPrompt.Text = this._settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
+		txtReviewTranscriptPrompt.Text = this._settings.LlmSettings?.ReviewTranscriptPrompt ?? string.Empty;
 
 		InitializeLlmReviewListView();
 
@@ -95,7 +95,7 @@ public partial class MutationForm : Form
 	public static string GetEnumDescription(Enum value)
 	{
 		var fieldInfo = value.GetType().GetField(value.ToString());
-		var attributes = (DescriptionAttribute[])fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false);
+		var attributes = (DescriptionAttribute[]?)fieldInfo?.GetCustomAttributes(typeof(DescriptionAttribute), false);
 
 		if (attributes != null && attributes.Length > 0)
 		{
@@ -193,7 +193,7 @@ public partial class MutationForm : Form
 	{
 		foreach (CaptureDeviceComboItem item in cmbActiveMicrophone.Items)
 		{
-			if (item.CaptureDevice.FullName == _settings.AudioSettings.ActiveCaptureDeviceFullName)
+			if (item.CaptureDevice.FullName == _settings.AudioSettings?.ActiveCaptureDeviceFullName)
 			{
 				cmbActiveMicrophone.SelectedItem = item;
 				_audioDeviceManager.SelectMicrophone(item.CaptureDevice);
@@ -216,8 +216,8 @@ public partial class MutationForm : Form
 	private void PopulateSpeechToTextServiceCombo()
 	{
 		cmbSpeechToTextService.Items.Clear();
-		_settings.SpeetchToTextSettings.Services
-			.ToList()
+		_settings.SpeetchToTextSettings?.Services
+			?.ToList()
 			.ForEach(serviceSettings => cmbSpeechToTextService.Items.Add(new SpeechToTextServiceComboItem
 			{
 				SpeetchToTextServiceSettings = serviceSettings,
@@ -231,7 +231,7 @@ public partial class MutationForm : Form
 	{
 		foreach (SpeechToTextServiceComboItem item in cmbSpeechToTextService.Items)
 		{
-			if (item.SpeetchToTextServiceSettings.Name == _settings.SpeetchToTextSettings.ActiveSpeetchToTextService)
+			if (item.SpeetchToTextServiceSettings.Name == _settings.SpeetchToTextSettings?.ActiveSpeetchToTextService)
 			{
 				cmbSpeechToTextService.SelectedItem = item;
 				break;
@@ -298,14 +298,14 @@ public partial class MutationForm : Form
 	{
 		var result = await _ocrManager.TakeScreenshotAndExtractText(ocrReadingOrder).ConfigureAwait(true);
 		txtOcr.Text = result.Message;
-		HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, result.Success ? 50 : 25);
+		HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
 	}
 
 	private async Task ExtractTextViaOcrFromClipboardImage(OcrReadingOrder ocrReadingOrder)
 	{
 		var result = await _ocrManager.ExtractTextFromClipboardImage(ocrReadingOrder).ConfigureAwait(true);
 		txtOcr.Text = result.Message;
-		HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, result.Success ? 50 : 25);
+		HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
 	}
 
 
@@ -392,11 +392,11 @@ public partial class MutationForm : Form
 	{
 		_uiStateManager.Save(this);
 
-		_activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
-		_settings.SpeetchToTextSettings.ActiveSpeetchToTextService = _activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.Name;
+		_activeSpeetchToTextServiceComboItem!.SpeetchToTextServiceSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
+		_settings.SpeetchToTextSettings!.ActiveSpeetchToTextService = _activeSpeetchToTextServiceComboItem!.SpeetchToTextServiceSettings.Name;
 
-		_settings.LlmSettings.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
-		_settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
+		_settings.LlmSettings!.FormatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
+		_settings.LlmSettings!.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 		this._settingsManager.SaveSettingsToFile(_settings);
 
 		_hotkeyManager.UnregisterHotkeys();
@@ -458,7 +458,7 @@ public partial class MutationForm : Form
 		}
 
 		BeepSuccess();
-		HotkeyManager.SendKeysAfterDelay(_settings.SpeetchToTextSettings.SendKotKeyAfterTranscriptionOperation, 50);
+		HotkeyManager.SendKeysAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
 	}
 
 	private async Task FormatSpeechToTextTranscriptWithLlm()
@@ -578,11 +578,14 @@ public partial class MutationForm : Form
 
 	private async Task ApplyReviewActionsToFormattedTranscriptWithLlm()
 	{
-		List<(DataGridViewRow row, string instruction)> selectedRows = new();
+		List<(DataGridViewRow row, string? instruction)> selectedRows = new();
 		foreach (DataGridViewRow row in dgvReview.Rows)
 		{
 			if (row.Cells[0].Value != null && (bool)row.Cells[0].Value == true)
-				selectedRows.Add((row, row.Cells[1].Value.ToString()));
+			{
+				var instruction = row.Cells[1].Value?.ToString() ?? string.Empty;
+				selectedRows.Add((row, instruction));
+			}
 		}
 
 		if (selectedRows.Any())
@@ -595,7 +598,7 @@ public partial class MutationForm : Form
 
 			string transcript = txtFormatTranscriptResponse.Text;
 			string systemPrompt = txtReviewTranscriptPrompt.Text;
-			string[] instructions = selectedRows.Select(x => x.instruction).ToArray();
+			string[] instructions = selectedRows.Select(x => x.instruction ?? string.Empty).ToArray();
 
 			string revision = await _transcriptReviewer.ApplyCorrectionsAsync(transcript, systemPrompt, instructions);
 			txtFormatTranscriptResponse.Text = revision;
@@ -626,7 +629,7 @@ public partial class MutationForm : Form
 		if (selectedItem is not null)
 		{
 			_audioDeviceManager.SelectMicrophone(selectedItem.CaptureDevice);
-			_settings.AudioSettings.ActiveCaptureDeviceFullName = selectedItem.CaptureDevice.FullName;
+			_settings.AudioSettings!.ActiveCaptureDeviceFullName = selectedItem.CaptureDevice.FullName;
 			FeedbackMicrophoneStateToUser();
 		}
 		else
