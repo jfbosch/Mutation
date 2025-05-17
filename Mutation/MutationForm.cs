@@ -3,16 +3,13 @@ using CognitiveSupport;
 using CognitiveSupport.Extensions;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
-using ScreenCapturing;
 using StringExtensionLibrary;
 using System.ComponentModel;
-using System.Drawing.Imaging;
 
 namespace Mutation
 {
 	public partial class MutationForm : Form
 	{
-		private ScreenCaptureForm _activeScreenCaptureForm = null;
 		private SpeechToTextServiceComboItem _activeSpeetchToTextServiceComboItem = null;
 
 		private Settings _settings { get; set; }
@@ -22,8 +19,7 @@ namespace Mutation
 
 		private ISpeechToTextService[] _speechToTextServices { get; set; }
 		private SpeechToTextManager _speechToTextManager { get; set; }
-		private IOcrService _ocrService { get; set; }
-		private OcrState _ocrState { get; init; } = new();
+		private OcrManager _ocrManager { get; set; }
 
 		private ILlmService _llmService { get; set; }
 		private ITextToSpeechService _textToSpeechService;
@@ -34,7 +30,7 @@ namespace Mutation
 				  ISettingsManager settingsManager,
 				  Settings settings,
 											 AudioDeviceManager audioDeviceManager,
-				  IOcrService ocrService,
+				  OcrManager ocrManager,
 				  ISpeechToTextService[] speechToTextServices,
 				  ITextToSpeechService textToSpeechService,
 				  ILlmService llmService,
@@ -43,7 +39,7 @@ namespace Mutation
 			this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
 			this._audioDeviceManager = audioDeviceManager ?? throw new ArgumentNullException(nameof(audioDeviceManager));
-			this._ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
+			this._ocrManager = ocrManager ?? throw new ArgumentNullException(nameof(ocrManager));
 			this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
@@ -345,204 +341,26 @@ The model may also leave out common filler words in the audio. If you want to ke
 		}
 
 
+        private void TakeScreenshotToClipboard()
+        {
+                _ocrManager.TakeScreenshotToClipboard();
+        }
 
-		private void TakeScreenshotToClipboard()
-		{
-			if (_activeScreenCaptureForm is not null)
-			{
-				// If there is already an active capture form open, just make sure it is topmost and short-circuit.
-				_activeScreenCaptureForm?.Activate();
-				return;
-			}
+        private async void TakeScreenshotAndExtractText(OcrReadingOrder ocrReadingOrder)
+        {
+                var result = await _ocrManager.TakeScreenshotAndExtractText(ocrReadingOrder).ConfigureAwait(true);
+                txtOcr.Text = result.Message;
+                HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, result.Success ? 50 : 25);
+        }
 
-			using (Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
-			using (Graphics g = Graphics.FromImage(screenshot))
-			{
-				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
-
-				var displayShot = screenshot;
-				using Bitmap invertedScreenshot = InvertScreenshotColors(screenshot);
-				if (_settings.AzureComputerVisionSettings.InvertScreenshot)
-					displayShot = invertedScreenshot;
-
-				using ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(displayShot));
-
-				_activeScreenCaptureForm = screenCaptureForm;
-
-				screenCaptureForm.TopMost = true;
-				screenCaptureForm.ShowDialog();
-
-				_activeScreenCaptureForm = null;
-
-			}
-		}
-
-		private Bitmap InvertScreenshotColors(Bitmap original)
-		{
-			Bitmap inverted = new Bitmap(original.Width, original.Height);
-			using (Graphics g = Graphics.FromImage(inverted))
-			{
-				// Define a color matrix that inverts the RGB values.
-				ColorMatrix invertMatrix = new ColorMatrix(new float[][]
-				{
-				new float[]{ -1,  0,  0, 0, 0 },
-				new float[]{  0, -1,  0, 0, 0 },
-				new float[]{  0,  0, -1, 0, 0 },
-				new float[]{  0,  0,  0, 1, 0 },
-				new float[]{  1,  1,  1, 0, 1 }
-				});
-
-				using (ImageAttributes attributes = new ImageAttributes())
-				{
-					attributes.SetColorMatrix(invertMatrix);
-					g.DrawImage(original,
-						 new Rectangle(0, 0, original.Width, original.Height),
-						 0, 0, original.Width, original.Height,
-						 GraphicsUnit.Pixel, attributes);
-				}
-			}
-			return inverted;
-		}
+        private async Task ExtractTextViaOcrFromClipboardImage(OcrReadingOrder ocrReadingOrder)
+        {
+                var result = await _ocrManager.ExtractTextFromClipboardImage(ocrReadingOrder).ConfigureAwait(true);
+                txtOcr.Text = result.Message;
+                HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, result.Success ? 50 : 25);
+        }
 
 
-		private async void TakeScreenshotAndExtractText(
-			OcrReadingOrder ocrReadingOrder)
-		{
-			if (_activeScreenCaptureForm is not null)
-			{
-				// If there is already an active capture form open, just make sure it is topmost and short-circuit.
-				_activeScreenCaptureForm?.Activate();
-				return;
-			}
-
-			using (Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height))
-			using (Graphics g = Graphics.FromImage(screenshot))
-			{
-				g.CopyFromScreen(0, 0, 0, 0, Screen.PrimaryScreen.Bounds.Size);
-
-				var displayShot = screenshot;
-				using Bitmap invertedScreenshot = InvertScreenshotColors(screenshot);
-				if (_settings.AzureComputerVisionSettings.InvertScreenshot)
-					displayShot = invertedScreenshot;
-
-				using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(displayShot)))
-				{
-					_activeScreenCaptureForm = screenCaptureForm;
-
-					screenCaptureForm.TopMost = true;
-					screenCaptureForm.ShowDialog();
-
-					_activeScreenCaptureForm = null;
-
-					await ExtractTextViaOcrFromClipboardImage(ocrReadingOrder);
-				}
-			}
-		}
-
-
-		private async Task ExtractTextViaOcrFromClipboardImage(
-				  OcrReadingOrder ocrReadingOrder)
-		{
-			if (_ocrState.BusyWithTextExtraction)
-			{
-				_ocrState.StopTextExtraction();
-				return;
-			}
-
-			var image = await TryGetClipboardImageAsync();
-			if (image is null)
-			{
-				var msg = "No image found on the clipboard after multiple retries.";
-				txtOcr.Text = msg;
-				SetTextToClipboard(msg);
-				BeepFail();
-				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
-				return;
-			}
-
-			try
-			{
-				_ocrState.StartTextExtraction();
-				await ExtractTextViaOcr(ocrReadingOrder, image);
-			}
-			finally
-			{
-				_ocrState.StopTextExtraction();
-			}
-		}
-
-		private async Task ExtractTextViaOcr(
-			OcrReadingOrder ocrReadingOrder,
-			Image image)
-		{
-			if (image is null)
-			{
-				txtOcr.Text = "No image provided to perform OCR on.";
-				return;
-			}
-
-			try
-			{
-				BeepStart();
-
-				txtOcr.Text = "Running OCR on image";
-
-				using MemoryStream imageStream = new MemoryStream();
-				image.Save(imageStream, ImageFormat.Jpeg);
-				imageStream.Seek(0, SeekOrigin.Begin);
-				string text = await this._ocrService.ExtractText(ocrReadingOrder, imageStream, _ocrState.OcrCancellationTokenSource.Token).ConfigureAwait(true);
-
-				SetTextToClipboard(text);
-				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
-				BeepSuccess();
-				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 50);
-			}
-			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
-			{
-				// This was an intentional cancellation by the user, so only beep the failure, but don't show an error message. 
-				BeepFail();
-
-				txtOcr.Text = "OCR cancelled by user.";
-				SetTextToClipboard(txtOcr.Text);
-
-				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
-			}
-			catch (Exception ex)
-			{
-				string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
-				txtOcr.Text = msg;
-
-				BeepFail();
-				SetTextToClipboard(msg);
-				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
-			}
-		}
-
-		public async Task<Image?> TryGetClipboardImageAsync()
-		{
-			int attempts = 5;
-
-			while (attempts > 0)
-			{
-				if (Clipboard.ContainsImage())
-				{
-					return Clipboard.GetImage();
-				}
-
-				attempts--;
-				await Task.Delay(150);
-			}
-
-			return null;
-		}
-
-		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
-		public void SetTextToClipboard(
-			string text)
-		{
-			if (!string.IsNullOrWhiteSpace(text))
-				Clipboard.SetText(text, TextDataFormat.UnicodeText);
-		}
 
 
 		private void TextToSpeech()
@@ -674,7 +492,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				txtFormatTranscriptResponse.Text = text;
 
 			await Task.Delay(100);
-			SetTextToClipboard(text);
+			_ocrManager.SetTextToClipboard(text);
 
 			if (!this.ContainsFocus)
 			{
