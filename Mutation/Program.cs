@@ -87,6 +87,7 @@ internal static class Program
                 builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 
                 builder.Services.AddSingleton<HotkeyManager>();
+                builder.Services.AddSingleton<UiStateManager>();
 
                 builder.Services.AddSingleton<MutationForm>();
 
