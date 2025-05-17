@@ -9,7 +9,6 @@ using ScreenCapturing;
 using StringExtensionLibrary;
 using System.ComponentModel;
 using System.Drawing.Imaging;
-using System.Threading.Tasks;
 
 namespace Mutation
 {
@@ -21,41 +20,32 @@ namespace Mutation
 		private Settings _settings { get; set; }
 		private ISettingsManager _settingsManager { get; set; }
 
-		private Hotkey _hkToggleMicMute;
 		private bool _isMuted = false;
 		private CoreAudioController _coreAudioController;
 		private IEnumerable<CoreAudioDevice> _captureDevices;
 		private CoreAudioDevice _microphone { get; set; }
 		private int _microphoneDeviceIndex = -1;
 
-		private Hotkey _hkSpeechToText { get; set; }
 		private ISpeechToTextService[] _speechToTextServices { get; set; }
 		private AudioRecorder _audioRecorder { get; set; }
 		private SpeechToTextState _speechToTextState { get; init; }
-
-		private Hotkey _hkScreenshot;
-		private Hotkey _hkScreenshotOcr;
-		private Hotkey _hkScreenshotLeftToRightTopToBottomOcr;
-		private Hotkey _hkOcr;
-		private Hotkey _hkOcrLeftToRightTopToBottom;
 		private IOcrService _ocrService { get; set; }
 		private OcrState _ocrState { get; init; } = new();
 
 		private ILlmService _llmService { get; set; }
-
-		private Hotkey _hkTextToSpeech { get; set; }
 		private ITextToSpeechService _textToSpeechService;
 
-		private List<Hotkey> HotKeyRouterFromEntries { get; set; } = new();
+		private HotkeyManager _hotkeyManager;
 
 		public MutationForm(
-			ISettingsManager settingsManager,
-			Settings settings,
-			CoreAudioController coreAudioController,
-			IOcrService ocrService,
-			ISpeechToTextService[] speechToTextServices,
-			ITextToSpeechService textToSpeechService,
-			ILlmService llmService)
+				  ISettingsManager settingsManager,
+				  Settings settings,
+				  CoreAudioController coreAudioController,
+				  IOcrService ocrService,
+				  ISpeechToTextService[] speechToTextServices,
+				  ITextToSpeechService textToSpeechService,
+				  ILlmService llmService,
+				  HotkeyManager hotkeyManager)
 		{
 			this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -64,6 +54,7 @@ namespace Mutation
 			this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+			this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
 			this._speechToTextState = new SpeechToTextState(() => _audioRecorder);
 
 
@@ -74,7 +65,19 @@ namespace Mutation
 
 			HookupTooltips();
 
-			HookupHotkeys();
+			_hotkeyManager.RegisterHotkeys(
+					  this,
+					  TakeScreenshotToClipboard,
+					  TakeScreenshotAndExtractText,
+					  ExtractTextViaOcrFromClipboardImage,
+					  ToggleMicrophoneMute,
+					  SpeechToText,
+					  TextToSpeech);
+
+			lblToggleMic.Text = $"Toggle Microphone Mute: {_hotkeyManager.ToggleMicMuteHotkey}";
+			lblScreenshotHotKey.Text = $"Screenshot: {_hotkeyManager.ScreenshotHotkey}";
+			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hotkeyManager.ScreenshotOcrHotkey}";
+			lblOcrHotKey.Text = $"OCR Clipboard: {_hotkeyManager.OcrHotkey}";
 
 			txtFormatTranscriptPrompt.Text = this._settings.LlmSettings.FormatTranscriptPrompt;
 			txtReviewTranscriptPrompt.Text = this._settings.LlmSettings.ReviewTranscriptPrompt;
@@ -314,9 +317,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void SelectCaptureDeviceForNAudioBasedRecording()
 		{
 			// The AudioSwitcher library, CoreAudioDevice.Name returns a value like
-                       // "Krisp Microphone". This is the name of the device as under Windows recording devices.
+			// "Krisp Microphone". This is the name of the device as under Windows recording devices.
 			// While the NAudio library(used for recording to file) property, WaveInEvent.GetCapabilities(i).ProductName, returns a value like
-                       // "Krisp Microphone (Krisp Audio)". This has the device name, but also contains a suffix.
+			// "Krisp Microphone (Krisp Audio)". This has the device name, but also contains a suffix.
 			// So, we do a starts with match to find the mic we are looking for using the default device name followed by a space and a (
 
 			string startsWithNameToMatch = $"{this._microphone.Name} (";
@@ -380,31 +383,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 		}
 
-		private void HookupHotkeys()
-		{
-                       HookupHotKeyToggleMicrophoneMuteHotkey();
 
-			HookupHotKeyScreenshot();
-			HookupHotKeyScreenshotOcr();
-			HookupHotKeyOcr();
-			HookupHotKeyScreenshotOcrLeftToRightTopToBottom();
-			HookupHotKeyOcrLeftToRightTopToBottom();
-
-
-			HookupHotKeySpeechToText();
-			HookupHotKeyTextToSpeech();
-
-			HookupHotKeyRouter();
-		}
-
-		private void HookupHotKeyScreenshot()
-		{
-			_hkScreenshot = MapHotKey(_settings.AzureComputerVisionSettings.ScreenshotHotKey);
-			_hkScreenshot.Pressed += delegate { TakeScreenshotToClipboard(); };
-			TryRegisterHotkey(_hkScreenshot);
-
-			lblScreenshotHotKey.Text = $"Screenshot: {_hkScreenshot}";
-		}
 
 		private void TakeScreenshotToClipboard()
 		{
@@ -464,30 +443,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 			return inverted;
 		}
 
-		private void HookupHotKeyScreenshotOcr()
-		{
-			_hkScreenshotOcr = MapHotKey(_settings.AzureComputerVisionSettings.ScreenshotOcrHotKey);
-			_hkScreenshotOcr.Pressed += delegate
-			{
-				TakeScreenshotAndExtractText(OcrReadingOrder.TopToBottomColumnAware);
-			};
-			TryRegisterHotkey(_hkScreenshotOcr);
-
-			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hkScreenshotOcr}";
-		}
-
-		private void HookupHotKeyScreenshotOcrLeftToRightTopToBottom()
-		{
-			_hkScreenshotLeftToRightTopToBottomOcr = MapHotKey(
-				 _settings.AzureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey
-			);
-			_hkScreenshotLeftToRightTopToBottomOcr.Pressed += delegate
-			{
-				TakeScreenshotAndExtractText(OcrReadingOrder.LeftToRightTopToBottom);
-			};
-			TryRegisterHotkey(_hkScreenshotLeftToRightTopToBottomOcr);
-
-		}
 
 		private async void TakeScreenshotAndExtractText(
 			OcrReadingOrder ocrReadingOrder)
@@ -523,48 +478,24 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 		}
 
-		private void HookupHotKeyOcr()
+
+		private async Task ExtractTextViaOcrFromClipboardImage(
+				  OcrReadingOrder ocrReadingOrder)
 		{
-			_hkOcr = MapHotKey(_settings.AzureComputerVisionSettings.OcrHotKey);
-			_hkOcr.Pressed += delegate
+			if (_ocrState.BusyWithTextExtraction)
 			{
-				ExtractTextViaOcrFromClipboardImage(OcrReadingOrder.TopToBottomColumnAware);
-			};
-			TryRegisterHotkey(_hkOcr);
+				_ocrState.StopTextExtraction();
+				return;
+			}
 
-			lblOcrHotKey.Text = $"OCR Clipboard: {_hkOcr}";
-		}
-
-		private void HookupHotKeyOcrLeftToRightTopToBottom()
-		{
-			_hkOcrLeftToRightTopToBottom = MapHotKey(
-				 _settings.AzureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey
-			);
-			_hkOcrLeftToRightTopToBottom.Pressed += delegate
+			var image = await TryGetClipboardImageAsync();
+			if (image is null)
 			{
-				ExtractTextViaOcrFromClipboardImage(OcrReadingOrder.LeftToRightTopToBottom);
-			};
-			TryRegisterHotkey(_hkOcrLeftToRightTopToBottom);
-
-		}
-
-               private async Task ExtractTextViaOcrFromClipboardImage(
-                       OcrReadingOrder ocrReadingOrder)
-               {
-                       if (_ocrState.BusyWithTextExtraction)
-                       {
-                               _ocrState.StopTextExtraction();
-                               return;
-                       }
-
-                       var image = await TryGetClipboardImageAsync();
-                       if (image is null)
-                       {
-                               var msg = "No image found on the clipboard after multiple retries.";
+				var msg = "No image found on the clipboard after multiple retries.";
 				txtOcr.Text = msg;
 				SetTextToClipboard(msg);
 				BeepFail();
-				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
+				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 				return;
 			}
 
@@ -603,7 +534,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				SetTextToClipboard(text);
 				txtOcr.Text = $"Converted text is on clipboard:{Environment.NewLine}{text}";
 				BeepSuccess();
-				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 50);
+				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 50);
 			}
 			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 			{
@@ -613,7 +544,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				txtOcr.Text = "OCR cancelled by user.";
 				SetTextToClipboard(txtOcr.Text);
 
-				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
+				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 			}
 			catch (Exception ex)
 			{
@@ -622,27 +553,27 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 				BeepFail();
 				SetTextToClipboard(msg);
-				SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
+				HotkeyManager.SendKeysAfterDelay(_settings.AzureComputerVisionSettings.SendKotKeyAfterOcrOperation, 25);
 			}
 		}
 
-               public async Task<Image?> TryGetClipboardImageAsync()
-               {
-                       int attempts = 5;
+		public async Task<Image?> TryGetClipboardImageAsync()
+		{
+			int attempts = 5;
 
-                       while (attempts > 0)
-                       {
-                               if (Clipboard.ContainsImage())
-                               {
-                                       return Clipboard.GetImage();
-                               }
+			while (attempts > 0)
+			{
+				if (Clipboard.ContainsImage())
+				{
+					return Clipboard.GetImage();
+				}
 
-                               attempts--;
-                               await Task.Delay(150);
-                       }
+				attempts--;
+				await Task.Delay(150);
+			}
 
-                       return null;
-               }
+			return null;
+		}
 
 		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
 		public void SetTextToClipboard(
@@ -652,57 +583,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 				Clipboard.SetText(text, TextDataFormat.UnicodeText);
 		}
 
-               private void HookupHotKeyToggleMicrophoneMuteHotkey()
-               {
-                       _hkToggleMicMute = MapHotKey(_settings.AudioSettings.MicrophoneToggleMuteHotKey);
-                       _hkToggleMicMute.Pressed += delegate { ToggleMicrophoneMute(); };
-                       TryRegisterHotkey(_hkToggleMicMute);
-
-                       lblToggleMic.Text = $"Toggle Microphone Mute: {_hkToggleMicMute}";
-               }
-
-		private void HookupHotKeySpeechToText()
-		{
-			_hkSpeechToText = MapHotKey(_settings.SpeetchToTextSettings.SpeechToTextHotKey);
-			_hkSpeechToText.Pressed += delegate { SpeechToText(); };
-			TryRegisterHotkey(_hkSpeechToText);
-
-                       lblSpeechToText.Text = $"Speech to Text: {_hkSpeechToText}";
-               }
-
-		private void HookupHotKeyTextToSpeech()
-		{
-			_hkTextToSpeech = MapHotKey(_settings.TextToSpeechSettings.TextToSpeechHotKey);
-			_hkTextToSpeech.Pressed += delegate { TextToSpeech(); };
-			TryRegisterHotkey(_hkTextToSpeech);
-
-			//lblTextToSpeech.Text = $"Text to Speech: {_hkTextToSpeech}";
-		}
-
-		private void HookupHotKeyRouter()
-		{
-			foreach (var mapping in _settings.HotKeyRouterSettings.Mappings)
-			{
-				Hotkey fromHotKey = MapHotKey(mapping.FromHotKey);
-				fromHotKey.Pressed += delegate { SendKeysAfterDelay(mapping.ToHotKey, 25); };
-				if (TryRegisterHotkey(fromHotKey))
-					this.HotKeyRouterFromEntries.Add(fromHotKey);
-			}
-		}
-
-		private static void SendKeysAfterDelay(
-			string hotkey,
-			int delayMs)
-		{
-			if (string.IsNullOrWhiteSpace(hotkey))
-				return;
-
-			System.Threading.Tasks.Task.Run(async () =>
-			{
-				await System.Threading.Tasks.Task.Delay(delayMs);
-				System.Windows.Forms.SendKeys.SendWait(hotkey);
-			});
-		}
 
 		private void TextToSpeech()
 		{
@@ -813,58 +693,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 		}
 
-		private static Hotkey MapHotKey(string hotKeyStringRepresentation)
-		{
-			var hotKey = new Hotkey();
-
-			var keyStrings = hotKeyStringRepresentation.Split(@"_-+,;: ".ToCharArray(), StringSplitOptions.RemoveEmptyEntries)
-				.Select(k => k.ToUpper())
-				.ToList();
-			string mainKeyString = keyStrings.Last();
-			mainKeyString = NormalizeKeyString(mainKeyString);
-			hotKey.KeyCode = Enum.Parse<Keys>(mainKeyString, true);
-
-			if (keyStrings.Contains("ALT"))
-				hotKey.Alt = true;
-			if (keyStrings.Contains("CTRL") || keyStrings.Contains("CONTROL"))
-				hotKey.Control = true;
-			if (keyStrings.Contains("SHFT") || keyStrings.Contains("SHIFT"))
-				hotKey.Shift = true;
-			if (keyStrings.Contains("WIN") || keyStrings.Contains("WINDOWS") || keyStrings.Contains("START"))
-				hotKey.Windows = true;
-
-			return hotKey;
-		}
-
-		private static string NormalizeKeyString(string keyString)
-		{
-			keyString = keyString
-				.Replace("{", "")
-				.Replace("}", "");
-
-			return keyString.ToLowerInvariant() switch
-			{
-				"del" => "delete",
-				"ins" => "insert",
-				_ => keyString
-			};
-
-		}
-
-		private bool TryRegisterHotkey(Hotkey hotKey)
-		{
-			if (!hotKey.GetCanRegister(this))
-			{
-				this.Activate();
-				MessageBox.Show($"Oops, looks like attempts to register the hotkey {hotKey} will fail or throw an exception.");
-				return false;
-			}
-			else
-			{
-				hotKey.Register(this);
-				return true;
-			}
-		}
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 		{
@@ -878,16 +706,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_settings.LlmSettings.ReviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 			this._settingsManager.SaveSettingsToFile(_settings);
 
-			UnregisterHotkey(_hkToggleMicMute);
-			UnregisterHotkey(_hkOcr);
+			_hotkeyManager.UnregisterHotkeys();
 			BeepPlayer.DisposePlayers();
 		}
 
-		private static void UnregisterHotkey(Hotkey hk)
-		{
-			if (hk != null && hk.Registered)
-				hk.Unregister();
-		}
 
 		private void MutationForm_Load(object sender, EventArgs e)
 		{
@@ -940,16 +762,16 @@ The model may also leave out common filler words in the audio. If you want to ke
 							System.Windows.Forms.SendKeys.Send(text);
 							break;
 						case DictationInsertOption.Paste:
-                                                       await Task.Delay(200); // Wait for text to arrive on clipboard.
-                                                       BeepStart();
-                                                       System.Windows.Forms.SendKeys.SendWait("^v");
-                                                       break;
+							await Task.Delay(200); // Wait for text to arrive on clipboard.
+							BeepStart();
+							System.Windows.Forms.SendKeys.SendWait("^v");
+							break;
 					}
 				}
 			}
 
 			BeepSuccess();
-			SendKeysAfterDelay(_settings.SpeetchToTextSettings.SendKotKeyAfterTranscriptionOperation, 50);
+			HotkeyManager.SendKeysAfterDelay(_settings.SpeetchToTextSettings.SendKotKeyAfterTranscriptionOperation, 50);
 		}
 
 		private async Task FormatSpeechToTextTranscriptWithLlm()
