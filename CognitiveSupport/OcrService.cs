@@ -10,19 +10,17 @@ using System.Text;
 
 namespace CognitiveSupport;
 
-public class OcrService : IOcrService
+public class OcrService : IOcrService, IDisposable
 {
 	private const int RetryDelayMilliseconds = 500;
-	private const double DefaultTimeoutMultiplier = 7.5;
-	private const int MinimumImageWidth = 50;
-	private const int MinimumImageHeight = 50;
-	private const int MaxTimeoutSeconds = 60;
+        private const int MinimumImageWidth = 50;
+        private const int MinimumImageHeight = 50;
+        private const int MaxTimeoutSeconds = 60;
 
-	private string SubscriptionKey { get; }
-	private string Endpoint { get; }
-	private ComputerVisionClient ComputerVisionClient { get; }
-	private readonly object _lock = new();
-	private readonly int _timeoutSeconds;
+        private string SubscriptionKey { get; }
+        private string Endpoint { get; }
+        private ComputerVisionClient ComputerVisionClient { get; }
+        private readonly int _timeoutSeconds;
 
 	public OcrService(string? subscriptionKey, string? endpoint, int timeoutSeconds = 30)
 	{
@@ -163,9 +161,7 @@ public class OcrService : IOcrService
 
 		imageStream = EnsureMinimumImageSize(imageStream);
 
-		Log("----------------------------------------------------------");
-
-		var headers = await ComputerVisionClient.ReadInStreamAsync(
+                var headers = await ComputerVisionClient.ReadInStreamAsync(
 								imageStream,
 								readingOrder: ocrReadingOrder.ToEnumMemberValue(),
 								cancellationToken: cancellationToken)
@@ -200,22 +196,23 @@ public class OcrService : IOcrService
 		}
 	}
 
-	private static string ExtractTextFromResults(ReadOperationResult results)
-	{
-		var sb = new StringBuilder();
+        private static string ExtractTextFromResults(ReadOperationResult results)
+        {
+                var sb = new StringBuilder();
 
-		foreach (ReadResult page in results.AnalyzeResult.ReadResults)
-		{
-			foreach (Line line in page.Lines)
-			{
-				Console.WriteLine(line.Text);
-				sb.AppendLine(line.Text);
-			}
-		}
+                foreach (ReadResult page in results.AnalyzeResult.ReadResults)
+                {
+                        foreach (Line line in page.Lines)
+                        {
+                                sb.AppendLine(line.Text);
+                        }
+                }
 
-		Console.WriteLine();
-		return sb.ToString();
-	}
+                return sb.ToString();
+        }
 
-	private static void Log(string message) => Console.WriteLine(message);
+        public void Dispose()
+        {
+                ComputerVisionClient?.Dispose();
+        }
 }
