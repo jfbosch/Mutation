@@ -8,7 +8,7 @@ public partial class MutationForm : Form
 {
 	private SpeechToTextServiceComboItem _activeSpeetchToTextServiceComboItem = null;
 
-	private Settings _settings { get; set; }
+	private CognitiveSupport.Settings _settings { get; set; }
 	private ISettingsManager _settingsManager { get; set; }
 	private AudioDeviceManager _audioDeviceManager;
 	private ISpeechToTextService[] _speechToTextServices { get; set; }
@@ -22,13 +22,13 @@ public partial class MutationForm : Form
 	private TranscriptFormatter _transcriptFormatter;
 	private TranscriptReviewer _transcriptReviewer;
 
-private HotkeyManager _hotkeyManager;
-private UiStateManager _uiStateManager;
-private TooltipManager _tooltipManager;
+	private HotkeyManager _hotkeyManager;
+	private UiStateManager _uiStateManager;
+	private TooltipManager _tooltipManager;
 
 	public MutationForm(
 							ISettingsManager settingsManager,
-							Settings settings,
+							CognitiveSupport.Settings settings,
 							AudioDeviceManager audioDeviceManager,
 							OcrManager ocrManager,
 							ClipboardManager clipboardManager,
@@ -58,13 +58,13 @@ private TooltipManager _tooltipManager;
 		InitializeComponent();
 		InitializeAudioControls();
 
-PopulateSpeechToTextServiceCombo();
+		PopulateSpeechToTextServiceCombo();
 
-_tooltipManager = new TooltipManager(toolTip, _settings);
-_tooltipManager.SetupTooltips(txtSpeechToTextPrompt,
-lblSpeechToTextPrompt,
-lblSpeechToText,
-lblFormatTranscriptResponse);
+		_tooltipManager = new TooltipManager(toolTip, _settings);
+		_tooltipManager.SetupTooltips(txtSpeechToTextPrompt,
+		lblSpeechToTextPrompt,
+		lblSpeechToText,
+		lblFormatTranscriptResponse);
 
 		txtFormatTranscriptPrompt.Text = this._settings.LlmSettings.FormatTranscriptPrompt;
 		txtReviewTranscriptPrompt.Text = this._settings.LlmSettings.ReviewTranscriptPrompt;

@@ -2,316 +2,315 @@
 using System.Runtime.InteropServices;
 using System.Xml.Serialization;
 
-namespace Mutation
+namespace Mutation;
+
+// http://bloggablea.wordpress.com/2007/05/01/global-hotkeys-with-net/
+public class Hotkey : IMessageFilter
 {
-	// http://bloggablea.wordpress.com/2007/05/01/global-hotkeys-with-net/
-	public class Hotkey : IMessageFilter
+	#region Interop
+
+	[DllImport("user32.dll", SetLastError = true)]
+	private static extern int RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, Keys vk);
+
+	[DllImport("user32.dll", SetLastError = true)]
+	private static extern int UnregisterHotKey(IntPtr hWnd, int id);
+
+	private const uint WM_HOTKEY = 0x312;
+
+	private const uint MOD_ALT = 0x1;
+	private const uint MOD_CONTROL = 0x2;
+	private const uint MOD_SHIFT = 0x4;
+	private const uint MOD_WIN = 0x8;
+
+	private const uint ERROR_HOTKEY_ALREADY_REGISTERED = 1409;
+
+	#endregion
+
+	private static int currentID;
+	private const int maximumID = 0xBFFF;
+
+	private Keys keyCode;
+	private bool shift;
+	private bool control;
+	private bool alt;
+	private bool windows;
+
+	[XmlIgnore]
+	private int id;
+	[XmlIgnore]
+	private bool registered;
+	[XmlIgnore]
+	private Control windowControl;
+
+	public event HandledEventHandler Pressed;
+
+	public Hotkey()
+		: this(Keys.None, false, false, false, false)
 	{
-		#region Interop
+		// No work done here!
+	}
 
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern int RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, Keys vk);
+	public Hotkey(Keys keyCode, bool shift, bool control, bool alt, bool windows)
+	{
+		// Assign properties
+		this.KeyCode = keyCode;
+		this.Shift = shift;
+		this.Control = control;
+		this.Alt = alt;
+		this.Windows = windows;
 
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern int UnregisterHotKey(IntPtr hWnd, int id);
+		// Register us as a message filter
+		Application.AddMessageFilter(this);
+	}
 
-		private const uint WM_HOTKEY = 0x312;
-
-		private const uint MOD_ALT = 0x1;
-		private const uint MOD_CONTROL = 0x2;
-		private const uint MOD_SHIFT = 0x4;
-		private const uint MOD_WIN = 0x8;
-
-		private const uint ERROR_HOTKEY_ALREADY_REGISTERED = 1409;
-
-		#endregion
-
-		private static int currentID;
-		private const int maximumID = 0xBFFF;
-
-		private Keys keyCode;
-		private bool shift;
-		private bool control;
-		private bool alt;
-		private bool windows;
-
-		[XmlIgnore]
-		private int id;
-		[XmlIgnore]
-		private bool registered;
-		[XmlIgnore]
-		private Control windowControl;
-
-		public event HandledEventHandler Pressed;
-
-		public Hotkey()
-			: this(Keys.None, false, false, false, false)
+	~Hotkey()
+	{
+		// Unregister the hotkey if necessary
+		if (this.Registered)
 		{
-			// No work done here!
+			this.Unregister();
 		}
+	}
 
-		public Hotkey(Keys keyCode, bool shift, bool control, bool alt, bool windows)
+	public Hotkey Clone()
+	{
+		// Clone the whole object
+		return new Hotkey(this.keyCode, this.shift, this.control, this.alt, this.windows);
+	}
+
+	public bool GetCanRegister(Control windowControl)
+	{
+		// Handle any exceptions: they mean "no, you can't register" :)
+		try
 		{
-			// Assign properties
-			this.KeyCode = keyCode;
-			this.Shift = shift;
-			this.Control = control;
-			this.Alt = alt;
-			this.Windows = windows;
-
-			// Register us as a message filter
-			Application.AddMessageFilter(this);
-		}
-
-		~Hotkey()
-		{
-			// Unregister the hotkey if necessary
-			if (this.Registered)
-			{
-				this.Unregister();
-			}
-		}
-
-		public Hotkey Clone()
-		{
-			// Clone the whole object
-			return new Hotkey(this.keyCode, this.shift, this.control, this.alt, this.windows);
-		}
-
-		public bool GetCanRegister(Control windowControl)
-		{
-			// Handle any exceptions: they mean "no, you can't register" :)
-			try
-			{
-				// Attempt to register
-				if (!this.Register(windowControl))
-				{
-					return false;
-				}
-
-				// Unregister and say we managed it
-				this.Unregister();
-				return true;
-			}
-			catch (Win32Exception)
+			// Attempt to register
+			if (!this.Register(windowControl))
 			{
 				return false;
 			}
-			catch (NotSupportedException)
-			{
-				return false;
-			}
-		}
 
-		public bool Register(Control windowControl)
-		{
-			// Check that we have not registered
-			if (this.registered)
-			{
-				throw new NotSupportedException("You cannot register a hotkey that is already registered");
-			}
-
-			// We can't register an empty hotkey
-			if (this.Empty)
-			{
-				throw new NotSupportedException("You cannot register an empty hotkey");
-			}
-
-			// Get an ID for the hotkey and increase current ID
-			this.id = Hotkey.currentID;
-			Hotkey.currentID = Hotkey.currentID + 1 % Hotkey.maximumID;
-
-			// Translate modifier keys into unmanaged version
-			uint modifiers =
-				(this.Alt ? Hotkey.MOD_ALT : 0)
-				| (this.Control ? Hotkey.MOD_CONTROL : 0)
-				| (this.Shift ? Hotkey.MOD_SHIFT : 0)
-				| (this.Windows ? Hotkey.MOD_WIN : 0);
-
-			// Register the hotkey
-			if (Hotkey.RegisterHotKey(windowControl.Handle, this.id, modifiers, keyCode) == 0)
-			{
-				// Is the error that the hotkey is registered?
-				if (Marshal.GetLastWin32Error() == ERROR_HOTKEY_ALREADY_REGISTERED)
-					return false;
-				else
-					throw new Win32Exception();
-			}
-
-			// Save the control reference and register state
-			this.registered = true;
-			this.windowControl = windowControl;
-
-			// We successfully registered
+			// Unregister and say we managed it
+			this.Unregister();
 			return true;
 		}
-
-		public void Unregister()
+		catch (Win32Exception)
 		{
-			// Check that we have registered
-			if (!this.registered)
-				throw new NotSupportedException("You cannot unregister a hotkey that is not registered");
+			return false;
+		}
+		catch (NotSupportedException)
+		{
+			return false;
+		}
+	}
 
-			// It's possible that the control itself has died: in that case, no need to unregister!
-			if (!this.windowControl.IsDisposed)
-			{
-				// Clean up after ourselves
-				if (Hotkey.UnregisterHotKey(this.windowControl.Handle, this.id) == 0)
-					throw new Win32Exception();
-			}
-
-			// Clear the control reference and register state
-			this.registered = false;
-			this.windowControl = null;
+	public bool Register(Control windowControl)
+	{
+		// Check that we have not registered
+		if (this.registered)
+		{
+			throw new NotSupportedException("You cannot register a hotkey that is already registered");
 		}
 
-		private void Reregister()
+		// We can't register an empty hotkey
+		if (this.Empty)
 		{
-			// Only do something if the key is already registered
-			if (!this.registered)
-			{ return; }
-
-			// Save control reference
-			Control windowControl = this.windowControl;
-
-			// Unregister and then reregister again
-			this.Unregister();
-			this.Register(windowControl);
+			throw new NotSupportedException("You cannot register an empty hotkey");
 		}
 
-		public bool PreFilterMessage(ref Message message)
-		{
-			// Only process WM_HOTKEY messages
-			if (message.Msg != Hotkey.WM_HOTKEY)
-			{ return false; }
+		// Get an ID for the hotkey and increase current ID
+		this.id = Hotkey.currentID;
+		Hotkey.currentID = Hotkey.currentID + 1 % Hotkey.maximumID;
 
-			// Check that the ID is our key and we are registerd
-			if (this.registered && (message.WParam.ToInt32() == this.id))
-			{
-				// Fire the event and pass on the event if our handlers didn't handle it
-				return this.OnPressed();
-			}
+		// Translate modifier keys into unmanaged version
+		uint modifiers =
+			(this.Alt ? Hotkey.MOD_ALT : 0)
+			| (this.Control ? Hotkey.MOD_CONTROL : 0)
+			| (this.Shift ? Hotkey.MOD_SHIFT : 0)
+			| (this.Windows ? Hotkey.MOD_WIN : 0);
+
+		// Register the hotkey
+		if (Hotkey.RegisterHotKey(windowControl.Handle, this.id, modifiers, keyCode) == 0)
+		{
+			// Is the error that the hotkey is registered?
+			if (Marshal.GetLastWin32Error() == ERROR_HOTKEY_ALREADY_REGISTERED)
+				return false;
 			else
-			{ return false; }
+				throw new Win32Exception();
 		}
 
-		private bool OnPressed()
-		{
-			// Fire the event if we can
-			HandledEventArgs handledEventArgs = new HandledEventArgs(false);
-			if (this.Pressed != null)
-			{ this.Pressed(this, handledEventArgs); }
+		// Save the control reference and register state
+		this.registered = true;
+		this.windowControl = windowControl;
 
-			// Return whether we handled the event or not
-			return handledEventArgs.Handled;
+		// We successfully registered
+		return true;
+	}
+
+	public void Unregister()
+	{
+		// Check that we have registered
+		if (!this.registered)
+			throw new NotSupportedException("You cannot unregister a hotkey that is not registered");
+
+		// It's possible that the control itself has died: in that case, no need to unregister!
+		if (!this.windowControl.IsDisposed)
+		{
+			// Clean up after ourselves
+			if (Hotkey.UnregisterHotKey(this.windowControl.Handle, this.id) == 0)
+				throw new Win32Exception();
 		}
 
-		public override string ToString()
+		// Clear the control reference and register state
+		this.registered = false;
+		this.windowControl = null;
+	}
+
+	private void Reregister()
+	{
+		// Only do something if the key is already registered
+		if (!this.registered)
+		{ return; }
+
+		// Save control reference
+		Control windowControl = this.windowControl;
+
+		// Unregister and then reregister again
+		this.Unregister();
+		this.Register(windowControl);
+	}
+
+	public bool PreFilterMessage(ref Message message)
+	{
+		// Only process WM_HOTKEY messages
+		if (message.Msg != Hotkey.WM_HOTKEY)
+		{ return false; }
+
+		// Check that the ID is our key and we are registerd
+		if (this.registered && (message.WParam.ToInt32() == this.id))
 		{
-			// We can be empty
-			if (this.Empty)
-			{ return "(none)"; }
+			// Fire the event and pass on the event if our handlers didn't handle it
+			return this.OnPressed();
+		}
+		else
+		{ return false; }
+	}
 
-			// Build key name
-			string keyName = Enum.GetName(typeof(Keys), this.keyCode); ;
-			switch (this.keyCode)
-			{
-				case Keys.D0:
-				case Keys.D1:
-				case Keys.D2:
-				case Keys.D3:
-				case Keys.D4:
-				case Keys.D5:
-				case Keys.D6:
-				case Keys.D7:
-				case Keys.D8:
-				case Keys.D9:
-					// Strip the first character
-					keyName = keyName.Substring(1);
-					break;
-				default:
-					// Leave everything alone
-					break;
-			}
+	private bool OnPressed()
+	{
+		// Fire the event if we can
+		HandledEventArgs handledEventArgs = new HandledEventArgs(false);
+		if (this.Pressed != null)
+		{ this.Pressed(this, handledEventArgs); }
 
-			// Build modifiers
-			string modifiers = "";
-			if (this.shift)
-			{ modifiers += "Shift+"; }
-			if (this.control)
-			{ modifiers += "Control+"; }
-			if (this.alt)
-			{ modifiers += "Alt+"; }
-			if (this.windows)
-			{ modifiers += "Windows+"; }
+		// Return whether we handled the event or not
+		return handledEventArgs.Handled;
+	}
 
-			// Return result
-			return modifiers + keyName;
+	public override string ToString()
+	{
+		// We can be empty
+		if (this.Empty)
+		{ return "(none)"; }
+
+		// Build key name
+		string keyName = Enum.GetName(typeof(Keys), this.keyCode); ;
+		switch (this.keyCode)
+		{
+			case Keys.D0:
+			case Keys.D1:
+			case Keys.D2:
+			case Keys.D3:
+			case Keys.D4:
+			case Keys.D5:
+			case Keys.D6:
+			case Keys.D7:
+			case Keys.D8:
+			case Keys.D9:
+				// Strip the first character
+				keyName = keyName.Substring(1);
+				break;
+			default:
+				// Leave everything alone
+				break;
 		}
 
-		public bool Empty
-		{
-			get { return this.keyCode == Keys.None; }
-		}
+		// Build modifiers
+		string modifiers = "";
+		if (this.shift)
+		{ modifiers += "Shift+"; }
+		if (this.control)
+		{ modifiers += "Control+"; }
+		if (this.alt)
+		{ modifiers += "Alt+"; }
+		if (this.windows)
+		{ modifiers += "Windows+"; }
 
-		public bool Registered
-		{
-			get { return this.registered; }
-		}
+		// Return result
+		return modifiers + keyName;
+	}
 
-		public Keys KeyCode
-		{
-			get { return this.keyCode; }
-			set
-			{
-				// Save and reregister
-				this.keyCode = value;
-				this.Reregister();
-			}
-		}
+	public bool Empty
+	{
+		get { return this.keyCode == Keys.None; }
+	}
 
-		public bool Shift
-		{
-			get { return this.shift; }
-			set
-			{
-				// Save and reregister
-				this.shift = value;
-				this.Reregister();
-			}
-		}
+	public bool Registered
+	{
+		get { return this.registered; }
+	}
 
-		public bool Control
+	public Keys KeyCode
+	{
+		get { return this.keyCode; }
+		set
 		{
-			get { return this.control; }
-			set
-			{
-				// Save and reregister
-				this.control = value;
-				this.Reregister();
-			}
+			// Save and reregister
+			this.keyCode = value;
+			this.Reregister();
 		}
+	}
 
-		public bool Alt
+	public bool Shift
+	{
+		get { return this.shift; }
+		set
 		{
-			get { return this.alt; }
-			set
-			{
-				// Save and reregister
-				this.alt = value;
-				this.Reregister();
-			}
+			// Save and reregister
+			this.shift = value;
+			this.Reregister();
 		}
+	}
 
-		public bool Windows
+	public bool Control
+	{
+		get { return this.control; }
+		set
 		{
-			get { return this.windows; }
-			set
-			{
-				// Save and reregister
-				this.windows = value;
-				this.Reregister();
-			}
+			// Save and reregister
+			this.control = value;
+			this.Reregister();
+		}
+	}
+
+	public bool Alt
+	{
+		get { return this.alt; }
+		set
+		{
+			// Save and reregister
+			this.alt = value;
+			this.Reregister();
+		}
+	}
+
+	public bool Windows
+	{
+		get { return this.windows; }
+		set
+		{
+			// Save and reregister
+			this.windows = value;
+			this.Reregister();
 		}
 	}
 }
