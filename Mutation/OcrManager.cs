@@ -1,6 +1,6 @@
 ﻿using CognitiveSupport;
-using ScreenCapturing;
 using System.Drawing.Imaging;
+using System.Windows.Forms;
 
 namespace Mutation;
 
@@ -9,17 +9,19 @@ namespace Mutation;
 /// </summary>
 public class OcrManager
 {
-	private readonly Settings _settings;
-	private readonly IOcrService _ocrService;
-	private readonly OcrState _ocrState = new();
+        private readonly Settings _settings;
+        private readonly IOcrService _ocrService;
+        private readonly OcrState _ocrState = new();
+        private readonly ClipboardManager _clipboardManager;
 
 	private ScreenCaptureForm? _activeScreenCaptureForm;
 
-	public OcrManager(Settings settings, IOcrService ocrService)
-	{
-		_settings = settings ?? throw new ArgumentNullException(nameof(settings));
-		_ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
-	}
+        public OcrManager(Settings settings, IOcrService ocrService, ClipboardManager clipboardManager)
+        {
+                _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+                _ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
+                _clipboardManager = clipboardManager ?? throw new ArgumentNullException(nameof(clipboardManager));
+        }
 
 	public void TakeScreenshotToClipboard()
 	{
@@ -41,7 +43,7 @@ public class OcrManager
 		if (_settings.AzureComputerVisionSettings != null && _settings.AzureComputerVisionSettings.InvertScreenshot)
 			displayShot = invertedScreenshot;
 
-		using ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(displayShot));
+                using ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(displayShot), _clipboardManager);
 		_activeScreenCaptureForm = screenCaptureForm;
 		screenCaptureForm.TopMost = true;
 		screenCaptureForm.ShowDialog();
@@ -68,8 +70,8 @@ public class OcrManager
 		if (_settings.AzureComputerVisionSettings != null && _settings.AzureComputerVisionSettings.InvertScreenshot)
 			displayShot = invertedScreenshot;
 
-		using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(displayShot)))
-		{
+                using (ScreenCaptureForm screenCaptureForm = new ScreenCaptureForm(new Bitmap(displayShot), _clipboardManager))
+                {
 			_activeScreenCaptureForm = screenCaptureForm;
 			screenCaptureForm.TopMost = true;
 			screenCaptureForm.ShowDialog();
@@ -87,11 +89,11 @@ public class OcrManager
 			return new OcrResult(false, "OCR cancelled by user.");
 		}
 
-		var image = await TryGetClipboardImageAsync().ConfigureAwait(true);
-		if (image is null)
-		{
-			string msg = "No image found on the clipboard after multiple retries.";
-			SetTextToClipboard(msg);
+                var image = await _clipboardManager.TryGetImageAsync().ConfigureAwait(true);
+                if (image is null)
+                {
+                        string msg = "No image found on the clipboard after multiple retries.";
+                        _clipboardManager.SetText(msg);
 			BeepPlayer.Play(BeepType.Failure);
 			return new OcrResult(false, msg);
 		}
@@ -121,45 +123,26 @@ public class OcrManager
 			imageStream.Seek(0, SeekOrigin.Begin);
 			string text = await _ocrService.ExtractText(ocrReadingOrder, imageStream, _ocrState.OcrCancellationTokenSource!.Token).ConfigureAwait(true);
 
-			SetTextToClipboard(text);
+                        _clipboardManager.SetText(text);
 			BeepPlayer.Play(BeepType.Success);
 			return new OcrResult(true, $"Converted text is on clipboard:{Environment.NewLine}{text}");
 		}
 		catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
 		{
 			BeepPlayer.Play(BeepType.Failure);
-			string msg = "OCR cancelled by user.";
-			SetTextToClipboard(msg);
+                        string msg = "OCR cancelled by user.";
+                        _clipboardManager.SetText(msg);
 			return new OcrResult(false, msg);
 		}
 		catch (Exception ex)
 		{
 			BeepPlayer.Play(BeepType.Failure);
-			string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
-			SetTextToClipboard(msg);
+                        string msg = $"Failed to extract text via OCR: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}";
+                        _clipboardManager.SetText(msg);
 			return new OcrResult(false, msg);
 		}
 	}
 
-	public async Task<Image?> TryGetClipboardImageAsync()
-	{
-		int attempts = 5;
-		while (attempts > 0)
-		{
-			if (Clipboard.ContainsImage())
-				return Clipboard.GetImage();
-
-			attempts--;
-			await Task.Delay(150).ConfigureAwait(true);
-		}
-		return null;
-	}
-
-	public void SetTextToClipboard(string text)
-	{
-		if (!string.IsNullOrWhiteSpace(text))
-			Clipboard.SetText(text, TextDataFormat.UnicodeText);
-	}
 
 	private static Bitmap InvertScreenshotColors(Bitmap original)
 	{

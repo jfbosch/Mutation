@@ -1,15 +1,26 @@
-﻿namespace ScreenCapturing
+﻿using System;
+using System.Drawing;
+using System.Windows.Forms;
+using Mutation;
+
+namespace Mutation
 {
-	public partial class ScreenCaptureForm : Form
-	{
-		private Bitmap? screenshot;
+        public partial class ScreenCaptureForm : Form
+        {
+                private readonly ClipboardManager _clipboardManager;
+                private Bitmap? screenshot;
 		private Bitmap? overlay; // New overlay for the crosshair
 		private Rectangle selectedRegion;
 		private Point firstPoint;
 
-		public ScreenCaptureForm(Bitmap screenshot)
-		{
+                public ScreenCaptureForm(Bitmap screenshot, ClipboardManager clipboardManager)
+                {
+                        _clipboardManager = clipboardManager ?? throw new ArgumentNullException(nameof(clipboardManager));
 			InitializeComponent();
+			if (Screen.PrimaryScreen == null)
+			{
+				throw new InvalidOperationException("No primary screen detected.");
+			}
 			this.Bounds = Screen.PrimaryScreen.Bounds;
 			this.FormBorderStyle = FormBorderStyle.None; // Hide title bar
 			this.WindowState = FormWindowState.Maximized;
@@ -78,7 +89,7 @@
 							g.DrawImage(screenshot, 0, 0, selectedRegion, GraphicsUnit.Pixel);
 						}
 
-						Clipboard.SetImage(selectedImage); // Copies the image to the clipboard
+                                                _clipboardManager.SetImage(selectedImage); // Copies the image to the clipboard
 					}
 				}
 
