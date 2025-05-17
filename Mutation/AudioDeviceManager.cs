@@ -12,7 +12,7 @@ namespace Mutation
     /// mute and unmute operations.  This keeps audio related responsibilities
     /// away from the WinForms logic in <see cref="MutationForm"/>.
     /// </summary>
-    internal class AudioDeviceManager
+    public class AudioDeviceManager
     {
         private readonly CoreAudioController _controller;
         private IEnumerable<CoreAudioDevice> _captureDevices = Enumerable.Empty<CoreAudioDevice>();
