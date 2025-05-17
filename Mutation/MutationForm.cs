@@ -9,6 +9,7 @@ using ScreenCapturing;
 using StringExtensionLibrary;
 using System.ComponentModel;
 using System.Drawing.Imaging;
+using System.Threading.Tasks;
 
 namespace Mutation
 {
@@ -313,9 +314,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void SelectCaptureDeviceForNAudioBasedRecording()
 		{
 			// The AudioSwitcher library, CoreAudioDevice.Name returns a value like
-			// "Krisp Michrophone". This is the name of the device as under Windows recording devices.
+                       // "Krisp Microphone". This is the name of the device as under Windows recording devices.
 			// While the NAudio library(used for recording to file) property, WaveInEvent.GetCapabilities(i).ProductName, returns a value like
-			// "Krisp Michrophone (Krisp Audio)". This has the device name, but also contains a suffix.
+                       // "Krisp Microphone (Krisp Audio)". This has the device name, but also contains a suffix.
 			// So, we do a starts with match to find the mic we are looking for using the default device name followed by a space and a (
 
 			string startsWithNameToMatch = $"{this._microphone.Name} (";
@@ -381,7 +382,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void HookupHotkeys()
 		{
-			HookupHotKeyToggleMichrophoneMuteHotkey();
+                       HookupHotKeyToggleMicrophoneMuteHotkey();
 
 			HookupHotKeyScreenshot();
 			HookupHotKeyScreenshotOcr();
@@ -486,8 +487,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 			};
 			TryRegisterHotkey(_hkScreenshotLeftToRightTopToBottomOcr);
 
-			//BookMark??999
-			//lblScreenshotLeftToRightTopToBottomOcrHotKey.Text = $"Screenshot OCR (L→R, T→B): {_hkScreenshotLeftToRightTopToBottomOcr}";
 		}
 
 		private async void TakeScreenshotAndExtractText(
@@ -547,24 +546,21 @@ The model may also leave out common filler words in the audio. If you want to ke
 			};
 			TryRegisterHotkey(_hkOcrLeftToRightTopToBottom);
 
-			//BookMark??((
-			//lblOcrLeftToRightTopToBottomHotKey.Text =
-			//	 $"OCR Clipboard (L→R, T→B): {_hkOcrLeftToRightTopToBottom}";
 		}
 
-		private async Task ExtractTextViaOcrFromClipboardImage(
-			OcrReadingOrder ocrReadingOrder)
-		{
-			if (_ocrState.BusyWithTextExtraction)
-			{
-				_ocrState.StopTextExtraction();
-				return;
-			}
+               private async Task ExtractTextViaOcrFromClipboardImage(
+                       OcrReadingOrder ocrReadingOrder)
+               {
+                       if (_ocrState.BusyWithTextExtraction)
+                       {
+                               _ocrState.StopTextExtraction();
+                               return;
+                       }
 
-			var image = TryGetClipboardImage();
-			if (image is null)
-			{
-				var msg = "No image found on the clipboard after multiple retries.";
+                       var image = await TryGetClipboardImageAsync();
+                       if (image is null)
+                       {
+                               var msg = "No image found on the clipboard after multiple retries.";
 				txtOcr.Text = msg;
 				SetTextToClipboard(msg);
 				BeepFail();
@@ -630,23 +626,23 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 		}
 
-		public Image TryGetClipboardImage()
-		{
-			int attempts = 5;
+               public async Task<Image?> TryGetClipboardImageAsync()
+               {
+                       int attempts = 5;
 
-			while (attempts > 0)
-			{
-				if (Clipboard.ContainsImage())
-				{
-					return Clipboard.GetImage();
-				}
+                       while (attempts > 0)
+                       {
+                               if (Clipboard.ContainsImage())
+                               {
+                                       return Clipboard.GetImage();
+                               }
 
-				attempts--;
-				Thread.Sleep(150);
-			}
+                               attempts--;
+                               await Task.Delay(150);
+                       }
 
-			return null;
-		}
+                       return null;
+               }
 
 		// https://docs.microsoft.com/en-us/dotnet/desktop/winforms/advanced/how-to-retrieve-data-from-the-clipboard?view=netframeworkdesktop-4.8
 		public void SetTextToClipboard(
@@ -656,14 +652,14 @@ The model may also leave out common filler words in the audio. If you want to ke
 				Clipboard.SetText(text, TextDataFormat.UnicodeText);
 		}
 
-		private void HookupHotKeyToggleMichrophoneMuteHotkey()
-		{
-			_hkToggleMicMute = MapHotKey(_settings.AudioSettings.MicrophoneToggleMuteHotKey);
-			_hkToggleMicMute.Pressed += delegate { ToggleMicrophoneMute(); };
-			TryRegisterHotkey(_hkToggleMicMute);
+               private void HookupHotKeyToggleMicrophoneMuteHotkey()
+               {
+                       _hkToggleMicMute = MapHotKey(_settings.AudioSettings.MicrophoneToggleMuteHotKey);
+                       _hkToggleMicMute.Pressed += delegate { ToggleMicrophoneMute(); };
+                       TryRegisterHotkey(_hkToggleMicMute);
 
-			lblToggleMic.Text = $"Toggle Michrophone Mute: {_hkToggleMicMute}";
-		}
+                       lblToggleMic.Text = $"Toggle Microphone Mute: {_hkToggleMicMute}";
+               }
 
 		private void HookupHotKeySpeechToText()
 		{
@@ -671,8 +667,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_hkSpeechToText.Pressed += delegate { SpeechToText(); };
 			TryRegisterHotkey(_hkSpeechToText);
 
-			lblSpeechToText.Text = $"Speach to Text: {_hkSpeechToText}";
-		}
+                       lblSpeechToText.Text = $"Speech to Text: {_hkSpeechToText}";
+               }
 
 		private void HookupHotKeyTextToSpeech()
 		{
@@ -896,9 +892,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void MutationForm_Load(object sender, EventArgs e)
 		{
 			RestoreWindowLocationAndSizeFromSettings();
-			//BookMark??888
-			//cmbSpeechToTextService.Text =
-			//	$"{ _activeSpeetchToTextServiceComboItem.Provider}: {_activeSpeetchToTextServiceComboItem.ModelId}";
 		}
 
 		private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)
@@ -947,10 +940,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 							System.Windows.Forms.SendKeys.Send(text);
 							break;
 						case DictationInsertOption.Paste:
-							Thread.Sleep(200); // Wait for text to arrive on clipboard.
-							BeepStart();
-							System.Windows.Forms.SendKeys.SendWait("^v");
-							break;
+                                                       await Task.Delay(200); // Wait for text to arrive on clipboard.
+                                                       BeepStart();
+                                                       System.Windows.Forms.SendKeys.SendWait("^v");
+                                                       break;
 					}
 				}
 			}
