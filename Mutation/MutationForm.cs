@@ -13,19 +13,17 @@ public partial class MutationForm : Form
 
 	private Settings _settings { get; set; }
 	private ISettingsManager _settingsManager { get; set; }
-
 	private AudioDeviceManager _audioDeviceManager;
-
 	private ISpeechToTextService[] _speechToTextServices { get; set; }
 	private SpeechToTextManager _speechToTextManager { get; set; }
 	private OcrManager _ocrManager { get; set; }
-
 	private ClipboardManager _clipboardManager;
 
 	private ILlmService _llmService { get; set; }
 	private ITextToSpeechService _textToSpeechService;
 
 	private HotkeyManager _hotkeyManager;
+	private UiStateManager _uiStateManager;
 
 	public MutationForm(
 			  ISettingsManager settingsManager,
@@ -36,7 +34,8 @@ public partial class MutationForm : Form
 								  ISpeechToTextService[] speechToTextServices,
 								  ITextToSpeechService textToSpeechService,
 								  ILlmService llmService,
-								  HotkeyManager hotkeyManager)
+																					  HotkeyManager hotkeyManager,
+																					  UiStateManager uiStateManager)
 	{
 		this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 		this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -47,6 +46,7 @@ public partial class MutationForm : Form
 		this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 		this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
 		this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
+		this._uiStateManager = uiStateManager ?? throw new ArgumentNullException(nameof(uiStateManager));
 		this._speechToTextManager = new SpeechToTextManager(this._settings);
 
 
@@ -171,31 +171,6 @@ The model may also leave out common filler words in the audio. If you want to ke
 		toolTip.SetToolTip(lblFormatTranscriptResponse, formattingCommandsPromptToolTipMsg);
 	}
 
-	private void RestoreWindowLocationAndSizeFromSettings()
-	{
-		if (_settings is null)
-			return;
-
-		if (_settings.MainWindowUiSettings.WindowSize != Size.Empty)
-		{
-			// Make sure the window size stays within the screen bounds
-			this.Size = new Size(Math.Min(_settings.MainWindowUiSettings.WindowSize.Width, Screen.PrimaryScreen.Bounds.Width),
-										Math.Min(_settings.MainWindowUiSettings.WindowSize.Height, Screen.PrimaryScreen.Bounds.Height));
-		}
-
-		if (this.Size.Width < 150 || this.Size.Height < 150)
-		{
-			this.Size = new Size(Math.Max(this.Size.Width, 150), Math.Max(this.Size.Height, 150));
-		}
-
-		if (_settings.MainWindowUiSettings.WindowLocation != Point.Empty)
-		{
-			// Make sure the window location stays within the screen bounds
-			this.Location = new Point(Math.Max(Math.Min(_settings.MainWindowUiSettings.WindowLocation.X, Screen.PrimaryScreen.Bounds.Width - this.Size.Width), 0),
-												Math.Max(Math.Min(_settings.MainWindowUiSettings.WindowLocation.Y, Screen.PrimaryScreen.Bounds.Height - this.Size.Height), 0));
-
-		}
-	}
 
 	private void SetupHotkeys()
 	{
@@ -445,8 +420,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 	private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
 	{
-		_settings.MainWindowUiSettings.WindowSize = this.Size;
-		_settings.MainWindowUiSettings.WindowLocation = this.Location;
+		_uiStateManager.Save(this);
 
 		_activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
 		_settings.SpeetchToTextSettings.ActiveSpeetchToTextService = _activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.Name;
@@ -462,7 +436,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 	private void MutationForm_Load(object sender, EventArgs e)
 	{
-		RestoreWindowLocationAndSizeFromSettings();
+		_uiStateManager.Restore(this);
 		SetupHotkeys();
 	}
 
