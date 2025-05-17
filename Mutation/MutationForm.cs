@@ -13,20 +13,17 @@ public partial class MutationForm : Form
 
 	private Settings _settings { get; set; }
 	private ISettingsManager _settingsManager { get; set; }
-
 	private AudioDeviceManager _audioDeviceManager;
-
 	private ISpeechToTextService[] _speechToTextServices { get; set; }
 	private SpeechToTextManager _speechToTextManager { get; set; }
 	private OcrManager _ocrManager { get; set; }
-
 	private ClipboardManager _clipboardManager;
 
 	private ILlmService _llmService { get; set; }
 	private ITextToSpeechService _textToSpeechService;
 
-        private HotkeyManager _hotkeyManager;
-        private UiStateManager _uiStateManager;
+	private HotkeyManager _hotkeyManager;
+	private UiStateManager _uiStateManager;
 
 	public MutationForm(
 			  ISettingsManager settingsManager,
@@ -37,9 +34,9 @@ public partial class MutationForm : Form
 								  ISpeechToTextService[] speechToTextServices,
 								  ITextToSpeechService textToSpeechService,
 								  ILlmService llmService,
-                                                                 HotkeyManager hotkeyManager,
-                                                                 UiStateManager uiStateManager)
-        {
+																					  HotkeyManager hotkeyManager,
+																					  UiStateManager uiStateManager)
+	{
 		this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 		this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
 		this._audioDeviceManager = audioDeviceManager ?? throw new ArgumentNullException(nameof(audioDeviceManager));
@@ -48,8 +45,8 @@ public partial class MutationForm : Form
 		this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 		this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 		this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-                this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
-                this._uiStateManager = uiStateManager ?? throw new ArgumentNullException(nameof(uiStateManager));
+		this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
+		this._uiStateManager = uiStateManager ?? throw new ArgumentNullException(nameof(uiStateManager));
 		this._speechToTextManager = new SpeechToTextManager(this._settings);
 
 
@@ -421,9 +418,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 	}
 
 
-        private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-                _uiStateManager.Save(this);
+	private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
+	{
+		_uiStateManager.Save(this);
 
 		_activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.SpeechToTextPrompt = txtSpeechToTextPrompt.Text;
 		_settings.SpeetchToTextSettings.ActiveSpeetchToTextService = _activeSpeetchToTextServiceComboItem.SpeetchToTextServiceSettings.Name;
@@ -437,11 +434,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 	}
 
 
-        private void MutationForm_Load(object sender, EventArgs e)
-        {
-                _uiStateManager.Restore(this);
-                SetupHotkeys();
-        }
+	private void MutationForm_Load(object sender, EventArgs e)
+	{
+		_uiStateManager.Restore(this);
+		SetupHotkeys();
+	}
 
 	private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)
 	{
