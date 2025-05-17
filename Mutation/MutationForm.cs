@@ -27,7 +27,7 @@ namespace Mutation
 		private int _microphoneDeviceIndex = -1;
 
 		private ISpeechToTextService[] _speechToTextServices { get; set; }
-                private SpeechToTextManager _speechToTextManager { get; set; }
+		private SpeechToTextManager _speechToTextManager { get; set; }
 		private IOcrService _ocrService { get; set; }
 		private OcrState _ocrState { get; init; } = new();
 
@@ -53,8 +53,8 @@ namespace Mutation
 			this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 			this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-                        this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
-                        this._speechToTextManager = new SpeechToTextManager(this._settings);
+			this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
+			this._speechToTextManager = new SpeechToTextManager(this._settings);
 
 
 			InitializeComponent();
@@ -589,75 +589,75 @@ The model may also leave out common filler words in the audio. If you want to ke
 			_textToSpeechService.SpeakText(text);
 		}
 
-                private async Task SpeechToText()
-                {
-                        if (this._activeSpeetchToTextServiceComboItem is null)
-                        {
-                                MessageBox.Show("No active speech-to-text service selected.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                                return;
-                        }
+		private async Task SpeechToText()
+		{
+			if (this._activeSpeetchToTextServiceComboItem is null)
+			{
+				MessageBox.Show("No active speech-to-text service selected.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
 
-                        try
-                        {
-                                if (_speechToTextManager.Transcribing)
-                                {
-                                        _speechToTextManager.CancelTranscription();
-                                        return;
-                                }
+			try
+			{
+				if (_speechToTextManager.Transcribing)
+				{
+					_speechToTextManager.CancelTranscription();
+					return;
+				}
 
-                                if (!_speechToTextManager.Recording)
-                                {
-                                        txtSpeechToText.ReadOnly = true;
-                                        txtSpeechToText.Text = "Recording microphone...";
-                                        btnSpeechToTextRecord.Text = "Stop &Recording";
+				if (!_speechToTextManager.Recording)
+				{
+					txtSpeechToText.ReadOnly = true;
+					txtSpeechToText.Text = "Recording microphone...";
+					btnSpeechToTextRecord.Text = "Stop &Recording";
 
-                                        await _speechToTextManager.StartRecordingAsync(_microphoneDeviceIndex).ConfigureAwait(true);
-                                        BeepStart();
-                                }
-                                else
-                                {
-                                        BeepEnd();
+					await _speechToTextManager.StartRecordingAsync(_microphoneDeviceIndex).ConfigureAwait(true);
+					BeepStart();
+				}
+				else
+				{
+					BeepEnd();
 
-                                        txtSpeechToText.ReadOnly = true;
-                                        txtSpeechToText.Text = "Converting speech to text...";
-                                        btnSpeechToTextRecord.Text = "Processing";
-                                        btnSpeechToTextRecord.Enabled = false;
+					txtSpeechToText.ReadOnly = true;
+					txtSpeechToText.Text = "Converting speech to text...";
+					btnSpeechToTextRecord.Text = "Processing";
+					btnSpeechToTextRecord.Enabled = false;
 
-                                        string text = await _speechToTextManager.StopRecordingAndTranscribeAsync(
-                                                this._activeSpeetchToTextServiceComboItem.SpeechToTextService,
-                                                txtSpeechToTextPrompt.Text,
-                                                CancellationToken.None).ConfigureAwait(true);
+					string text = await _speechToTextManager.StopRecordingAndTranscribeAsync(
+							  this._activeSpeetchToTextServiceComboItem.SpeechToTextService,
+							  txtSpeechToTextPrompt.Text,
+							  CancellationToken.None).ConfigureAwait(true);
 
-                                        txtSpeechToText.ReadOnly = false;
-                                        txtSpeechToText.Text = $"{text}";
-                                        btnSpeechToTextRecord.Text = "&Record";
-                                        btnSpeechToTextRecord.Enabled = true;
-                                }
+					txtSpeechToText.ReadOnly = false;
+					txtSpeechToText.Text = $"{text}";
+					btnSpeechToTextRecord.Text = "&Record";
+					btnSpeechToTextRecord.Enabled = true;
+				}
 
-                        }
-                        catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
-                        {
-                                BeepFail();
+			}
+			catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
+			{
+				BeepFail();
 
-                                txtSpeechToText.Text = "Transcription cancelled by user.";
-                                txtSpeechToText.ReadOnly = false;
-                                btnSpeechToTextRecord.Text = "&Record";
-                                btnSpeechToTextRecord.Enabled = true;
-                        }
-                        catch (Exception ex)
-                        {
-                                BeepFail();
+				txtSpeechToText.Text = "Transcription cancelled by user.";
+				txtSpeechToText.ReadOnly = false;
+				btnSpeechToTextRecord.Text = "&Record";
+				btnSpeechToTextRecord.Enabled = true;
+			}
+			catch (Exception ex)
+			{
+				BeepFail();
 
-                                string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
-                                txtSpeechToText.Text = msg;
-                                txtSpeechToText.ReadOnly = false;
-                                btnSpeechToTextRecord.Text = "&Record";
-                                btnSpeechToTextRecord.Enabled = true;
+				string msg = $"Failed speech to text: {ex.Message}{Environment.NewLine}{ex.GetType().FullName}{Environment.NewLine}{ex.StackTrace}"; ;
+				txtSpeechToText.Text = msg;
+				txtSpeechToText.ReadOnly = false;
+				btnSpeechToTextRecord.Text = "&Record";
+				btnSpeechToTextRecord.Enabled = true;
 
-                                this.Activate();
-                                MessageBox.Show(this, msg, "Speech to text error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                }
+				this.Activate();
+				MessageBox.Show(this, msg, "Speech to text error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
 
 
 		private void MutationForm_FormClosing(object sender, FormClosingEventArgs e)
