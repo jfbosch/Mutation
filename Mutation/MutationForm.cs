@@ -1,8 +1,6 @@
 ﻿using AudioSwitcher.AudioApi;
-using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 using CognitiveSupport.Extensions;
-using NAudio.Wave;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 using ScreenCapturing;
@@ -20,11 +18,7 @@ namespace Mutation
 		private Settings _settings { get; set; }
 		private ISettingsManager _settingsManager { get; set; }
 
-		private bool _isMuted = false;
-		private CoreAudioController _coreAudioController;
-		private IEnumerable<CoreAudioDevice> _captureDevices;
-		private CoreAudioDevice _microphone { get; set; }
-		private int _microphoneDeviceIndex = -1;
+		private AudioDeviceManager _audioDeviceManager;
 
 		private ISpeechToTextService[] _speechToTextServices { get; set; }
 		private SpeechToTextManager _speechToTextManager { get; set; }
@@ -39,7 +33,7 @@ namespace Mutation
 		public MutationForm(
 				  ISettingsManager settingsManager,
 				  Settings settings,
-				  CoreAudioController coreAudioController,
+											 AudioDeviceManager audioDeviceManager,
 				  IOcrService ocrService,
 				  ISpeechToTextService[] speechToTextServices,
 				  ITextToSpeechService textToSpeechService,
@@ -48,7 +42,7 @@ namespace Mutation
 		{
 			this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 			this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
-			this._coreAudioController = coreAudioController ?? throw new ArgumentNullException(nameof(coreAudioController));
+			this._audioDeviceManager = audioDeviceManager ?? throw new ArgumentNullException(nameof(audioDeviceManager));
 			this._ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
 			this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 			this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
@@ -63,20 +57,6 @@ namespace Mutation
 			PopulateSpeechToTextServiceCombo();
 
 			HookupTooltips();
-
-			_hotkeyManager.RegisterHotkeys(
-					  this,
-					  TakeScreenshotToClipboard,
-					  TakeScreenshotAndExtractText,
-					  ExtractTextViaOcrFromClipboardImage,
-					  ToggleMicrophoneMute,
-					  SpeechToText,
-					  TextToSpeech);
-
-			lblToggleMic.Text = $"Toggle Microphone Mute: {_hotkeyManager.ToggleMicMuteHotkey}";
-			lblScreenshotHotKey.Text = $"Screenshot: {_hotkeyManager.ScreenshotHotkey}";
-			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hotkeyManager.ScreenshotOcrHotkey}";
-			lblOcrHotKey.Text = $"OCR Clipboard: {_hotkeyManager.OcrHotkey}";
 
 			txtFormatTranscriptPrompt.Text = this._settings.LlmSettings.FormatTranscriptPrompt;
 			txtReviewTranscriptPrompt.Text = this._settings.LlmSettings.ReviewTranscriptPrompt;
@@ -213,9 +193,26 @@ The model may also leave out common filler words in the audio. If you want to ke
 			{
 				// Make sure the window location stays within the screen bounds
 				this.Location = new Point(Math.Max(Math.Min(_settings.MainWindowUiSettings.WindowLocation.X, Screen.PrimaryScreen.Bounds.Width - this.Size.Width), 0),
-												  Math.Max(Math.Min(_settings.MainWindowUiSettings.WindowLocation.Y, Screen.PrimaryScreen.Bounds.Height - this.Size.Height), 0));
+													Math.Max(Math.Min(_settings.MainWindowUiSettings.WindowLocation.Y, Screen.PrimaryScreen.Bounds.Height - this.Size.Height), 0));
 
 			}
+		}
+
+		private void SetupHotkeys()
+		{
+			_hotkeyManager.RegisterHotkeys(
+									this,
+									TakeScreenshotToClipboard,
+									TakeScreenshotAndExtractText,
+									ExtractTextViaOcrFromClipboardImage,
+									ToggleMicrophoneMute,
+									SpeechToText,
+									TextToSpeech);
+
+			lblToggleMic.Text = $"Toggle Microphone Mute: {_hotkeyManager.ToggleMicMuteHotkey}";
+			lblScreenshotHotKey.Text = $"Screenshot: {_hotkeyManager.ScreenshotHotkey}";
+			lblScreenshotOcrHotKey.Text = $"Screenshot OCR: {_hotkeyManager.ScreenshotOcrHotkey}";
+			lblOcrHotKey.Text = $"OCR Clipboard: {_hotkeyManager.OcrHotkey}";
 		}
 
 		internal void InitializeAudioControls()
@@ -224,7 +221,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			Application.DoEvents();
 
-			_captureDevices = _coreAudioController.GetDevices(DeviceType.Capture, DeviceState.Active);
+			_audioDeviceManager.RefreshCaptureDevices();
 			PopulateActiveMicrophoneCombo();
 			SetActiveMicrophoneFromSettings();
 			SetActiveMicrophoneToDefaultCaptureDeviceIfNotSet();
@@ -232,16 +229,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void SetActiveMicrophoneToDefaultCaptureDeviceIfNotSet()
 		{
-			if (_microphone is null)
+			if (_audioDeviceManager.Microphone is null)
 			{
-				var defaultMicDevice = _captureDevices
-					.FirstOrDefault(x => x.IsDefaultDevice);
-				if (defaultMicDevice is not null)
+				_audioDeviceManager.EnsureDefaultMicrophoneSelected();
+				if (_audioDeviceManager.Microphone is not null)
 				{
-					this._microphone = defaultMicDevice;
-					SelectCaptureDeviceForNAudioBasedRecording();
 					SelectActiveCaptureDeviceInActiveMicrophoneCombo();
-
 					FeedbackMicrophoneStateToUser();
 				}
 				else
@@ -259,6 +252,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 				if (item.CaptureDevice.FullName == _settings.AudioSettings.ActiveCaptureDeviceFullName)
 				{
 					cmbActiveMicrophone.SelectedItem = item;
+					_audioDeviceManager.SelectMicrophone(item.CaptureDevice);
 					break;
 				}
 			}
@@ -267,12 +261,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void PopulateActiveMicrophoneCombo()
 		{
 			cmbActiveMicrophone.Items.Clear();
-			_captureDevices
-				.ToList()
-				.ForEach(m => cmbActiveMicrophone.Items.Add(new CaptureDeviceComboItem
-				{
-					CaptureDevice = m,
-				}));
+			_audioDeviceManager.CaptureDevices
+					  .ToList()
+					  .ForEach(m => cmbActiveMicrophone.Items.Add(new CaptureDeviceComboItem
+					  {
+						  CaptureDevice = m,
+					  }));
 		}
 
 		private void PopulateSpeechToTextServiceCombo()
@@ -303,9 +297,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 		private void SelectActiveCaptureDeviceInActiveMicrophoneCombo()
 		{
+			if (_audioDeviceManager.Microphone is null)
+				return;
+
 			foreach (CaptureDeviceComboItem item in cmbActiveMicrophone.Items)
 			{
-				if (item.CaptureDevice.FullName == _microphone.FullName)
+				if (item.CaptureDevice.FullName == _audioDeviceManager.Microphone.FullName)
 				{
 					cmbActiveMicrophone.SelectedItem = item;
 					break;
@@ -313,47 +310,12 @@ The model may also leave out common filler words in the audio. If you want to ke
 			}
 		}
 
-		private void SelectCaptureDeviceForNAudioBasedRecording()
-		{
-			// The AudioSwitcher library, CoreAudioDevice.Name returns a value like
-			// "Krisp Microphone". This is the name of the device as under Windows recording devices.
-			// While the NAudio library(used for recording to file) property, WaveInEvent.GetCapabilities(i).ProductName, returns a value like
-			// "Krisp Microphone (Krisp Audio)". This has the device name, but also contains a suffix.
-			// So, we do a starts with match to find the mic we are looking for using the default device name followed by a space and a (
-
-			string startsWithNameToMatch = $"{this._microphone.Name} (";
-			int deviceCount = WaveIn.DeviceCount;
-			bool micMatchFound = false;
-			for (int i = 0; i < deviceCount; i++)
-			{
-				if (WaveInEvent.GetCapabilities(i).ProductName.StartsWith(startsWithNameToMatch))
-				{
-					micMatchFound = true;
-					_microphoneDeviceIndex = i;
-
-					// Debugging message
-					//MessageBox.Show(
-					//	defaultMicDevice.Name
-					//	+ Environment.NewLine
-					//	+ WaveInEvent.GetCapabilities(i).ProductName
-					//	+ Environment.NewLine
-					//	+ "Device Index: " + _microphoneDeviceIndex);
-
-					break;
-				}
-			}
-			if (!micMatchFound)
-				MessageBox.Show($"No michrophone match found for {this._microphone.Name}");
-		}
 
 		public void ToggleMicrophoneMute()
 		{
 			lock (this)
 			{
-				_isMuted = !_isMuted;
-				foreach (var mic in _captureDevices)
-					mic.Mute(_isMuted);
-
+				_audioDeviceManager.ToggleMute();
 				FeedbackMicrophoneStateToUser();
 			}
 		}
@@ -362,7 +324,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		{
 			lock (this)
 			{
-				if (_microphone.IsMuted)
+				if (_audioDeviceManager.Microphone?.IsMuted == true)
 				{
 					this.Text = "Mutation - Muted Microphone";
 					this.BackColor = Color.LightGray;
@@ -375,10 +337,10 @@ The model may also leave out common filler words in the audio. If you want to ke
 					BeepUnmuted();
 				}
 
-				txtActiveMicrophoneMuteState.Text = this._microphone.IsMuted ? "Muted" : "Unmuted";
+				txtActiveMicrophoneMuteState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
 
 				int i = 1;
-				txtAllMics.Text = string.Join(Environment.NewLine, _captureDevices.Select(m => $"{i++}) {m.FullName}{(m.IsMuted ? "       - muted" : "")}").ToArray());
+				txtAllMics.Text = string.Join(Environment.NewLine, _audioDeviceManager.CaptureDevices.Select(m => $"{i++}) {m.FullName}{(m.IsMuted ? "       - muted" : "")}").ToArray());
 			}
 		}
 
@@ -611,7 +573,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 					txtSpeechToText.Text = "Recording microphone...";
 					btnSpeechToTextRecord.Text = "Stop &Recording";
 
-					await _speechToTextManager.StartRecordingAsync(_microphoneDeviceIndex).ConfigureAwait(true);
+					await _speechToTextManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex).ConfigureAwait(true);
 					BeepStart();
 				}
 				else
@@ -680,6 +642,7 @@ The model may also leave out common filler words in the audio. If you want to ke
 		private void MutationForm_Load(object sender, EventArgs e)
 		{
 			RestoreWindowLocationAndSizeFromSettings();
+			SetupHotkeys();
 		}
 
 		private async void btnSpeechToTextRecord_Click(object sender, EventArgs e)
@@ -925,9 +888,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 			var selectedItem = cmbActiveMicrophone.SelectedItem as CaptureDeviceComboItem;
 			if (selectedItem is not null)
 			{
-				_microphone = selectedItem.CaptureDevice;
-				SelectCaptureDeviceForNAudioBasedRecording();
-				_settings.AudioSettings.ActiveCaptureDeviceFullName = _microphone.FullName;
+				_audioDeviceManager.SelectMicrophone(selectedItem.CaptureDevice);
+				_settings.AudioSettings.ActiveCaptureDeviceFullName = selectedItem.CaptureDevice.FullName;
 				FeedbackMicrophoneStateToUser();
 			}
 			else
