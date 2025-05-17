@@ -1,4 +1,4 @@
-﻿namespace ScreenCapturing
+﻿namespace Mutation
 {
 	partial class ScreenCaptureForm
 	{

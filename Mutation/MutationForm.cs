@@ -18,9 +18,9 @@ public partial class MutationForm : Form
 
 	private ISpeechToTextService[] _speechToTextServices { get; set; }
 	private SpeechToTextManager _speechToTextManager { get; set; }
-        private OcrManager _ocrManager { get; set; }
+	private OcrManager _ocrManager { get; set; }
 
-        private ClipboardManager _clipboardManager;
+	private ClipboardManager _clipboardManager;
 
 	private ILlmService _llmService { get; set; }
 	private ITextToSpeechService _textToSpeechService;
@@ -31,18 +31,18 @@ public partial class MutationForm : Form
 			  ISettingsManager settingsManager,
 			  Settings settings,
 										 AudioDeviceManager audioDeviceManager,
-                          OcrManager ocrManager,
-                          ClipboardManager clipboardManager,
-                          ISpeechToTextService[] speechToTextServices,
-                          ITextToSpeechService textToSpeechService,
-                          ILlmService llmService,
-                          HotkeyManager hotkeyManager)
-        {
+								  OcrManager ocrManager,
+								  ClipboardManager clipboardManager,
+								  ISpeechToTextService[] speechToTextServices,
+								  ITextToSpeechService textToSpeechService,
+								  ILlmService llmService,
+								  HotkeyManager hotkeyManager)
+	{
 		this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 		this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
 		this._audioDeviceManager = audioDeviceManager ?? throw new ArgumentNullException(nameof(audioDeviceManager));
-                this._ocrManager = ocrManager ?? throw new ArgumentNullException(nameof(ocrManager));
-                this._clipboardManager = clipboardManager ?? throw new ArgumentNullException(nameof(clipboardManager));
+		this._ocrManager = ocrManager ?? throw new ArgumentNullException(nameof(ocrManager));
+		this._clipboardManager = clipboardManager ?? throw new ArgumentNullException(nameof(clipboardManager));
 		this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 		this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
 		this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
@@ -366,11 +366,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 
 
-        private void TextToSpeech()
-        {
-                string text = _clipboardManager.GetText();
-                _textToSpeechService.SpeakText(text);
-        }
+	private void TextToSpeech()
+	{
+		string text = _clipboardManager.GetText();
+		_textToSpeechService.SpeakText(text);
+	}
 
 	private async Task SpeechToText()
 	{
@@ -494,8 +494,8 @@ The model may also leave out common filler words in the audio. If you want to ke
 		else
 			txtFormatTranscriptResponse.Text = text;
 
-                await Task.Delay(100);
-                _clipboardManager.SetText(text);
+		await Task.Delay(100);
+		_clipboardManager.SetText(text);
 
 		if (!this.ContainsFocus)
 		{

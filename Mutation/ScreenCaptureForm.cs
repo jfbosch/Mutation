@@ -1,5 +1,9 @@
-﻿namespace ScreenCapturing
+﻿using System;
+using System.Drawing;
+using System.Windows.Forms;
 using Mutation;
+
+namespace Mutation
 {
         public partial class ScreenCaptureForm : Form
         {
@@ -13,6 +17,10 @@ using Mutation;
                 {
                         _clipboardManager = clipboardManager ?? throw new ArgumentNullException(nameof(clipboardManager));
 			InitializeComponent();
+			if (Screen.PrimaryScreen == null)
+			{
+				throw new InvalidOperationException("No primary screen detected.");
+			}
 			this.Bounds = Screen.PrimaryScreen.Bounds;
 			this.FormBorderStyle = FormBorderStyle.None; // Hide title bar
 			this.WindowState = FormWindowState.Maximized;
