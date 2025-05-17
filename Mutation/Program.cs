@@ -89,6 +89,9 @@ internal static class Program
                 builder.Services.AddSingleton<HotkeyManager>();
                 builder.Services.AddSingleton<UiStateManager>();
 
+                builder.Services.AddSingleton<TranscriptFormatter>();
+                builder.Services.AddSingleton<TranscriptReviewer>();
+
                 builder.Services.AddSingleton<MutationForm>();
 
 		return builder;
