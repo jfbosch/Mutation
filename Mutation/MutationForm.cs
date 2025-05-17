@@ -1,5 +1,4 @@
 ﻿using CognitiveSupport;
-using CognitiveSupport.Extensions;
 using StringExtensionLibrary;
 using System.ComponentModel;
 
@@ -17,28 +16,28 @@ public partial class MutationForm : Form
 	private OcrManager _ocrManager { get; set; }
 	private ClipboardManager _clipboardManager;
 
-        private ILlmService _llmService { get; set; }
-        private ITextToSpeechService _textToSpeechService;
+	private ILlmService _llmService { get; set; }
+	private ITextToSpeechService _textToSpeechService;
 
-        private TranscriptFormatter _transcriptFormatter;
-        private TranscriptReviewer _transcriptReviewer;
+	private TranscriptFormatter _transcriptFormatter;
+	private TranscriptReviewer _transcriptReviewer;
 
 	private HotkeyManager _hotkeyManager;
 	private UiStateManager _uiStateManager;
 
-        public MutationForm(
-                          ISettingsManager settingsManager,
-                          Settings settings,
-                          AudioDeviceManager audioDeviceManager,
-                          OcrManager ocrManager,
-                          ClipboardManager clipboardManager,
-                          ISpeechToTextService[] speechToTextServices,
-                          ITextToSpeechService textToSpeechService,
-                          ILlmService llmService,
-                          TranscriptFormatter transcriptFormatter,
-                          TranscriptReviewer transcriptReviewer,
-                          HotkeyManager hotkeyManager,
-                          UiStateManager uiStateManager)
+	public MutationForm(
+							ISettingsManager settingsManager,
+							Settings settings,
+							AudioDeviceManager audioDeviceManager,
+							OcrManager ocrManager,
+							ClipboardManager clipboardManager,
+							ISpeechToTextService[] speechToTextServices,
+							ITextToSpeechService textToSpeechService,
+							ILlmService llmService,
+							TranscriptFormatter transcriptFormatter,
+							TranscriptReviewer transcriptReviewer,
+							HotkeyManager hotkeyManager,
+							UiStateManager uiStateManager)
 	{
 		this._settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 		this._settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -47,12 +46,12 @@ public partial class MutationForm : Form
 		this._clipboardManager = clipboardManager ?? throw new ArgumentNullException(nameof(clipboardManager));
 		this._speechToTextServices = speechToTextServices ?? throw new ArgumentNullException(nameof(speechToTextServices));
 		this._textToSpeechService = textToSpeechService ?? throw new ArgumentNullException(nameof(textToSpeechService));
-                this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-                this._transcriptFormatter = transcriptFormatter ?? throw new ArgumentNullException(nameof(transcriptFormatter));
-                this._transcriptReviewer = transcriptReviewer ?? throw new ArgumentNullException(nameof(transcriptReviewer));
-                this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
-                this._uiStateManager = uiStateManager ?? throw new ArgumentNullException(nameof(uiStateManager));
-                this._speechToTextManager = new SpeechToTextManager(this._settings);
+		this._llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+		this._transcriptFormatter = transcriptFormatter ?? throw new ArgumentNullException(nameof(transcriptFormatter));
+		this._transcriptReviewer = transcriptReviewer ?? throw new ArgumentNullException(nameof(transcriptReviewer));
+		this._hotkeyManager = hotkeyManager ?? throw new ArgumentNullException(nameof(hotkeyManager));
+		this._uiStateManager = uiStateManager ?? throw new ArgumentNullException(nameof(uiStateManager));
+		this._speechToTextManager = new SpeechToTextManager(this._settings);
 
 
 		InitializeComponent();
@@ -457,9 +456,9 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 	private async Task FormatSpeechToTextTranscriptWithRules()
 	{
-                string rawTranscript = txtSpeechToText.Text;
+		string rawTranscript = txtSpeechToText.Text;
 
-                string text = _transcriptFormatter.ApplyRules(rawTranscript, radManualPunctuation.Checked);
+		string text = _transcriptFormatter.ApplyRules(rawTranscript, radManualPunctuation.Checked);
 
 		if (chkFormattedTranscriptAppend.Checked)
 			txtFormatTranscriptResponse.Text += text;
@@ -501,11 +500,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 		txtFormatTranscriptResponse.Text = "Formatting...";
 		BeepStart();
 
-                string rawTranscript = txtSpeechToText.Text;
-                string formatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
+		string rawTranscript = txtSpeechToText.Text;
+		string formatTranscriptPrompt = txtFormatTranscriptPrompt.Text;
 
-                string formattedText = await _transcriptFormatter.FormatWithLlmAsync(rawTranscript, formatTranscriptPrompt);
-                txtFormatTranscriptResponse.Text = formattedText;
+		string formattedText = await _transcriptFormatter.FormatWithLlmAsync(rawTranscript, formatTranscriptPrompt);
+		txtFormatTranscriptResponse.Text = formattedText;
 
 		BeepSuccess();
 	}
@@ -523,11 +522,11 @@ The model may also leave out common filler words in the audio. If you want to ke
 		string transcript = txtFormatTranscriptResponse.Text;
 		string reviewTranscriptPrompt = txtReviewTranscriptPrompt.Text;
 
-                var selectedTemperature = cmbReviewTemperature.SelectedItem;
-                decimal temperature = ((dynamic)selectedTemperature).Value;
-                string review = await _transcriptReviewer.ReviewAsync(transcript, reviewTranscriptPrompt, temperature);
-                txtTranscriptReviewResponse.Text = review;
-                txtTranscriptReviewResponse.ReadOnly = false;
+		var selectedTemperature = cmbReviewTemperature.SelectedItem;
+		decimal temperature = ((dynamic)selectedTemperature).Value;
+		string review = await _transcriptReviewer.ReviewAsync(transcript, reviewTranscriptPrompt, temperature);
+		txtTranscriptReviewResponse.Text = review;
+		txtTranscriptReviewResponse.ReadOnly = false;
 
 		var lines = txtTranscriptReviewResponse.Text.Split(Environment.NewLine, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 		foreach (var line in lines)
@@ -628,13 +627,13 @@ The model may also leave out common filler words in the audio. If you want to ke
 
 			BeepStart();
 
-                        string transcript = txtFormatTranscriptResponse.Text;
-                        string systemPrompt = txtReviewTranscriptPrompt.Text;
-                        string[] instructions = selectedRows.Select(x => x.instruction).ToArray();
+			string transcript = txtFormatTranscriptResponse.Text;
+			string systemPrompt = txtReviewTranscriptPrompt.Text;
+			string[] instructions = selectedRows.Select(x => x.instruction).ToArray();
 
-                        string revision = await _transcriptReviewer.ApplyCorrectionsAsync(transcript, systemPrompt, instructions);
-                        txtFormatTranscriptResponse.Text = revision;
-                        txtFormatTranscriptResponse.ReadOnly = false;
+			string revision = await _transcriptReviewer.ApplyCorrectionsAsync(transcript, systemPrompt, instructions);
+			txtFormatTranscriptResponse.Text = revision;
+			txtFormatTranscriptResponse.ReadOnly = false;
 
 			foreach (var (row, instruction) in selectedRows)
 				dgvReview.Rows.Remove(row);
