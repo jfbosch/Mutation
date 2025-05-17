@@ -63,7 +63,8 @@ internal static class Program
 		builder.Services.AddSingleton<ISettingsManager>(settingsManager);
 		builder.Services.AddSingleton<CognitiveSupport.Settings>(settings);
 
-		builder.Services.AddSingleton<CoreAudioController>();
+                builder.Services.AddSingleton<CoreAudioController>();
+                builder.Services.AddSingleton<AudioDeviceManager>();
 
 		builder.Services.AddSingleton<IOcrService>(
 			new OcrService(
