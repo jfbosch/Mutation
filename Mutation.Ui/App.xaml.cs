@@ -33,7 +33,7 @@ namespace Mutation.Ui
 		/// </summary>
 		public App()
 		{
-			//InitializeComponent();
+			
 		}
 
 		/// <summary>
