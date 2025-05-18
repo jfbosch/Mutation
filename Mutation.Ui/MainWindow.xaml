@@ -13,7 +13,11 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid>
-
+    <Grid Padding="20">
+        <StackPanel Spacing="10">
+            <Button x:Name="BtnBeep" Content="Play Success Beep" Click="BtnBeep_Click"/>
+            <TextBox x:Name="TxtClipboard" PlaceholderText="Clipboard text"/>
+            <Button Content="Copy Text" Click="CopyText_Click"/>
+        </StackPanel>
     </Grid>
 </Window>
