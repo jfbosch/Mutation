@@ -22,6 +22,7 @@ namespace Mutation.Ui
         {
                 private readonly ClipboardManager _clipboard;
                 private readonly UiStateManager _uiStateManager;
+                private readonly ISettingsManager _settingsManager;
                 private readonly AudioDeviceManager _audioDeviceManager;
                 private readonly OcrManager _ocrManager;
                 private readonly ISpeechToTextService[] _speechServices;
@@ -42,10 +43,12 @@ namespace Mutation.Ui
                         ITextToSpeechService textToSpeech,
                         TranscriptFormatter transcriptFormatter,
                         TranscriptReviewer transcriptReviewer,
+                        ISettingsManager settingsManager,
                         Settings settings)
                 {
                         _clipboard = clipboard;
                         _uiStateManager = uiStateManager;
+                        _settingsManager = settingsManager;
                         _audioDeviceManager = audioDeviceManager;
                         _ocrManager = ocrManager;
                         _speechServices = speechServices;
@@ -66,12 +69,27 @@ namespace Mutation.Ui
                         CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
                         if (_activeSpeechService != null)
                                 CmbSpeechService.SelectedItem = _activeSpeechService;
+
+                        TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
+                        TxtReviewPrompt.Text = _settings.LlmSettings?.ReviewTranscriptPrompt ?? string.Empty;
+
+                        var tooltipManager = new TooltipManager(_settings);
+                        tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
+
                         this.Closed += MainWindow_Closed;
                 }
 
-                private void MainWindow_Closed(object sender, WindowEventArgs args)
+                private async void MainWindow_Closed(object sender, WindowEventArgs args)
                 {
                         _uiStateManager.Save(this);
+
+                        if (_activeSpeechService != null)
+                                _settings.SpeetchToTextSettings!.ActiveSpeetchToTextService = _activeSpeechService.ServiceName;
+                        _settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
+                        _settings.LlmSettings!.ReviewTranscriptPrompt = TxtReviewPrompt.Text;
+
+                        await _settingsManager.SaveAsync(_settings);
+                        BeepPlayer.DisposePlayers();
                 }
 
                 private void BtnBeep_Click(object sender, RoutedEventArgs e)
@@ -118,7 +136,17 @@ namespace Mutation.Ui
                 public async Task StartStopSpeechToTextAsync()
                 {
                         if (_activeSpeechService == null)
+                        {
+                                var dlg = new ContentDialog
+                                {
+                                        Title = "Warning",
+                                        Content = "No speech-to-text service selected.",
+                                        CloseButtonText = "OK",
+                                        XamlRoot = this.Content.XamlRoot
+                                };
+                                await dlg.ShowAsync();
                                 return;
+                        }
 
                         if (!_speechManager.Recording)
                         {
@@ -163,6 +191,25 @@ namespace Mutation.Ui
                                      .Select(i => new ReviewItem { Apply = false, Issue = i })
                                      .ToList();
                 GridReview.ItemsSource = issues;
+        }
+
+        private async void BtnApplySelectedReviewIssues_Click(object sender, RoutedEventArgs e)
+        {
+                if (GridReview.ItemsSource is IEnumerable<ReviewItem> items)
+                {
+                        var selected = items.Where(i => i.Apply).Select(i => i.Issue).ToArray();
+                        if (selected.Length > 0)
+                        {
+                                TxtFormatTranscript.IsReadOnly = true;
+                                string transcript = TxtFormatTranscript.Text;
+                                string prompt = TxtReviewPrompt.Text;
+                                string revision = await _transcriptReviewer.ApplyCorrectionsAsync(transcript, prompt, selected);
+                                TxtFormatTranscript.Text = revision;
+                                TxtFormatTranscript.IsReadOnly = false;
+                                GridReview.ItemsSource = items.Where(i => !i.Apply).ToList();
+                                BeepPlayer.Play(BeepType.Success);
+                        }
+                }
         }
 
         private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
