@@ -29,10 +29,11 @@
                 <TextBox x:Name="TxtOcr" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
 
                 <Button x:Name="BtnSpeechToText" Content="Record" Click="BtnSpeechToText_Click"/>
-                <TextBox x:Name="TxtSpeechToText" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
+                <TextBox x:Name="TxtSpeechToText" AcceptsReturn="True" TextWrapping="Wrap" Height="80" TextChanged="TxtSpeechToText_TextChanged"/>
 
                 <TextBox x:Name="TxtFormatPrompt" PlaceholderText="Format prompt" AcceptsReturn="True" TextWrapping="Wrap" Height="60"/>
                 <Button x:Name="BtnFormatTranscript" Content="Format Transcript" Click="BtnFormatTranscript_Click"/>
+                <Button x:Name="BtnFormatLlm" Content="Format Transcript with LLM" Click="BtnFormatLlm_Click"/>
                 <TextBox x:Name="TxtFormatTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
 
                 <TextBox x:Name="TxtReviewPrompt" PlaceholderText="Review prompt" AcceptsReturn="True" TextWrapping="Wrap" Height="60"/>

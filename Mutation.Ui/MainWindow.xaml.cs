@@ -33,6 +33,7 @@ namespace Mutation.Ui
                 private readonly Settings _settings;
 
                 private ISpeechToTextService? _activeSpeechService;
+                private CancellationTokenSource _formatDebounceCts = new();
 
                 public MainWindow(
                         ClipboardManager clipboard,
@@ -173,13 +174,23 @@ namespace Mutation.Ui
                         _textToSpeech.SpeakText(text);
                 }
 
-                public void BtnFormatTranscript_Click(object? sender, RoutedEventArgs? e)
-                {
-                        string raw = TxtSpeechToText.Text;
-                        string formatted = _transcriptFormatter.ApplyRules(raw, false);
-                        TxtFormatTranscript.Text = formatted;
-                        _clipboard.SetText(formatted);
-                }
+        public void BtnFormatTranscript_Click(object? sender, RoutedEventArgs? e)
+        {
+                string raw = TxtSpeechToText.Text;
+                string formatted = _transcriptFormatter.ApplyRules(raw, false);
+                TxtFormatTranscript.Text = formatted;
+                _clipboard.SetText(formatted);
+        }
+
+        public async void BtnFormatLlm_Click(object? sender, RoutedEventArgs? e)
+        {
+                TxtFormatTranscript.Text = "Formatting...";
+                string raw = TxtSpeechToText.Text;
+                string prompt = TxtFormatPrompt.Text;
+                string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
+                TxtFormatTranscript.Text = formatted;
+                _clipboard.SetText(formatted);
+        }
 
         public async void BtnReviewTranscript_Click(object? sender, RoutedEventArgs? e)
         {
@@ -224,6 +235,28 @@ namespace Mutation.Ui
         {
                 if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
                         _activeSpeechService = svc;
+        }
+
+        private async void TxtSpeechToText_TextChanged(object sender, TextChangedEventArgs e)
+        {
+                if (TxtSpeechToText.IsReadOnly)
+                        return;
+
+                _formatDebounceCts.Cancel();
+                _formatDebounceCts = new CancellationTokenSource();
+                var token = _formatDebounceCts.Token;
+                try
+                {
+                        await Task.Delay(300, token);
+                        if (!token.IsCancellationRequested)
+                        {
+                                string raw = TxtSpeechToText.Text;
+                                string formatted = _transcriptFormatter.ApplyRules(raw, false);
+                                TxtFormatTranscript.Text = formatted;
+                                _clipboard.SetText(formatted);
+                        }
+                }
+                catch (TaskCanceledException) { }
         }
 
         private class ReviewItem
