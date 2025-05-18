@@ -83,18 +83,21 @@ namespace Mutation.Ui
                 private async void BtnScreenshot_Click(object sender, RoutedEventArgs e)
                 {
                         await _ocrManager.TakeScreenshotToClipboardAsync();
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, 50);
                 }
 
                 private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
                 {
                         var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
                         TxtOcr.Text = result.Message;
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
                 }
 
                 private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
                 {
                         var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
                         TxtOcr.Text = result.Message;
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
                 }
 
                 public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
@@ -122,6 +125,7 @@ namespace Mutation.Ui
                                 BtnSpeechToText.Content = "Record";
                                 BtnSpeechToText.IsEnabled = true;
                                 _clipboard.SetText(text);
+                                HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
                         }
                 }
 
