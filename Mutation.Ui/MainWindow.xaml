@@ -18,6 +18,7 @@
             <Button x:Name="BtnBeep" Content="Play Success Beep" Click="BtnBeep_Click"/>
             <TextBox x:Name="TxtClipboard" PlaceholderText="Clipboard text"/>
             <Button Content="Copy Text" Click="CopyText_Click"/>
+            <Button x:Name="BtnToggleMic" Content="Toggle Mic Mute" Click="BtnToggleMic_Click"/>
         </StackPanel>
     </Grid>
 </Window>

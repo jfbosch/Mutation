@@ -18,11 +18,13 @@ namespace Mutation.Ui
         {
                 private readonly ClipboardManager _clipboard;
                 private readonly UiStateManager _uiStateManager;
+                private readonly AudioDeviceManager _audioDeviceManager;
 
-                public MainWindow(ClipboardManager clipboard, UiStateManager uiStateManager)
+                public MainWindow(ClipboardManager clipboard, UiStateManager uiStateManager, AudioDeviceManager audioDeviceManager)
                 {
                         _clipboard = clipboard;
                         _uiStateManager = uiStateManager;
+                        _audioDeviceManager = audioDeviceManager;
                         InitializeComponent();
                         this.Closed += MainWindow_Closed;
                 }
@@ -40,6 +42,11 @@ namespace Mutation.Ui
                 private void CopyText_Click(object sender, RoutedEventArgs e)
                 {
                         _clipboard.SetText(TxtClipboard.Text);
+                }
+
+                private void BtnToggleMic_Click(object sender, RoutedEventArgs e)
+                {
+                        _audioDeviceManager.ToggleMute();
                 }
         }
 }
