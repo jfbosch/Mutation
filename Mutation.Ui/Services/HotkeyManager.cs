@@ -82,6 +82,7 @@ public class HotkeyManager : IDisposable
 
     private const int INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_KEYUP = 0x0002;
+    private const uint KEYEVENTF_UNICODE = 0x0004;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct INPUT
@@ -205,6 +206,28 @@ public class HotkeyManager : IDisposable
         if (hk.Shift) Add(VirtualKey.Shift, true);
         if (hk.Control) Add(VirtualKey.Control, true);
 
+        SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
+    }
+
+    public static void SendText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return;
+
+        List<INPUT> inputs = new();
+        foreach (char c in text)
+        {
+            inputs.Add(new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new INPUTUNION { ki = new KEYBDINPUT { wScan = c, dwFlags = KEYEVENTF_UNICODE } }
+            });
+            inputs.Add(new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new INPUTUNION { ki = new KEYBDINPUT { wScan = c, dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP } }
+            });
+        }
         SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
     }
 

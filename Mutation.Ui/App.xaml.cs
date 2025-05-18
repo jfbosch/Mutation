@@ -111,12 +111,24 @@ namespace Mutation.Ui
                                 Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotOcrHotKey!),
                                 () => _ = ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware));
                 }
+                if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotLeftToRightTopToBottomOcrHotKey))
+                {
+                        hkManager.RegisterHotkey(
+                                Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey!),
+                                () => _ = ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom));
+                }
 
                 if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.OcrHotKey))
                 {
                         hkManager.RegisterHotkey(
                                 Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.OcrHotKey!),
                                 () => _ = ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware));
+                }
+                if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.OcrLeftToRightTopToBottomHotKey))
+                {
+                        hkManager.RegisterHotkey(
+                                Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey!),
+                                () => _ = ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom));
                 }
 
                 if (!string.IsNullOrWhiteSpace(settingsSvc.AudioSettings?.MicrophoneToggleMuteHotKey))
@@ -141,6 +153,7 @@ namespace Mutation.Ui
                 }
 
                 hkManager.RegisterRouterHotkeys();
+                _window.Closed += (_, __) => hkManager.Dispose();
         }
 
         private static void AddSpeechToTextServices(HostApplicationBuilder builder, Settings settings)

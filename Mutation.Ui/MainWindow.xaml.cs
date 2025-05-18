@@ -29,11 +29,12 @@ namespace Mutation.Ui
                 private readonly SpeechToTextManager _speechManager;
                 private readonly TranscriptFormatter _transcriptFormatter;
                 private readonly TranscriptReviewer _transcriptReviewer;
-                private readonly ITextToSpeechService _textToSpeech;
-                private readonly Settings _settings;
+        private readonly ITextToSpeechService _textToSpeech;
+        private readonly Settings _settings;
 
-                private ISpeechToTextService? _activeSpeechService;
-                private CancellationTokenSource _formatDebounceCts = new();
+        private ISpeechToTextService? _activeSpeechService;
+        private CancellationTokenSource _formatDebounceCts = new();
+        private DictationInsertOption _insertOption = DictationInsertOption.Paste;
 
                 public MainWindow(
                         ClipboardManager clipboard,
@@ -77,6 +78,9 @@ namespace Mutation.Ui
                         var tooltipManager = new TooltipManager(_settings);
                         tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
 
+                        CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
+                        CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
+
                         this.Closed += MainWindow_Closed;
                 }
 
@@ -103,11 +107,12 @@ namespace Mutation.Ui
                         _clipboard.SetText(TxtClipboard.Text);
                 }
 
-                public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
-                {
-                        _audioDeviceManager.ToggleMute();
-                        TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
-                }
+        public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
+        {
+                _audioDeviceManager.ToggleMute();
+                TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
+                BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
+        }
 
                 private async void BtnScreenshot_Click(object sender, RoutedEventArgs e)
                 {
@@ -153,6 +158,7 @@ namespace Mutation.Ui
                         {
                                 TxtSpeechToText.Text = "Recording...";
                                 BtnSpeechToText.Content = "Stop";
+                                BeepPlayer.Play(BeepType.Start);
                                 await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
                         }
                         else
@@ -160,10 +166,13 @@ namespace Mutation.Ui
                                 BtnSpeechToText.IsEnabled = false;
                                 TxtSpeechToText.Text = "Transcribing...";
                                 string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+                                BeepPlayer.Play(BeepType.End);
                                 TxtSpeechToText.Text = text;
                                 BtnSpeechToText.Content = "Record";
                                 BtnSpeechToText.IsEnabled = true;
                                 _clipboard.SetText(text);
+                                InsertIntoActiveApplication(text);
+                                BeepPlayer.Play(BeepType.Success);
                                 HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
                         }
                 }
@@ -180,6 +189,8 @@ namespace Mutation.Ui
                 string formatted = _transcriptFormatter.ApplyRules(raw, false);
                 TxtFormatTranscript.Text = formatted;
                 _clipboard.SetText(formatted);
+                InsertIntoActiveApplication(formatted);
+                BeepPlayer.Play(BeepType.Success);
         }
 
         public async void BtnFormatLlm_Click(object? sender, RoutedEventArgs? e)
@@ -190,6 +201,8 @@ namespace Mutation.Ui
                 string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
                 TxtFormatTranscript.Text = formatted;
                 _clipboard.SetText(formatted);
+                InsertIntoActiveApplication(formatted);
+                BeepPlayer.Play(BeepType.Success);
         }
 
         public async void BtnReviewTranscript_Click(object? sender, RoutedEventArgs? e)
@@ -237,6 +250,31 @@ namespace Mutation.Ui
                         _activeSpeechService = svc;
         }
 
+        private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+                if (CmbInsertOption.SelectedItem is DictationInsertOption opt)
+                        _insertOption = opt;
+        }
+
+        private void InsertIntoActiveApplication(string text)
+        {
+                if (string.IsNullOrWhiteSpace(text) || this.IsActive)
+                        return;
+
+                switch (_insertOption)
+                {
+                        case DictationInsertOption.SendKeys:
+                                BeepPlayer.Play(BeepType.Start);
+                                HotkeyManager.SendText(text);
+                                break;
+                        case DictationInsertOption.Paste:
+                                _clipboard.SetText(text);
+                                BeepPlayer.Play(BeepType.Start);
+                                HotkeyManager.SendHotkey("CTRL+V");
+                                break;
+                }
+        }
+
         private async void TxtSpeechToText_TextChanged(object sender, TextChangedEventArgs e)
         {
                 if (TxtSpeechToText.IsReadOnly)
@@ -254,6 +292,8 @@ namespace Mutation.Ui
                                 string formatted = _transcriptFormatter.ApplyRules(raw, false);
                                 TxtFormatTranscript.Text = formatted;
                                 _clipboard.SetText(formatted);
+                                InsertIntoActiveApplication(formatted);
+                                BeepPlayer.Play(BeepType.Success);
                         }
                 }
                 catch (TaskCanceledException) { }
