@@ -19,12 +19,14 @@ namespace Mutation.Ui
                 private readonly ClipboardManager _clipboard;
                 private readonly UiStateManager _uiStateManager;
                 private readonly AudioDeviceManager _audioDeviceManager;
+                private readonly OcrManager _ocrManager;
 
-                public MainWindow(ClipboardManager clipboard, UiStateManager uiStateManager, AudioDeviceManager audioDeviceManager)
+                public MainWindow(ClipboardManager clipboard, UiStateManager uiStateManager, AudioDeviceManager audioDeviceManager, OcrManager ocrManager)
                 {
                         _clipboard = clipboard;
                         _uiStateManager = uiStateManager;
                         _audioDeviceManager = audioDeviceManager;
+                        _ocrManager = ocrManager;
                         InitializeComponent();
                         this.Closed += MainWindow_Closed;
                 }
@@ -47,6 +49,17 @@ namespace Mutation.Ui
                 private void BtnToggleMic_Click(object sender, RoutedEventArgs e)
                 {
                         _audioDeviceManager.ToggleMute();
+                }
+
+                private async void BtnScreenshot_Click(object sender, RoutedEventArgs e)
+                {
+                        await _ocrManager.TakeScreenshotToClipboardAsync();
+                }
+
+                private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
+                {
+                        var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
+                        TxtClipboard.Text = result.Message;
                 }
         }
 }
