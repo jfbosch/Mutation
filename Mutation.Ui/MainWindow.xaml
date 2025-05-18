@@ -14,13 +14,32 @@
     </Window.SystemBackdrop>
 
     <Grid Padding="20">
-        <StackPanel Spacing="10">
-            <Button x:Name="BtnBeep" Content="Play Success Beep" Click="BtnBeep_Click"/>
-            <TextBox x:Name="TxtClipboard" PlaceholderText="Clipboard text"/>
-            <Button Content="Copy Text" Click="CopyText_Click"/>
-            <Button x:Name="BtnToggleMic" Content="Toggle Mic Mute" Click="BtnToggleMic_Click"/>
-            <Button x:Name="BtnScreenshot" Content="Screenshot to Clipboard" Click="BtnScreenshot_Click"/>
-            <Button x:Name="BtnScreenshotOcr" Content="Screenshot &amp; OCR" Click="BtnScreenshotOcr_Click"/>
-        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10">
+                <Button x:Name="BtnBeep" Content="Play Success Beep" Click="BtnBeep_Click"/>
+                <TextBlock x:Name="TxtMicState" Text="Microphone"/>
+                <Button x:Name="BtnToggleMic" Content="Toggle Mic Mute" Click="BtnToggleMic_Click"/>
+
+                <Button x:Name="BtnScreenshot" Content="Screenshot to Clipboard" Click="BtnScreenshot_Click"/>
+                <Button x:Name="BtnScreenshotOcr" Content="Screenshot &amp; OCR" Click="BtnScreenshotOcr_Click"/>
+                <Button x:Name="BtnOcrClipboard" Content="OCR Clipboard" Click="BtnOcrClipboard_Click"/>
+                <TextBox x:Name="TxtOcr" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
+
+                <Button x:Name="BtnSpeechToText" Content="Record" Click="BtnSpeechToText_Click"/>
+                <TextBox x:Name="TxtSpeechToText" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
+
+                <TextBox x:Name="TxtFormatPrompt" PlaceholderText="Format prompt" AcceptsReturn="True" TextWrapping="Wrap" Height="60"/>
+                <Button x:Name="BtnFormatTranscript" Content="Format Transcript" Click="BtnFormatTranscript_Click"/>
+                <TextBox x:Name="TxtFormatTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
+
+                <TextBox x:Name="TxtReviewPrompt" PlaceholderText="Review prompt" AcceptsReturn="True" TextWrapping="Wrap" Height="60"/>
+                <Button x:Name="BtnReviewTranscript" Content="Review Transcript" Click="BtnReviewTranscript_Click"/>
+                <TextBox x:Name="TxtReviewTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
+
+                <TextBox x:Name="TxtClipboard" PlaceholderText="Clipboard text"/>
+                <Button Content="Copy Text" Click="CopyText_Click"/>
+                <Button x:Name="BtnTextToSpeech" Content="Speak Clipboard" Click="BtnTextToSpeech_Click"/>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>

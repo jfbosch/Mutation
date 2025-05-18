@@ -65,6 +65,7 @@ namespace Mutation.Ui
                                 settings.LlmSettings?.ModelDeploymentIdMaps ?? new List<LlmSettings.ModelDeploymentIdMap>()));
                 builder.Services.AddSingleton<TranscriptFormatter>();
                 builder.Services.AddSingleton<TranscriptReviewer>();
+                builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
                 builder.Services.AddHttpClient(OpenAiHttpClientName);
                 AddSpeechToTextServices(builder, settings);
                 builder.Services.AddSingleton<MainWindow>();
@@ -95,6 +96,34 @@ namespace Mutation.Ui
                         hkManager.RegisterHotkey(
                                 Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotOcrHotKey!),
                                 () => _ = ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware));
+                }
+
+                if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.OcrHotKey))
+                {
+                        hkManager.RegisterHotkey(
+                                Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.OcrHotKey!),
+                                () => _ = ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware));
+                }
+
+                if (!string.IsNullOrWhiteSpace(settingsSvc.AudioSettings?.MicrophoneToggleMuteHotKey))
+                {
+                        hkManager.RegisterHotkey(
+                                Hotkey.Parse(settingsSvc.AudioSettings.MicrophoneToggleMuteHotKey!),
+                                () => _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnToggleMic_Click(null!, null!)));
+                }
+
+                if (!string.IsNullOrWhiteSpace(settingsSvc.SpeetchToTextSettings?.SpeechToTextHotKey))
+                {
+                        hkManager.RegisterHotkey(
+                                Hotkey.Parse(settingsSvc.SpeetchToTextSettings.SpeechToTextHotKey!),
+                                () => _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).StartStopSpeechToTextAsync()));
+                }
+
+                if (!string.IsNullOrWhiteSpace(settingsSvc.TextToSpeechSettings?.TextToSpeechHotKey))
+                {
+                        hkManager.RegisterHotkey(
+                                Hotkey.Parse(settingsSvc.TextToSpeechSettings.TextToSpeechHotKey!),
+                                () => _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnTextToSpeech_Click(null!, null!)));
                 }
         }
 
