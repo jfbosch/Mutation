@@ -11,6 +11,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Mutation.Ui.Services;
+using Mutation.Ui.Views;
 using WinRT;
 using WinRT.Interop;
 using CognitiveSupport;
@@ -113,6 +114,37 @@ public class OcrManager
         }
         framePool.FrameArrived += OnFrameArrived;
         session.StartCapture();
-        return await tcs.Task.ConfigureAwait(false);
+        var bmp = await tcs.Task.ConfigureAwait(false);
+        if (bmp == null)
+            return null;
+
+        // show region selection overlay
+        var overlay = new RegionSelectionWindow();
+        await overlay.InitializeAsync(bmp);
+        Rect? rect = await overlay.SelectRegionAsync();
+        if (rect == null || rect.Value.Width < 1 || rect.Value.Height < 1)
+            return null;
+
+        return await CropBitmapAsync(bmp, rect.Value);
+    }
+
+    private static async Task<SoftwareBitmap> CropBitmapAsync(SoftwareBitmap src, Rect rect)
+    {
+        using InMemoryRandomAccessStream stream = new();
+        BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
+        encoder.SetSoftwareBitmap(src);
+        await encoder.FlushAsync();
+        stream.Seek(0);
+
+        BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+        BitmapBounds bounds = new()
+        {
+            X = (uint)rect.X,
+            Y = (uint)rect.Y,
+            Width = (uint)rect.Width,
+            Height = (uint)rect.Height
+        };
+        BitmapTransform transform = new() { Bounds = bounds };
+        return await decoder.GetSoftwareBitmapAsync(decoder.BitmapPixelFormat, decoder.BitmapAlphaMode, transform, ExifOrientationMode.IgnoreExifOrientation, ColorManagementMode.DoNotColorManage);
     }
 }
