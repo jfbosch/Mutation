@@ -1,0 +1,21 @@
+<Window
+    x:Class="Mutation.Ui.Views.RegionSelectionWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Select Region"
+    WindowStyle="None"
+    ExtendsContentIntoTitleBar="True"
+    Background="Transparent">
+    <Grid>
+        <Image x:Name="Img" Stretch="None"/>
+        <Canvas x:Name="Overlay" Background="Transparent"
+                PointerPressed="Overlay_PointerPressed"
+                PointerMoved="Overlay_PointerMoved"
+                PointerReleased="Overlay_PointerReleased">
+            <Rectangle x:Name="Selection" Stroke="Red" StrokeThickness="2" Fill="#40FFFFFF" Visibility="Collapsed"/>
+        </Canvas>
+    </Grid>
+</Window>

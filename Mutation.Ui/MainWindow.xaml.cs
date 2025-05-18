@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using System;
+using System.Collections.Generic;
 using CognitiveSupport;
 using Mutation.Ui.Services;
 using System.Linq;
@@ -56,6 +57,15 @@ namespace Mutation.Ui
                         _activeSpeechService = _speechServices.FirstOrDefault();
                         InitializeComponent();
                         TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
+                        CmbMicrophone.ItemsSource = _audioDeviceManager.CaptureDevices.ToList();
+                        CmbMicrophone.DisplayMemberPath = nameof(AudioSwitcher.AudioApi.CoreAudio.CoreAudioDevice.FullName);
+                        if (_audioDeviceManager.Microphone != null)
+                                CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
+
+                        CmbSpeechService.ItemsSource = _speechServices;
+                        CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
+                        if (_activeSpeechService != null)
+                                CmbSpeechService.SelectedItem = _activeSpeechService;
                         this.Closed += MainWindow_Closed;
                 }
 
@@ -143,12 +153,36 @@ namespace Mutation.Ui
                         _clipboard.SetText(formatted);
                 }
 
-                public async void BtnReviewTranscript_Click(object? sender, RoutedEventArgs? e)
+        public async void BtnReviewTranscript_Click(object? sender, RoutedEventArgs? e)
+        {
+                string transcript = TxtFormatTranscript.Text;
+                string prompt = TxtReviewPrompt.Text;
+                string review = await _transcriptReviewer.ReviewAsync(transcript, prompt, 0.4m);
+                TxtReviewTranscript.Text = review;
+                var issues = review.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                                     .Select(i => new ReviewItem { Apply = false, Issue = i })
+                                     .ToList();
+                GridReview.ItemsSource = issues;
+        }
+
+        private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+                if (CmbMicrophone.SelectedItem is AudioSwitcher.AudioApi.CoreAudio.CoreAudioDevice device)
                 {
-                        string transcript = TxtFormatTranscript.Text;
-                        string prompt = TxtReviewPrompt.Text;
-                        string review = await _transcriptReviewer.ReviewAsync(transcript, prompt, 0.4m);
-                        TxtReviewTranscript.Text = review;
+                        _audioDeviceManager.SelectMicrophone(device);
                 }
+        }
+
+        private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+                if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
+                        _activeSpeechService = svc;
+        }
+
+        private class ReviewItem
+        {
+                public bool Apply { get; set; }
+                public string Issue { get; set; } = string.Empty;
+        }
         }
 }
