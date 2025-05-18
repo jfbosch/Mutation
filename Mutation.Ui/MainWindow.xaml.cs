@@ -44,6 +44,16 @@ namespace Mutation.Ui
                 {
                         _uiStateManager.Restore(this);
                         _hotkeyManager.Initialize(this);
+                        _hotkeyManager.RegisterHotkey(Windows.System.VirtualKey.F9, Services.HotkeyModifiers.Control, () =>
+                        {
+                                _ = DispatcherQueue.TryEnqueue(async () =>
+                                {
+                                        var result = await _ocrManager.TakeScreenshotAndExtractText(CognitiveSupport.OcrReadingOrder.TopToBottomColumnAware);
+                                        if (result.Success)
+                                                txtOcr.Text = result.Message;
+                                });
+                        });
+
                         btnOcr.Click += async (_, _) =>
                         {
                                 var result = await _ocrManager.TakeScreenshotAndExtractText(CognitiveSupport.OcrReadingOrder.TopToBottomColumnAware);
