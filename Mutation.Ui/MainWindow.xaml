@@ -13,7 +13,20 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid>
-
+    <Grid Padding="12">
+        <TabView>
+            <TabViewItem Header="OCR">
+                <StackPanel Spacing="8">
+                    <Button x:Name="btnOcr" Content="Capture and OCR" Width="150" />
+                    <TextBox x:Name="txtOcr" AcceptsReturn="True" TextWrapping="Wrap" Height="200"/>
+                </StackPanel>
+            </TabViewItem>
+            <TabViewItem Header="Dictation">
+                <StackPanel Spacing="8">
+                    <Button x:Name="btnRecord" Content="Record" Width="100" />
+                    <TextBox x:Name="txtSpeechToText" AcceptsReturn="True" TextWrapping="Wrap" Height="200"/>
+                </StackPanel>
+            </TabViewItem>
+        </TabView>
     </Grid>
-</Window>
+  </Window>

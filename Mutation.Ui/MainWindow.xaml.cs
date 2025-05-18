@@ -21,11 +21,41 @@ namespace Mutation.Ui
 	/// <summary>
 	/// An empty window that can be used on its own or navigated to within a Frame.
 	/// </summary>
-	public sealed partial class MainWindow : Window
-	{
-		public MainWindow()
-		{
-			InitializeComponent();
-		}
-	}
+        public sealed partial class MainWindow : Window
+        {
+                private readonly Services.OcrManager _ocrManager;
+                private readonly Services.HotkeyManager _hotkeyManager;
+                private readonly Services.UiStateManager _uiStateManager;
+
+                public MainWindow(Services.OcrManager ocrManager,
+                                   Services.HotkeyManager hotkeyManager,
+                                   Services.UiStateManager uiStateManager)
+                {
+                        _ocrManager = ocrManager;
+                        _hotkeyManager = hotkeyManager;
+                        _uiStateManager = uiStateManager;
+
+                        InitializeComponent();
+                        Loaded += OnLoaded;
+                        Closing += OnClosing;
+                }
+
+                private void OnLoaded(object sender, RoutedEventArgs e)
+                {
+                        _uiStateManager.Restore(this);
+                        _hotkeyManager.Initialize(this);
+                        btnOcr.Click += async (_, _) =>
+                        {
+                                var result = await _ocrManager.TakeScreenshotAndExtractText(CognitiveSupport.OcrReadingOrder.TopToBottomColumnAware);
+                                if (result.Success)
+                                        txtOcr.Text = result.Message;
+                        };
+                }
+
+                private void OnClosing(object sender, WindowEventArgs e)
+                {
+                        _uiStateManager.Save(this);
+                        _hotkeyManager.UnregisterAll();
+                }
+        }
 }
