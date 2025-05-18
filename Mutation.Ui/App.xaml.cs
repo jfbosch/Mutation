@@ -1,20 +1,10 @@
 ﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.UI.Xaml;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+using CognitiveSupport;
+using Mutation.Ui.Services;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -26,7 +16,8 @@ namespace Mutation.Ui
 	/// </summary>
 	public partial class App : Application
 	{
-		private Window? _window;
+        private Window? _window;
+        private IHost? _host;
 
 		/// <summary>
 		/// Initializes the singleton application object.  This is the first line of authored code
@@ -41,10 +32,27 @@ namespace Mutation.Ui
 		/// Invoked when the application is launched.
 		/// </summary>
 		/// <param name="args">Details about the launch request and process.</param>
-		protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
-		{
-			_window = new MainWindow();
-			_window.Activate();
-		}
+        protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        {
+                HostApplicationBuilder builder = Host.CreateApplicationBuilder();
+
+                var settingsManager = new SettingsManager();
+                var settings = await settingsManager.LoadAsync();
+                BeepPlayer.Initialize(settings);
+
+                builder.Services.AddSingleton<ISettingsManager>(settingsManager);
+                builder.Services.AddSingleton(settings);
+                builder.Services.AddSingleton<ClipboardManager>();
+                builder.Services.AddSingleton<UiStateManager>();
+                builder.Services.AddSingleton<MainWindow>();
+
+                _host = builder.Build();
+
+                _window = _host.Services.GetRequiredService<MainWindow>();
+                var ui = _host.Services.GetRequiredService<UiStateManager>();
+                ui.Restore(_window);
+
+                _window.Activate();
+        }
 	}
 }
