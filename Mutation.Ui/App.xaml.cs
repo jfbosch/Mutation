@@ -52,6 +52,12 @@ namespace Mutation.Ui
                 builder.Services.AddSingleton<UiStateManager>();
                 builder.Services.AddSingleton<CoreAudioController>();
                 builder.Services.AddSingleton<AudioDeviceManager>();
+                builder.Services.AddSingleton<OcrManager>(sp =>
+                        new OcrManager(settings,
+                                       sp.GetRequiredService<IOcrService>(),
+                                       sp.GetRequiredService<ClipboardManager>()));
+                builder.Services.AddSingleton<HotkeyManager>(sp =>
+                        new HotkeyManager(sp.GetRequiredService<MainWindow>()));
                 builder.Services.AddSingleton<ILlmService>(
                         new LlmService(
                                 settings.LlmSettings?.ApiKey ?? string.Empty,
@@ -70,6 +76,26 @@ namespace Mutation.Ui
                 ui.Restore(_window);
 
                 _window.Activate();
+
+                var ocrMgr = _host.Services.GetRequiredService<OcrManager>();
+                ocrMgr.InitializeWindow(_window);
+
+                // Register global hotkeys
+                var hkManager = _host.Services.GetRequiredService<HotkeyManager>();
+                var settingsSvc = _host.Services.GetRequiredService<Settings>();
+
+                if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotHotKey))
+                {
+                        hkManager.RegisterHotkey(
+                                Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotHotKey!),
+                                () => _ = ocrMgr.TakeScreenshotToClipboardAsync());
+                }
+                if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotOcrHotKey))
+                {
+                        hkManager.RegisterHotkey(
+                                Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotOcrHotKey!),
+                                () => _ = ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware));
+                }
         }
 
         private static void AddSpeechToTextServices(HostApplicationBuilder builder, Settings settings)
