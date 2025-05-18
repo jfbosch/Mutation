@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using System;
 using AudioSwitcher.AudioApi.CoreAudio;
 using Deepgram;
@@ -77,6 +78,18 @@ namespace Mutation.Ui
                 ui.Restore(_window);
 
                 _window.Activate();
+
+                if (BeepPlayer.LastInitializationIssues.Count > 0)
+                {
+                        var dialog = new ContentDialog
+                        {
+                                Title = "Custom Beep Settings Issues",
+                                Content = "The following issues were found with the custom beep settings:\n\n" + string.Join("\n", BeepPlayer.LastInitializationIssues),
+                                CloseButtonText = "OK",
+                                XamlRoot = _window.Content.XamlRoot
+                        };
+                        await dialog.ShowAsync();
+                }
 
                 var ocrMgr = _host.Services.GetRequiredService<OcrManager>();
                 ocrMgr.InitializeWindow(_window);

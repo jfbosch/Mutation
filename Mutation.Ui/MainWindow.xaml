@@ -39,6 +39,7 @@
                 <Button x:Name="BtnReviewTranscript" Content="Review Transcript" Click="BtnReviewTranscript_Click"/>
                 <TextBox x:Name="TxtReviewTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
                 <DataGrid x:Name="GridReview" Height="150" />
+                <Button x:Name="BtnApplyReview" Content="Apply Selected Issues" Click="BtnApplySelectedReviewIssues_Click"/>
 
                 <TextBox x:Name="TxtClipboard" PlaceholderText="Clipboard text"/>
                 <Button Content="Copy Text" Click="CopyText_Click"/>
