@@ -57,7 +57,7 @@ namespace Mutation.Ui
                                        sp.GetRequiredService<IOcrService>(),
                                        sp.GetRequiredService<ClipboardManager>()));
                 builder.Services.AddSingleton<HotkeyManager>(sp =>
-                        new HotkeyManager(sp.GetRequiredService<MainWindow>()));
+                        new HotkeyManager(sp.GetRequiredService<MainWindow>(), sp.GetRequiredService<Settings>()));
                 builder.Services.AddSingleton<ILlmService>(
                         new LlmService(
                                 settings.LlmSettings?.ApiKey ?? string.Empty,
@@ -125,6 +125,8 @@ namespace Mutation.Ui
                                 Hotkey.Parse(settingsSvc.TextToSpeechSettings.TextToSpeechHotKey!),
                                 () => _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnTextToSpeech_Click(null!, null!)));
                 }
+
+                hkManager.RegisterRouterHotkeys();
         }
 
         private static void AddSpeechToTextServices(HostApplicationBuilder builder, Settings settings)

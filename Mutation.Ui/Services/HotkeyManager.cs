@@ -5,6 +5,8 @@ using Microsoft.UI.Xaml;
 using WinRT.Interop;
 using Windows.System;
 using System.Threading;
+using System.Threading.Tasks;
+using CognitiveSupport;
 
 namespace Mutation.Ui.Services;
 
@@ -58,6 +60,8 @@ public class HotkeyManager : IDisposable
 {
     private readonly IntPtr _hwnd;
     private readonly Dictionary<int, Action> _callbacks = new();
+    private readonly List<int> _routerIds = new();
+    private readonly Settings _settings;
     private int _id;
     private IntPtr _prevWndProc;
     private WndProcDelegate? _newWndProc;
@@ -74,12 +78,40 @@ public class HotkeyManager : IDisposable
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     [DllImport("user32.dll")] static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr newProc);
     [DllImport("user32.dll")] static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("user32.dll")] static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    private const int INPUT_KEYBOARD = 1;
+    private const uint KEYEVENTF_KEYUP = 0x0002;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct INPUT
+    {
+        public uint type;
+        public INPUTUNION U;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct INPUTUNION
+    {
+        [FieldOffset(0)] public KEYBDINPUT ki;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KEYBDINPUT
+    {
+        public ushort wVk;
+        public ushort wScan;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
 
     private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
-    public HotkeyManager(Window window)
+    public HotkeyManager(Window window, Settings settings)
     {
         _hwnd = WindowNative.GetWindowHandle(window);
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _newWndProc = WndProc;
         _prevWndProc = SetWindowLongPtr(_hwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_newWndProc));
     }
@@ -96,11 +128,23 @@ public class HotkeyManager : IDisposable
         return id;
     }
 
+    public void RegisterRouterHotkeys()
+    {
+        foreach (var map in _settings.HotKeyRouterSettings.Mappings)
+        {
+            if (string.IsNullOrWhiteSpace(map.FromHotKey) || string.IsNullOrWhiteSpace(map.ToHotKey))
+                continue;
+            int id = RegisterHotkey(Hotkey.Parse(map.FromHotKey!), () => SendHotkeyAfterDelay(map.ToHotKey!, 25));
+            _routerIds.Add(id);
+        }
+    }
+
     public void UnregisterAll()
     {
         foreach (var kvp in _callbacks)
             UnregisterHotKey(_hwnd, kvp.Key);
         _callbacks.Clear();
+        _routerIds.Clear();
     }
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -113,6 +157,55 @@ public class HotkeyManager : IDisposable
             return IntPtr.Zero;
         }
         return CallWindowProc(_prevWndProc, hWnd, msg, wParam, lParam);
+    }
+
+    public static void SendHotkeyAfterDelay(string hotkey, int delayMs)
+    {
+        if (string.IsNullOrWhiteSpace(hotkey))
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(delayMs).ConfigureAwait(false);
+            SendHotkey(hotkey);
+        });
+    }
+
+    private static void SendHotkey(string hotkey)
+    {
+        Hotkey hk = Hotkey.Parse(hotkey);
+
+        List<INPUT> inputs = new();
+        void Add(VirtualKey key, bool up)
+        {
+            inputs.Add(new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new INPUTUNION
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = (ushort)key,
+                        dwFlags = up ? KEYEVENTF_KEYUP : 0
+                    }
+                }
+            });
+        }
+
+        if (hk.Control) Add(VirtualKey.Control, false);
+        if (hk.Shift) Add(VirtualKey.Shift, false);
+        if (hk.Alt) Add(VirtualKey.Menu, false);
+        if (hk.Win) Add(VirtualKey.LeftWindows, false);
+
+        Add(hk.Key, false);
+        Add(hk.Key, true);
+
+        if (hk.Win) Add(VirtualKey.LeftWindows, true);
+        if (hk.Alt) Add(VirtualKey.Menu, true);
+        if (hk.Shift) Add(VirtualKey.Shift, true);
+        if (hk.Control) Add(VirtualKey.Control, true);
+
+        SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
     }
 
     public void Dispose()
