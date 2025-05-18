@@ -44,28 +44,43 @@ public class OcrManager
 
     public async Task TakeScreenshotToClipboardAsync()
     {
+        BeepPlayer.Play(BeepType.Start);
         var bitmap = await CaptureScreenshotAsync();
         if (bitmap != null)
+        {
             await _clipboard.SetImageAsync(bitmap);
+            BeepPlayer.Play(BeepType.Success);
+        }
     }
 
     public async Task<OcrResult> TakeScreenshotAndExtractTextAsync(OcrReadingOrder order)
     {
+        BeepPlayer.Play(BeepType.Start);
         var bitmap = await CaptureScreenshotAsync();
         if (bitmap == null)
+        {
+            BeepPlayer.Play(BeepType.Failure);
             return new(false, "Screenshot cancelled.");
+        }
 
         await _clipboard.SetImageAsync(bitmap);
-        return await ExtractTextViaOcrAsync(order, bitmap);
+        var result = await ExtractTextViaOcrAsync(order, bitmap);
+        BeepPlayer.Play(result.Success ? BeepType.Success : BeepType.Failure);
+        return result;
     }
 
     public async Task<OcrResult> ExtractTextFromClipboardImageAsync(OcrReadingOrder order)
     {
         var bitmap = await _clipboard.TryGetImageAsync();
         if (bitmap == null)
+        {
+            BeepPlayer.Play(BeepType.Failure);
             return new(false, "No image on clipboard.");
+        }
 
-        return await ExtractTextViaOcrAsync(order, bitmap);
+        var result = await ExtractTextViaOcrAsync(order, bitmap);
+        BeepPlayer.Play(result.Success ? BeepType.Success : BeepType.Failure);
+        return result;
     }
 
     private async Task<OcrResult> ExtractTextViaOcrAsync(OcrReadingOrder order, SoftwareBitmap bitmap)
