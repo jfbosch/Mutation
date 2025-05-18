@@ -32,6 +32,7 @@ namespace Mutation.Ui
         {
                 private Window? _window;
                 private IHost? _host;
+                public static Window? MainWindow { get; private set; }
 
 		/// <summary>
 		/// Initializes the singleton application object.  This is the first line of authored code
@@ -70,6 +71,7 @@ namespace Mutation.Ui
                         _host = builder.Build();
 
                         _window = _host.Services.GetRequiredService<MainWindow>();
+                        MainWindow = _window;
                         _window.Activate();
                 }
         }
