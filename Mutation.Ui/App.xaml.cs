@@ -11,6 +11,7 @@ using OpenAI.Managers;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.IO;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -45,7 +46,10 @@ public partial class App : Application
 		{
 			HostApplicationBuilder builder = Host.CreateApplicationBuilder();
 
-			string filePath = "Mutation.json";
+			string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+			string mutationDir = Path.Combine(appData, "Mutation");
+			Directory.CreateDirectory(mutationDir);
+			string filePath = Path.Combine(mutationDir, "Mutation.json");
 			var settingsManager = new SettingsManager(filePath);
 			var settings = settingsManager.LoadAndEnsureSettings();
 			BeepPlayer.Initialize(settings);
