@@ -15,6 +15,7 @@ using Mutation.Ui.Views;
 using WinRT;
 using WinRT.Interop;
 using CognitiveSupport;
+using Windows.Foundation;
 
 namespace Mutation.Ui.Services;
 

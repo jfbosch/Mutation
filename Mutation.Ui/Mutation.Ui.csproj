@@ -24,13 +24,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AudioSwitcher.AudioApi" Version="3.0.0" />
-		<PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="3.0.3" />
-		<PackageReference Include="Deepgram" Version="5.1.2" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+		<PackageReference Include="AudioSwitcher.AudioApi" Version="4.0.0-alpha5" />
+		<PackageReference Include="AudioSwitcher.AudioApi.CoreAudio" Version="4.0.0-alpha5" />
+		<PackageReference Include="Deepgram" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="StringExtensionsLibrary" Version="1.0.0" />
-		<PackageReference Include="System.Speech" Version="8.0.0" />
+		<PackageReference Include="System.Speech" Version="9.0.5" />
 		<PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
 	</ItemGroup>
 
@@ -66,10 +66,6 @@
 		<Manifest Include="$(ApplicationManifest)" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<ApplicationDefinition Include="App.xaml" />
-	</ItemGroup>
-
 	<!--
     Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
     Tools extension to be activated for this project even if the Windows App SDK Nuget
@@ -78,6 +74,7 @@
 	<ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
 		<ProjectCapability Include="Msix" />
 	</ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.3916" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250401001" />

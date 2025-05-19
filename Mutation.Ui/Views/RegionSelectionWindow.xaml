@@ -6,10 +6,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="Select Region"
-    WindowStyle="None"
-    ExtendsContentIntoTitleBar="True"
-    Background="Transparent">
-    <Grid>
+    ExtendsContentIntoTitleBar="True">
+    <Grid Background="Transparent">
         <Image x:Name="Img" Stretch="None"/>
         <Canvas x:Name="Overlay" Background="Transparent"
                 PointerPressed="Overlay_PointerPressed"

@@ -1,7 +1,7 @@
-﻿namespace Mutation
-namespace Mutation.Ui;
-
-internal static class Constants
+﻿namespace Mutation.Ui
 {
-    internal const string SessionsDirectoryName = "Sessions";
+    internal static class Constants
+    {
+        internal const string SessionsDirectoryName = "Sessions";
+    }
 }

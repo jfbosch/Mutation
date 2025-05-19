@@ -1,6 +1,9 @@
 ﻿using AudioSwitcher.AudioApi;
 using AudioSwitcher.AudioApi.CoreAudio;
 using NAudio.Wave;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Mutation.Ui;
 

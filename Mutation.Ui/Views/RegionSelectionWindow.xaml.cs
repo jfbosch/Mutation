@@ -80,11 +80,5 @@ namespace Mutation.Ui.Views
             _tcs?.TrySetResult(rect);
             Close();
         }
-
-        protected override void OnClosed(WindowEventArgs args)
-        {
-            _tcs?.TrySetResult(null);
-            base.OnClosed(args);
-        }
     }
 }
