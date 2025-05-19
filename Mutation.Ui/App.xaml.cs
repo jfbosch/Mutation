@@ -46,9 +46,8 @@ public partial class App : Application
 		{
 			HostApplicationBuilder builder = Host.CreateApplicationBuilder();
 
-			string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-			string mutationDir = Path.Combine(appData, "Mutation");
-			Directory.CreateDirectory(mutationDir);
+			string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+			string mutationDir = exeDir;
 			string filePath = Path.Combine(mutationDir, "Mutation.json");
 			var settingsManager = new SettingsManager(filePath);
 			var settings = settingsManager.LoadAndEnsureSettings();
