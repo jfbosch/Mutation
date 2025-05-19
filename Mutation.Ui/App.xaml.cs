@@ -60,6 +60,11 @@ public partial class App : Application
 			builder.Services.AddSingleton<UiStateManager>();
 			builder.Services.AddSingleton<CoreAudioController>();
 			builder.Services.AddSingleton<AudioDeviceManager>();
+			builder.Services.AddSingleton<IOcrService>(sp =>
+    new OcrService(
+        settings.AzureComputerVisionSettings?.ApiKey,
+        settings.AzureComputerVisionSettings?.Endpoint,
+        settings.AzureComputerVisionSettings?.TimeoutSeconds ?? 10));
 			builder.Services.AddSingleton<OcrManager>(sp =>
 					  new OcrManager(settings,
 									  sp.GetRequiredService<IOcrService>(),
