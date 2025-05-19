@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Mutation.Ui"
-    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:datagrid="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -41,7 +41,7 @@
                 <TextBox x:Name="TxtReviewPrompt" PlaceholderText="Review prompt" AcceptsReturn="True" TextWrapping="Wrap" Height="60"/>
                 <Button x:Name="BtnReviewTranscript" Content="Review Transcript" Click="BtnReviewTranscript_Click"/>
                 <TextBox x:Name="TxtReviewTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
-                <controls:DataGrid x:Name="GridReview" Height="150" />
+                <datagrid:DataGrid x:Name="GridReview" Height="150" />
                 <Button x:Name="BtnApplyReview" Content="Apply Selected Issues" Click="BtnApplySelectedReviewIssues_Click"/>
 
                 <TextBox x:Name="TxtClipboard" PlaceholderText="Clipboard text"/>
