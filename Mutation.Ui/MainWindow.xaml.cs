@@ -1,4 +1,4 @@
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -93,7 +93,7 @@ namespace Mutation.Ui
                         _settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
                         _settings.LlmSettings!.ReviewTranscriptPrompt = TxtReviewPrompt.Text;
 
-                        await _settingsManager.SaveAsync(_settings);
+                        _settingsManager.SaveSettingsToFile(_settings);
                         BeepPlayer.DisposePlayers();
                 }
 
