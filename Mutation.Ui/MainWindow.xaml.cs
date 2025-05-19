@@ -258,7 +258,7 @@ namespace Mutation.Ui
 
         private void InsertIntoActiveApplication(string text)
         {
-                if (string.IsNullOrWhiteSpace(text) || this.IsActive)
+                if (string.IsNullOrWhiteSpace(text))
                         return;
 
                 switch (_insertOption)

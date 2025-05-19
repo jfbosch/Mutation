@@ -172,7 +172,7 @@ public class HotkeyManager : IDisposable
         });
     }
 
-    private static void SendHotkey(string hotkey)
+    public static void SendHotkey(string hotkey)
     {
         Hotkey hk = Hotkey.Parse(hotkey);
 

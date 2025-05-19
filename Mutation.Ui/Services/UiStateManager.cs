@@ -4,6 +4,7 @@ using Windows.Storage;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using CognitiveSupport;
+using Windows.Graphics;
 
 namespace Mutation.Ui.Services;
 

@@ -31,8 +31,12 @@ namespace Mutation.Ui.Views
             stream.Seek(0);
             await wb.SetSourceAsync(stream);
             Img.Source = wb;
-            Width = wb.PixelWidth;
-            Height = wb.PixelHeight;
+            // Replace setting Width/Height with AppWindow.Resize
+            var appWindow = this.AppWindow;
+            if (appWindow != null)
+            {
+                appWindow.Resize(new Windows.Graphics.SizeInt32(wb.PixelWidth, wb.PixelHeight));
+            }
         }
 
         public Task<Rect?> SelectRegionAsync()

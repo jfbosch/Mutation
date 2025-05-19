@@ -107,6 +107,6 @@ public class AudioDeviceManager
 	{
 		bool newMuteState = !IsMuted;
 		foreach (var mic in _captureDevices)
-			mic.Mute(newMuteState);
+			mic.SetMuteAsync(newMuteState).GetAwaiter().GetResult();
 	}
 }
