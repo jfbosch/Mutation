@@ -1,4 +1,4 @@
-﻿using AudioSwitcher.AudioApi.CoreAudio;
+using CoreAudio;
 using CognitiveSupport;
 using Deepgram;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,8 +57,8 @@ public partial class App : Application
 			builder.Services.AddSingleton(settings);
 			builder.Services.AddSingleton<ClipboardManager>();
 			builder.Services.AddSingleton<UiStateManager>();
-			builder.Services.AddSingleton<CoreAudioController>();
-			builder.Services.AddSingleton<AudioDeviceManager>();
+                        builder.Services.AddSingleton<MMDeviceEnumerator>(_ => new MMDeviceEnumerator(Guid.NewGuid()));
+                        builder.Services.AddSingleton<AudioDeviceManager>();
 			builder.Services.AddSingleton<IOcrService>(sp =>
     new OcrService(
         settings.AzureComputerVisionSettings?.ApiKey,

@@ -1,4 +1,3 @@
-﻿using AudioSwitcher.AudioApi.CoreAudio;
 using CognitiveSupport;
 
 namespace Mutation.Ui;
