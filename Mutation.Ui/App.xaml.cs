@@ -90,17 +90,32 @@ public partial class App : Application
 
 			_window.Activate();
 
-			if (BeepPlayer.LastInitializationIssues.Count > 0)
-			{
-				var dialog = new ContentDialog
-				{
-					Title = "Custom Beep Settings Issues",
-					Content = "The following issues were found with the custom beep settings:\n\n" + string.Join("\n", BeepPlayer.LastInitializationIssues),
-					CloseButtonText = "OK",
-					XamlRoot = _window.Content.XamlRoot
-				};
-				await dialog.ShowAsync();
-			}
+                        if (BeepPlayer.LastInitializationIssues.Count > 0)
+                        {
+                                const string title = "Custom Beep Settings Issues";
+                                string message = "The following issues were found with the custom beep settings:\n\n" +
+                                                    string.Join("\n", BeepPlayer.LastInitializationIssues);
+
+                                if (_window.Content is FrameworkElement fe && fe.XamlRoot is not null)
+                                {
+                                        var dialog = new ContentDialog
+                                        {
+                                                Title = title,
+                                                Content = message,
+                                                CloseButtonText = "OK",
+                                                XamlRoot = fe.XamlRoot
+                                        };
+                                        await dialog.ShowAsync();
+                                }
+                                else
+                                {
+                                        System.Windows.Forms.MessageBox.Show(
+                                                message,
+                                                title,
+                                                System.Windows.Forms.MessageBoxButtons.OK,
+                                                System.Windows.Forms.MessageBoxIcon.Warning);
+                                }
+                        }
 
 			var ocrMgr = _host.Services.GetRequiredService<OcrManager>();
 			ocrMgr.InitializeWindow(_window);
@@ -166,14 +181,29 @@ public partial class App : Application
 
                         if (hkManager.FailedRegistrations.Count > 0)
                         {
-                                var dialog = new ContentDialog
+                                const string title = "Hotkeys Not Registered";
+                                string message = "The following hotkeys could not be registered and may be in use by another application:\n\n" +
+                                                    string.Join("\n", hkManager.FailedRegistrations);
+
+                                if (_window.Content is FrameworkElement fe && fe.XamlRoot is not null)
                                 {
-                                        Title = "Hotkeys Not Registered",
-                                        Content = "The following hotkeys could not be registered and may be in use by another application:\n\n" + string.Join("\n", hkManager.FailedRegistrations),
-                                        CloseButtonText = "OK",
-                                        XamlRoot = _window.Content.XamlRoot
-                                };
-                                await dialog.ShowAsync();
+                                        var dialog = new ContentDialog
+                                        {
+                                                Title = title,
+                                                Content = message,
+                                                CloseButtonText = "OK",
+                                                XamlRoot = fe.XamlRoot
+                                        };
+                                        await dialog.ShowAsync();
+                                }
+                                else
+                                {
+                                        System.Windows.Forms.MessageBox.Show(
+                                                message,
+                                                title,
+                                                System.Windows.Forms.MessageBoxButtons.OK,
+                                                System.Windows.Forms.MessageBoxIcon.Warning);
+                                }
                         }
 
                         _window.Closed += (_, __) => hkManager.Dispose();
