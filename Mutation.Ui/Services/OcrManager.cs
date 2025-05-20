@@ -1,21 +1,15 @@
+﻿using CognitiveSupport;
+using Microsoft.UI.Xaml;
+using Mutation.Ui.Views;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Windows.ApplicationModel.DataTransfer;
+using Windows.Foundation;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
-using Windows.Graphics.DirectX.Direct3D11;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
-using Mutation.Ui.Services;
-using Mutation.Ui.Views;
-using WinRT;
 using WinRT.Interop;
-using CognitiveSupport;
-using Windows.Foundation;
 
 namespace Mutation.Ui.Services;
 
