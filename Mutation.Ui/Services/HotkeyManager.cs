@@ -12,13 +12,18 @@ namespace Mutation.Ui.Services;
 
 public class HotkeyManager : IDisposable
 {
-	private readonly IntPtr _hwnd;
-	private readonly Dictionary<int, Action> _callbacks = new();
-	private readonly List<int> _routerIds = new();
-	private readonly Settings _settings;
-	private int _id;
-	private IntPtr _prevWndProc;
-	private WndProcDelegate? _newWndProc;
+        private readonly IntPtr _hwnd;
+        private readonly Dictionary<int, Action> _callbacks = new();
+        private readonly List<int> _routerIds = new();
+        private readonly Settings _settings;
+        private int _id;
+        private IntPtr _prevWndProc;
+        private WndProcDelegate? _newWndProc;
+
+        /// <summary>
+        /// Gets the list of hotkeys that failed to register.
+        /// </summary>
+        public List<string> FailedRegistrations { get; } = new();
 
 	private const int WM_HOTKEY = 0x0312;
 	private const int GWLP_WNDPROC = -4;
@@ -71,17 +76,24 @@ public class HotkeyManager : IDisposable
 		_prevWndProc = SetWindowLongPtr(_hwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_newWndProc));
 	}
 
-	public int RegisterHotkey(Hotkey hotkey, Action callback)
-	{
-		int id = Interlocked.Increment(ref _id);
-		uint mods = (hotkey.Alt ? MOD_ALT : 0) |
-						(hotkey.Control ? MOD_CONTROL : 0) |
-						(hotkey.Shift ? MOD_SHIFT : 0) |
-						(hotkey.Win ? MOD_WIN : 0);
-		RegisterHotKey(_hwnd, id, mods, (uint)hotkey.Key);
-		_callbacks[id] = callback;
-		return id;
-	}
+        public int RegisterHotkey(Hotkey hotkey, Action callback)
+        {
+                int id = Interlocked.Increment(ref _id);
+                uint mods = (hotkey.Alt ? MOD_ALT : 0) |
+                                                (hotkey.Control ? MOD_CONTROL : 0) |
+                                                (hotkey.Shift ? MOD_SHIFT : 0) |
+                                                (hotkey.Win ? MOD_WIN : 0);
+                bool success = RegisterHotKey(_hwnd, id, mods, (uint)hotkey.Key);
+                if (success)
+                {
+                        _callbacks[id] = callback;
+                }
+                else
+                {
+                        FailedRegistrations.Add(hotkey.ToString());
+                }
+                return id;
+        }
 
 	public void RegisterRouterHotkeys()
 	{
