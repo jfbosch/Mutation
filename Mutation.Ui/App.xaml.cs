@@ -162,11 +162,24 @@ public partial class App : Application
 						  () => _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnTextToSpeech_Click(null!, null!)));
 			}
 
-			hkManager.RegisterRouterHotkeys();
-			_window.Closed += (_, __) => hkManager.Dispose();
-		}
-		catch (Exception ex)
-		{
+                        hkManager.RegisterRouterHotkeys();
+
+                        if (hkManager.FailedRegistrations.Count > 0)
+                        {
+                                var dialog = new ContentDialog
+                                {
+                                        Title = "Hotkeys Not Registered",
+                                        Content = "The following hotkeys could not be registered and may be in use by another application:\n\n" + string.Join("\n", hkManager.FailedRegistrations),
+                                        CloseButtonText = "OK",
+                                        XamlRoot = _window.Content.XamlRoot
+                                };
+                                await dialog.ShowAsync();
+                        }
+
+                        _window.Closed += (_, __) => hkManager.Dispose();
+                }
+                catch (Exception ex)
+                {
 			bool dialogShown = false;
 			try
 			{
