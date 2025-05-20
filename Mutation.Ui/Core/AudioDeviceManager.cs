@@ -1,5 +1,4 @@
-﻿using AudioSwitcher.AudioApi;
-using AudioSwitcher.AudioApi.CoreAudio;
+using CoreAudio;
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
@@ -14,26 +13,26 @@ namespace Mutation.Ui;
 /// </summary>
 public class AudioDeviceManager
 {
-	private readonly CoreAudioController _controller;
-	private IEnumerable<CoreAudioDevice> _captureDevices = Enumerable.Empty<CoreAudioDevice>();
-	private CoreAudioDevice? _microphone;
-	private int _microphoneDeviceIndex = -1;
+        private readonly MMDeviceEnumerator _deviceEnumerator;
+        private IList<MMDevice> _captureDevices = new List<MMDevice>();
+        private MMDevice? _microphone;
+        private int _microphoneDeviceIndex = -1;
 
-	public AudioDeviceManager(CoreAudioController controller)
-	{
-		_controller = controller ?? throw new ArgumentNullException(nameof(controller));
-		RefreshCaptureDevices();
-	}
+        public AudioDeviceManager(MMDeviceEnumerator deviceEnumerator)
+        {
+                _deviceEnumerator = deviceEnumerator ?? throw new ArgumentNullException(nameof(deviceEnumerator));
+                RefreshCaptureDevices();
+        }
 
 	/// <summary>
 	/// List of active capture devices.
 	/// </summary>
-	public IEnumerable<CoreAudioDevice> CaptureDevices => _captureDevices;
+        public IEnumerable<MMDevice> CaptureDevices => _captureDevices;
 
 	/// <summary>
 	/// The currently selected microphone device.
 	/// </summary>
-	public CoreAudioDevice? Microphone => _microphone;
+        public MMDevice? Microphone => _microphone;
 
 	/// <summary>
 	/// Gets the NAudio device index for the selected microphone.
@@ -43,24 +42,25 @@ public class AudioDeviceManager
 	/// <summary>
 	/// Indicates if the microphone is muted.
 	/// </summary>
-	public bool IsMuted => _microphone != null && _microphone.IsMuted;
+        public bool IsMuted => _microphone != null && _microphone.AudioEndpointVolume.Mute;
 
 	/// <summary>
 	/// Refreshes the list of capture devices from the system.
 	/// </summary>
-	public void RefreshCaptureDevices()
-	{
-		_captureDevices = _controller.GetDevices(DeviceType.Capture, DeviceState.Active);
-	}
+        public void RefreshCaptureDevices()
+        {
+                var devices = _deviceEnumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active);
+                _captureDevices = devices.ToList();
+        }
 
 	/// <summary>
 	/// Sets the microphone to the specified device.
 	/// </summary>
-	public void SelectMicrophone(CoreAudioDevice device)
-	{
-		_microphone = device ?? throw new ArgumentNullException(nameof(device));
-		SelectCaptureDeviceForNAudio();
-	}
+        public void SelectMicrophone(MMDevice device)
+        {
+                _microphone = device ?? throw new ArgumentNullException(nameof(device));
+                SelectCaptureDeviceForNAudio();
+        }
 
 	/// <summary>
 	/// Attempts to select the default system capture device if no microphone
@@ -71,13 +71,17 @@ public class AudioDeviceManager
 		if (_microphone != null)
 			return;
 
-		var defaultMic = _captureDevices.FirstOrDefault(d => d.IsDefaultDevice);
-		if (defaultMic != null)
-		{
-			_microphone = defaultMic;
-			SelectCaptureDeviceForNAudio();
-		}
-	}
+                try
+                {
+                        var defaultMic = _deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+                        if (defaultMic != null)
+                        {
+                                _microphone = defaultMic;
+                                SelectCaptureDeviceForNAudio();
+                        }
+                }
+                catch { }
+        }
 
 	private void SelectCaptureDeviceForNAudio()
 	{
@@ -87,7 +91,7 @@ public class AudioDeviceManager
 			return;
 		}
 
-		string startsWithNameToMatch = $"{_microphone.Name} (";
+                string startsWithNameToMatch = $"{_microphone.FriendlyName} (";
 		int deviceCount = WaveIn.DeviceCount;
 		for (int i = 0; i < deviceCount; i++)
 		{
@@ -106,7 +110,7 @@ public class AudioDeviceManager
 	public void ToggleMute()
 	{
 		bool newMuteState = !IsMuted;
-		foreach (var mic in _captureDevices)
-			mic.SetMuteAsync(newMuteState).GetAwaiter().GetResult();
-	}
+                foreach (var mic in _captureDevices)
+                        mic.AudioEndpointVolume.Mute = newMuteState;
+        }
 }

@@ -1,12 +1,12 @@
-﻿using AudioSwitcher.AudioApi.CoreAudio;
+using CoreAudio;
 
 namespace Mutation.Ui;
 
 internal class CaptureDeviceComboItem
 {
-	public CoreAudioDevice CaptureDevice { get; set; }
-	public string Display =>
-		$"{CaptureDevice.FullName}";
+        public MMDevice CaptureDevice { get; set; }
+        public string Display =>
+                $"{CaptureDevice.FriendlyName}";
 
 	public override string ToString()
 	{

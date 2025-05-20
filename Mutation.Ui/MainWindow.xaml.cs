@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using System;
+using CoreAudio;
 using System.Collections.Generic;
 using CognitiveSupport;
 using Mutation.Ui.Services;
@@ -67,13 +68,13 @@ namespace Mutation.Ui
                         TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
                         var micList = _audioDeviceManager.CaptureDevices.ToList();
                         CmbMicrophone.ItemsSource = micList;
-                        CmbMicrophone.DisplayMemberPath = nameof(AudioSwitcher.AudioApi.CoreAudio.CoreAudioDevice.FullName);
+                        CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
 
                         // Restore persisted microphone selection
                         string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
                         if (!string.IsNullOrWhiteSpace(savedMicFullName))
                         {
-                            var match = micList.FirstOrDefault(m => m.FullName == savedMicFullName);
+                            var match = micList.FirstOrDefault(m => m.FriendlyName == savedMicFullName);
                             if (match != null)
                                 CmbMicrophone.SelectedItem = match;
                             else if (_audioDeviceManager.Microphone != null)
@@ -257,12 +258,12 @@ namespace Mutation.Ui
 
         private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-                if (CmbMicrophone.SelectedItem is AudioSwitcher.AudioApi.CoreAudio.CoreAudioDevice device)
+                if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
                 {
                         _audioDeviceManager.SelectMicrophone(device);
                         if (_settings.AudioSettings != null)
                         {
-                                _settings.AudioSettings.ActiveCaptureDeviceFullName = device.FullName;
+                                _settings.AudioSettings.ActiveCaptureDeviceFullName = device.FriendlyName;
                                 _settingsManager.SaveSettingsToFile(_settings);
                         }
                 }
