@@ -59,13 +59,32 @@ namespace Mutation.Ui
                         _transcriptReviewer = transcriptReviewer;
                         _settings = settings;
                         _speechManager = new SpeechToTextManager(settings);
-                        _activeSpeechService = _speechServices.FirstOrDefault();
+
+                        // Ensure a default microphone is selected
+                        _audioDeviceManager.EnsureDefaultMicrophoneSelected();
+
                         InitializeComponent();
                         TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
-                        CmbMicrophone.ItemsSource = _audioDeviceManager.CaptureDevices.ToList();
+                        var micList = _audioDeviceManager.CaptureDevices.ToList();
+                        CmbMicrophone.ItemsSource = micList;
                         CmbMicrophone.DisplayMemberPath = nameof(AudioSwitcher.AudioApi.CoreAudio.CoreAudioDevice.FullName);
-                        if (_audioDeviceManager.Microphone != null)
+
+                        // Restore persisted microphone selection
+                        string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
+                        if (!string.IsNullOrWhiteSpace(savedMicFullName))
+                        {
+                            var match = micList.FirstOrDefault(m => m.FullName == savedMicFullName);
+                            if (match != null)
+                                CmbMicrophone.SelectedItem = match;
+                            else if (_audioDeviceManager.Microphone != null)
                                 CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
+                            else if (micList.Count > 0)
+                                CmbMicrophone.SelectedIndex = 0;
+                        }
+                        else if (_audioDeviceManager.Microphone != null)
+                                CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
+                        else if (micList.Count > 0)
+                                CmbMicrophone.SelectedIndex = 0;
 
                         CmbSpeechService.ItemsSource = _speechServices;
                         CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
@@ -241,6 +260,11 @@ namespace Mutation.Ui
                 if (CmbMicrophone.SelectedItem is AudioSwitcher.AudioApi.CoreAudio.CoreAudioDevice device)
                 {
                         _audioDeviceManager.SelectMicrophone(device);
+                        if (_settings.AudioSettings != null)
+                        {
+                                _settings.AudioSettings.ActiveCaptureDeviceFullName = device.FullName;
+                                _settingsManager.SaveSettingsToFile(_settings);
+                        }
                 }
         }
 
