@@ -8,9 +8,19 @@ namespace CognitiveSupport;
 public class LlmService : ILlmService
 {
 	private readonly string ApiKey;
-	private readonly string Endpoint;
-	private readonly object _lock = new object();
+	// private readonly string Endpoint; // Endpoint is not used
+	// private readonly object _lock = new object(); // _lock is not used
 	private readonly Dictionary<string, IOpenAIService> _openAIServices;
+
+	private static readonly HttpClient SharedHttpClient;
+
+	static LlmService()
+	{
+		SharedHttpClient = new HttpClient
+		{
+			Timeout = TimeSpan.FromSeconds(60)
+		};
+	}
 
 	public LlmService(
 		string apiKey,
@@ -31,9 +41,8 @@ public class LlmService : ILlmService
 				ProviderType = ProviderType.Azure,
 				DeploymentId = map.DeploymentId,
 			};
-			HttpClient httpClient = new HttpClient();
-			httpClient.Timeout = TimeSpan.FromSeconds(60);
-			_openAIServices[map.ModelName] = new OpenAIService(options, httpClient);
+			// Use the shared HttpClient instance
+			_openAIServices[map.ModelName] = new OpenAIService(options, SharedHttpClient);
 		}
 	}
 
@@ -54,15 +63,28 @@ public class LlmService : ILlmService
 		});
 		if (response.Successful)
 		{
-			return response.Choices.First().Message.Content;
+			// Ensure there is content to return, though rare for this to be null on success.
+			var content = response.Choices?.FirstOrDefault()?.Message?.Content;
+			if (content == null)
+			{
+				// This case should ideally not happen if Successful is true and Choices are present.
+				// However, to prevent NullReferenceException and signal an unexpected state:
+				throw new LlmServiceException("LLM request reported success, but no content was found.");
+			}
+			return content;
 		}
 		else
 		{
-			if (response.Error == null)
+			// Use the custom LlmServiceException
+			if (response.Error != null)
 			{
-				throw new Exception("Unknown Error");
+				throw new LlmServiceException(response.Error.Code, response.Error.Message);
 			}
-			return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
+			else
+			{
+				// Fallback if Error object itself is null, though the API usually provides it.
+				throw new LlmServiceException("LLM request failed with an unknown error and no error details provided.");
+			}
 		}
 	}
 }

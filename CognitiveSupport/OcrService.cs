@@ -147,7 +147,10 @@ public class OcrService : IOcrService, IDisposable
 		paddedImage.Save(paddedStream, ImageFormat.Png);
 		paddedStream.Seek(0, SeekOrigin.Begin);
 
-		// Do not dispose imageStream here! Let the caller manage its lifetime.
+		// The original imageStream was used to create 'image'.
+		// Since we are returning a new stream ('paddedStream'),
+		// we should dispose of the original imageStream here.
+		imageStream.Dispose();
 
 		return paddedStream;
 	}
