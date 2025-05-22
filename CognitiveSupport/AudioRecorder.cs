@@ -17,25 +17,40 @@ namespace CognitiveSupport
 			int captureDeviceIndex,
 			string outputFile)
 		{
-			waveIn = new WaveInEvent();
-			waveIn.DeviceNumber = captureDeviceIndex;
-			
-			// Debugging exception to show the name.
-			//throw new Exception("Device Index " + captureDeviceIndex + "   " + WaveInEvent.GetCapabilities(captureDeviceIndex).ProductName);
-
-			mp3Writer = new LameMP3FileWriter(outputFile, waveIn.WaveFormat, LAMEPreset.STANDARD);
-
-			waveIn.DataAvailable += (sender, e) =>
+			try
 			{
-				mp3Writer.Write(e.Buffer, 0, e.BytesRecorded);
-			};
+				waveIn = new WaveInEvent();
+				waveIn.DeviceNumber = captureDeviceIndex;
 
-			waveIn.RecordingStopped += (sender, e) =>
+				// It's good practice to set WaveFormat before creating LameMP3FileWriter
+				// if the writer depends on it, though NAudio might handle defaults.
+				// For now, assuming WaveInEvent default format is acceptable for LAME.
+				// waveIn.WaveFormat = new WaveFormat(44100, 1); // Example: 44.1 kHz, Mono
+
+				mp3Writer = new LameMP3FileWriter(outputFile, waveIn.WaveFormat, LAMEPreset.STANDARD);
+
+				waveIn.DataAvailable += (sender, e) =>
+				{
+					// Check if mp3Writer is still valid, as DataAvailable might be called
+					// concurrently with StopRecording/Dispose in some edge cases.
+					mp3Writer?.Write(e.Buffer, 0, e.BytesRecorded);
+				};
+
+				waveIn.RecordingStopped += (sender, e) =>
+				{
+					// This ensures resources are cleaned up when recording stops,
+					// whether normally or due to an error.
+					Dispose();
+				};
+
+				waveIn.StartRecording();
+			}
+			catch (Exception)
 			{
+				// If any part of the setup fails, ensure cleanup.
 				Dispose();
-			};
-
-			waveIn.StartRecording();
+				throw; // Re-throw the original exception to signal failure.
+			}
 		}
 
 		public void StopRecording()

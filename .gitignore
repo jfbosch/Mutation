@@ -81,3 +81,7 @@ src/Positron.Website/wwwroot/internal/*.svg
 src/Positron.Website/wwwroot/app/1.2/
 src/Positron.Website/appsettings.Development.json
 /src/Positron.Website/wwwroot/internal
+
+# User settings files
+*-settings.json
+settings.json

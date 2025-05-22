@@ -104,14 +104,29 @@ namespace Mutation.Ui
                         this.Closed += MainWindow_Closed;
                 }
 
+        private async Task ShowErrorDialogAsync(string message, string title = "Error")
+        {
+            var errorDialog = new ContentDialog
+            {
+                Title = title,
+                Content = message,
+                CloseButtonText = "OK",
+                XamlRoot = this.Content.XamlRoot
+            };
+            await errorDialog.ShowAsync();
+        }
+
                 private async void MainWindow_Closed(object sender, WindowEventArgs args)
                 {
                         _uiStateManager.Save(this);
 
-                        if (_activeSpeechService != null)
-                                _settings.SpeetchToTextSettings!.ActiveSpeetchToTextService = _activeSpeechService.ServiceName;
-                        _settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
-                        _settings.LlmSettings!.ReviewTranscriptPrompt = TxtReviewPrompt.Text;
+                        if (_activeSpeechService != null && _settings.SpeetchToTextSettings != null) // Null check for safety
+                                _settings.SpeetchToTextSettings.ActiveSpeetchToTextService = _activeSpeechService.ServiceName;
+                        if (_settings.LlmSettings != null) // Null check for safety
+                        {
+                            _settings.LlmSettings.FormatTranscriptPrompt = TxtFormatPrompt.Text;
+                            _settings.LlmSettings.ReviewTranscriptPrompt = TxtReviewPrompt.Text;
+                        }
 
                         _settingsManager.SaveSettingsToFile(_settings);
                         BeepPlayer.DisposePlayers();
@@ -163,37 +178,73 @@ namespace Mutation.Ui
                 {
                         if (_activeSpeechService == null)
                         {
-                                var dlg = new ContentDialog
-                                {
-                                        Title = "Warning",
-                                        Content = "No speech-to-text service selected.",
-                                        CloseButtonText = "OK",
-                                        XamlRoot = this.Content.XamlRoot
-                                };
-                                await dlg.ShowAsync();
+                                // Using the new helper for consistency, though this is a warning.
+                                await ShowErrorDialogAsync("No speech-to-text service selected.", "Warning");
                                 return;
                         }
 
-                        if (!_speechManager.Recording)
+                        bool wasRecording = _speechManager.Recording;
+                        try
                         {
-                                TxtSpeechToText.Text = "Recording...";
-                                BtnSpeechToText.Content = "Stop";
-                                BeepPlayer.Play(BeepType.Start);
-                                await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+                                if (!wasRecording)
+                                {
+                                        TxtSpeechToText.Text = "Recording...";
+                                        BtnSpeechToText.Content = "Stop";
+                                        BeepPlayer.Play(BeepType.Start);
+                                        await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+                                }
+                                else
+                                {
+                                        BtnSpeechToText.IsEnabled = false;
+                                        TxtSpeechToText.Text = "Transcribing...";
+                                        // Ensure _activeSpeechService is not null again, though checked above.
+                                        // This is more for static analysis or extreme edge cases.
+                                        if (_activeSpeechService == null) 
+                                        {
+                                            await ShowErrorDialogAsync("Speech service became unselected during operation.", "Error");
+                                            return; // Early exit
+                                        }
+                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+                                        BeepPlayer.Play(BeepType.End);
+                                        TxtSpeechToText.Text = text;
+                                        _clipboard.SetText(text);
+                                        InsertIntoActiveApplication(text);
+                                        BeepPlayer.Play(BeepType.Success);
+                                        HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
+                                }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                                BtnSpeechToText.IsEnabled = false;
-                                TxtSpeechToText.Text = "Transcribing...";
-                                string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-                                BeepPlayer.Play(BeepType.End);
-                                TxtSpeechToText.Text = text;
+                                BeepPlayer.Play(BeepType.Failure); // Play failure beep on error
+                                await ShowErrorDialogAsync(ex.Message, "Speech-to-Text Error");
+                                // If an error occurred while trying to stop, text might still be "Transcribing..."
+                                // Or if error during start, it might be "Recording..."
+                                // Resetting to a neutral state is important.
+                                if (wasRecording) // Error likely during StopRecordingAndTranscribeAsync
+                                {
+                                   TxtSpeechToText.Text = "Error during transcription. Please try again.";
+                                }
+                                else // Error likely during StartRecordingAsync
+                                {
+                                   TxtSpeechToText.Text = "Error starting recording. Please try again.";
+                                }
+                        }
+                        finally
+                        {
+                                // Always reset UI to a consistent state
                                 BtnSpeechToText.Content = "Record";
                                 BtnSpeechToText.IsEnabled = true;
-                                _clipboard.SetText(text);
-                                InsertIntoActiveApplication(text);
-                                BeepPlayer.Play(BeepType.Success);
-                                HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
+                                // If _speechManager.Recording is still true here, it means StartRecordingAsync failed
+                                // or StopRecordingAndTranscribeAsync failed before stopping the underlying recorder.
+                                // A more robust _speechManager would ensure its state is consistent.
+                                // For now, we assume the UI reset is the primary goal.
+                                if (_speechManager.Recording && wasRecording)
+                                {
+                                    // If it was recording and still is, means stop failed before transcription step.
+                                    // Attempt to gracefully stop the underlying recording if possible,
+                                    // though _speechManager should ideally handle this.
+                                    // For now, we focus on UI consistency.
+                                }
                         }
                 }
 
@@ -215,44 +266,95 @@ namespace Mutation.Ui
 
         public async void BtnFormatLlm_Click(object? sender, RoutedEventArgs? e)
         {
-                TxtFormatTranscript.Text = "Formatting...";
-                string raw = TxtSpeechToText.Text;
-                string prompt = TxtFormatPrompt.Text;
-                string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
-                TxtFormatTranscript.Text = formatted;
-                _clipboard.SetText(formatted);
-                InsertIntoActiveApplication(formatted);
-                BeepPlayer.Play(BeepType.Success);
+                string originalText = TxtFormatTranscript.Text; // Save original in case of error
+                try
+                {
+                        TxtFormatTranscript.Text = "Formatting...";
+                        string raw = TxtSpeechToText.Text;
+                        string prompt = TxtFormatPrompt.Text;
+                        string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
+                        TxtFormatTranscript.Text = formatted;
+                        _clipboard.SetText(formatted);
+                        InsertIntoActiveApplication(formatted);
+                        BeepPlayer.Play(BeepType.Success);
+                }
+                catch (LlmServiceException ex)
+                {
+                        BeepPlayer.Play(BeepType.Failure);
+                        await ShowErrorDialogAsync(ex.Message, "LLM Formatting Error");
+                        TxtFormatTranscript.Text = originalText; // Reset on error
+                }
+                catch (Exception ex)
+                {
+                        BeepPlayer.Play(BeepType.Failure);
+                        await ShowErrorDialogAsync(ex.Message, "Formatting Error");
+                        TxtFormatTranscript.Text = originalText; // Reset on error
+                }
         }
 
         public async void BtnReviewTranscript_Click(object? sender, RoutedEventArgs? e)
         {
-                string transcript = TxtFormatTranscript.Text;
-                string prompt = TxtReviewPrompt.Text;
-                string review = await _transcriptReviewer.ReviewAsync(transcript, prompt, 0.4m);
-                TxtReviewTranscript.Text = review;
-                var issues = review.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-                                     .Select(i => new ReviewItem { Apply = false, Issue = i })
-                                     .ToList();
-                GridReview.ItemsSource = issues;
+                try
+                {
+                        string transcript = TxtFormatTranscript.Text;
+                        string prompt = TxtReviewPrompt.Text;
+                        // Potentially indicate work in progress if review is slow
+                        // TxtReviewTranscript.Text = "Reviewing..."; 
+                        string review = await _transcriptReviewer.ReviewAsync(transcript, prompt, 0.4m);
+                        TxtReviewTranscript.Text = review;
+                        var issues = review.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                                             .Select(i => new ReviewItem { Apply = false, Issue = i })
+                                             .ToList();
+                        GridReview.ItemsSource = issues;
+                        BeepPlayer.Play(BeepType.Success); // Play success after review
+                }
+                catch (LlmServiceException ex)
+                {
+                        BeepPlayer.Play(BeepType.Failure);
+                        await ShowErrorDialogAsync(ex.Message, "LLM Review Error");
+                        TxtReviewTranscript.Text = "Error during review."; // Clear or indicate error
+                }
+                catch (Exception ex)
+                {
+                        BeepPlayer.Play(BeepType.Failure);
+                        await ShowErrorDialogAsync(ex.Message, "Review Error");
+                        TxtReviewTranscript.Text = "Error during review."; // Clear or indicate error
+                }
         }
 
         private async void BtnApplySelectedReviewIssues_Click(object sender, RoutedEventArgs e)
         {
-                if (GridReview.ItemsSource is IEnumerable<ReviewItem> items)
+                if (!(GridReview.ItemsSource is IEnumerable<ReviewItem> items)) return;
+
+                var selected = items.Where(i => i.Apply).Select(i => i.Issue).ToArray();
+                if (selected.Length == 0) return;
+
+                string originalTranscript = TxtFormatTranscript.Text;
+                TxtFormatTranscript.IsReadOnly = true;
+                try
                 {
-                        var selected = items.Where(i => i.Apply).Select(i => i.Issue).ToArray();
-                        if (selected.Length > 0)
-                        {
-                                TxtFormatTranscript.IsReadOnly = true;
-                                string transcript = TxtFormatTranscript.Text;
-                                string prompt = TxtReviewPrompt.Text;
-                                string revision = await _transcriptReviewer.ApplyCorrectionsAsync(transcript, prompt, selected);
-                                TxtFormatTranscript.Text = revision;
-                                TxtFormatTranscript.IsReadOnly = false;
-                                GridReview.ItemsSource = items.Where(i => !i.Apply).ToList();
-                                BeepPlayer.Play(BeepType.Success);
-                        }
+                        // Optionally indicate work: TxtFormatTranscript.Text = "Applying corrections...";
+                        string prompt = TxtReviewPrompt.Text;
+                        string revision = await _transcriptReviewer.ApplyCorrectionsAsync(originalTranscript, prompt, selected);
+                        TxtFormatTranscript.Text = revision;
+                        GridReview.ItemsSource = items.Where(i => !i.Apply).ToList(); // Update remaining issues
+                        BeepPlayer.Play(BeepType.Success);
+                }
+                catch (LlmServiceException ex)
+                {
+                        BeepPlayer.Play(BeepType.Failure);
+                        await ShowErrorDialogAsync(ex.Message, "LLM Apply Corrections Error");
+                        TxtFormatTranscript.Text = originalTranscript; // Revert on error
+                }
+                catch (Exception ex)
+                {
+                        BeepPlayer.Play(BeepType.Failure);
+                        await ShowErrorDialogAsync(ex.Message, "Apply Corrections Error");
+                        TxtFormatTranscript.Text = originalTranscript; // Revert on error
+                }
+                finally
+                {
+                        TxtFormatTranscript.IsReadOnly = false;
                 }
         }
 
