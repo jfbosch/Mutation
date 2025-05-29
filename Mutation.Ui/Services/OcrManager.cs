@@ -5,11 +5,11 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Windows.Foundation;
-using Windows.Graphics.Capture;
-using Windows.Graphics.DirectX;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
-using WinRT.Interop;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Windows.Forms;
 
 namespace Mutation.Ui.Services;
 
@@ -101,32 +101,28 @@ public class OcrManager
 
     private async Task<SoftwareBitmap?> CaptureScreenshotAsync()
     {
-        if (_window == null)
-            throw new InvalidOperationException("OcrManager window not initialized.");
-
-        var picker = new GraphicsCapturePicker();
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(_window));
-        GraphicsCaptureItem item = await picker.PickSingleItemAsync();
-        if (item == null)
-            return null;
-
-        var device = Direct3D11Helper.CreateDevice();
-        using var framePool = Direct3D11CaptureFramePool.CreateFreeThreaded(device, DirectXPixelFormat.B8G8R8A8UIntNormalized, 1, item.Size);
-        using var session = framePool.CreateCaptureSession(item);
-        var tcs = new TaskCompletionSource<SoftwareBitmap?>();
-        void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
+        // Capture the entire virtual screen using GDI and convert to SoftwareBitmap
+        var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+        using Bitmap gdiBmp = new(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
+        using (Graphics g = Graphics.FromImage(gdiBmp))
         {
-            using var frame = sender.TryGetNextFrame();
-            sender.FrameArrived -= OnFrameArrived;
-            session.Dispose();
-            var task = SoftwareBitmap.CreateCopyFromSurfaceAsync(frame.Surface);
-            task.AsTask().ContinueWith(t => tcs.SetResult(t.Result));
+            g.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, bounds.Size);
         }
-        framePool.FrameArrived += OnFrameArrived;
-        session.StartCapture();
-        var bmp = await tcs.Task.ConfigureAwait(false);
-        if (bmp == null)
-            return null;
+
+        using MemoryStream ms = new();
+        gdiBmp.Save(ms, ImageFormat.Png);
+        ms.Position = 0;
+
+        InMemoryRandomAccessStream stream = new();
+        using (var writer = new DataWriter(stream))
+        {
+            writer.WriteBytes(ms.ToArray());
+            await writer.StoreAsync();
+        }
+        stream.Seek(0);
+
+        BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+        SoftwareBitmap bmp = await decoder.GetSoftwareBitmapAsync();
 
         // show region selection overlay
         var overlay = new RegionSelectionWindow();
