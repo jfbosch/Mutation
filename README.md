@@ -15,7 +15,7 @@ Mutation supports two OCR reading orders via Azure **Computer Vision** (part of 
 
 Hotkeys:
 
-* **ScreenshotHotKey** – draw a rectangle; the screenshot goes to the clipboard.  
+* **ScreenshotHotKey** – instantly captures the full screen and then lets you draw a rectangle with a crosshair cursor (press **Esc** to cancel); the selected region goes to the clipboard.
 * **OcrHotKey** – OCR the clipboard image with **Natural** layout.  
 * **ScreenshotOcrHotKey** – take a screenshot and OCR it with **Natural** layout in one step.  
 * **OcrLeftToRightTopToBottomHotKey** – OCR the clipboard image with **Basic** layout.  
