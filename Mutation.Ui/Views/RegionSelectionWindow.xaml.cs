@@ -3,9 +3,12 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
+using Microsoft.UI.Windowing;
 using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Windows.Foundation;
+using Windows.Graphics;
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
 
@@ -16,9 +19,19 @@ namespace Mutation.Ui.Views
         private Point _start;
         private bool _dragging;
         private TaskCompletionSource<Rect?>? _tcs;
+        private readonly IntPtr _hwnd;
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        private static readonly IntPtr HWND_TOPMOST = new(-1);
+        private const uint SWP_SHOWWINDOW = 0x0040;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOSIZE = 0x0001;
         public RegionSelectionWindow()
         {
             this.InitializeComponent();
+            _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         }
 
         public async Task InitializeAsync(SoftwareBitmap bitmap)
@@ -31,12 +44,16 @@ namespace Mutation.Ui.Views
             stream.Seek(0);
             await wb.SetSourceAsync(stream);
             Img.Source = wb;
-            // Replace setting Width/Height with AppWindow.Resize
+
+            var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
             var appWindow = this.AppWindow;
             if (appWindow != null)
             {
-                appWindow.Resize(new Windows.Graphics.SizeInt32(wb.PixelWidth, wb.PixelHeight));
+                appWindow.MoveAndResize(new RectInt32(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
             }
+
+            SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height,
+                SWP_SHOWWINDOW);
         }
 
         public Task<Rect?> SelectRegionAsync()
@@ -83,6 +100,16 @@ namespace Mutation.Ui.Views
             Rect rect = new(x, y, w, h);
             _tcs?.TrySetResult(rect);
             Close();
+        }
+
+        private void Window_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == Windows.System.VirtualKey.Escape)
+            {
+                _dragging = false;
+                _tcs?.TrySetResult(null);
+                Close();
+            }
         }
     }
 }
