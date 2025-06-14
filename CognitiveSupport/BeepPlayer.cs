@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Media;
+﻿using System.Media;
 
 namespace CognitiveSupport
 {
@@ -11,7 +8,7 @@ namespace CognitiveSupport
 	{
 		public const int DefaultStartFrequency = 970;
 		public const int DefaultStartDuration = 80;
-		public static readonly (int Frequency,int Duration)[] DefaultSuccessSequence = new[] { (1050,40),(1150,40) };
+		public static readonly (int Frequency, int Duration)[] DefaultSuccessSequence = new[] { (1050, 40), (1150, 40) };
 		public const int DefaultFailureFrequency = 300;
 		public const int DefaultFailureDuration = 100;
 		public const int DefaultFailureRepeats = 3;
@@ -29,53 +26,54 @@ namespace CognitiveSupport
 		private static SoundPlayer? _playerEnd;
 		private static SoundPlayer? _playerMute;
 		private static SoundPlayer? _playerUnmute;
-		public static IReadOnlyList<string> LastInitializationIssues { get; private set; } = Array.Empty<string> ( );
+		public static IReadOnlyList<string> LastInitializationIssues { get; private set; } = Array.Empty<string>();
 
-		public static void Initialize ( Settings settings )
+		public static void Initialize(Settings settings)
 		{
-			lock ( SyncLock )
+			lock (SyncLock)
 			{
-				DisposePlayers ( );
+				DisposePlayers();
 				var issues = new List<string>();
 				var custom = settings.AudioSettings?.CustomBeepSettings;
-				if ( custom?.UseCustomBeeps == true )
+				if (custom?.UseCustomBeeps == true)
 				{
-					_playerStart = LoadPlayer ( custom.BeepStartFile, fp => issues.Add ( $"Could not load start beep file: {fp}" ) );
-					_playerSuccess = LoadPlayer ( custom.BeepSuccessFile, fp => issues.Add ( $"Could not load success beep file: {fp}" ) );
-					_playerFailure = LoadPlayer ( custom.BeepFailureFile, fp => issues.Add ( $"Could not load failure beep file: {fp}" ) );
-					_playerEnd = LoadPlayer ( custom.BeepEndFile, fp => issues.Add ( $"Could not load end beep file: {fp}" ) );
-					_playerMute = LoadPlayer ( custom.BeepMuteFile, fp => issues.Add ( $"Could not load mute beep file: {fp}" ) );
-					_playerUnmute = LoadPlayer ( custom.BeepUnmuteFile, fp => issues.Add ( $"Could not load unmute beep file: {fp}" ) );
+					_playerStart = LoadPlayer(custom.ResolveAudioFilePath(custom.BeepStartFile), fp => issues.Add($"Could not load start beep file: {fp}"));
+					_playerSuccess = LoadPlayer(custom.ResolveAudioFilePath(custom.BeepSuccessFile), fp => issues.Add($"Could not load success beep file: {fp}"));
+					_playerFailure = LoadPlayer(custom.ResolveAudioFilePath(custom.BeepFailureFile), fp => issues.Add($"Could not load failure beep file: {fp}"));
+					_playerEnd = LoadPlayer(custom.ResolveAudioFilePath(custom.BeepEndFile), fp => issues.Add($"Could not load end beep file: {fp}"));
+					_playerMute = LoadPlayer(custom.ResolveAudioFilePath(custom.BeepMuteFile), fp => issues.Add($"Could not load mute beep file: {fp}"));
+					_playerUnmute = LoadPlayer(custom.ResolveAudioFilePath(custom.BeepUnmuteFile), fp => issues.Add($"Could not load unmute beep file: {fp}"));
 				}
 				LastInitializationIssues = issues;
 			}
 		}
 
-		private static SoundPlayer? LoadPlayer ( string filePath, Action<string> onError )
+		private static SoundPlayer? LoadPlayer(string filePath, Action<string> onError)
 		{
-			if ( string.IsNullOrWhiteSpace ( filePath ) || !File.Exists ( filePath ) )
+			if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
 				return null;
+
 			try
 			{
 				var player = new SoundPlayer(filePath);
-				player.Load ( );
+				player.Load();
 				return player;
 			}
 			catch
 			{
-				onError ( filePath );
+				onError(filePath);
 				return null;
 			}
 		}
 
-		public static void Play ( BeepType type )
+		public static void Play(BeepType type)
 		{
-			if ( TryPlayCustom ( type ) )
+			if (TryPlayCustom(type))
 				return;
-			PlayDefault ( type );
+			PlayDefault(type);
 		}
 
-		private static bool TryPlayCustom ( BeepType type )
+		private static bool TryPlayCustom(BeepType type)
 		{
 			var player = type switch
 			{
@@ -87,49 +85,49 @@ namespace CognitiveSupport
 				BeepType.Unmute => _playerUnmute,
 				_ => null
 			};
-			if ( player != null )
+			if (player != null)
 			{
-				player.Play ( );
+				player.Play();
 				return true;
 			}
 			return false;
 		}
 
-		private static void PlayDefault ( BeepType type )
+		private static void PlayDefault(BeepType type)
 		{
-			switch ( type )
+			switch (type)
 			{
 				case BeepType.Start:
-					Console.Beep ( DefaultStartFrequency, DefaultStartDuration );
+					Console.Beep(DefaultStartFrequency, DefaultStartDuration);
 					break;
 				case BeepType.Success:
-					foreach ( var (frequency, duration) in DefaultSuccessSequence )
-						Console.Beep ( frequency, duration );
+					foreach (var (frequency, duration) in DefaultSuccessSequence)
+						Console.Beep(frequency, duration);
 					break;
 				case BeepType.Failure:
-					for ( var i = 0; i < DefaultFailureRepeats; i++ )
-						Console.Beep ( DefaultFailureFrequency, DefaultFailureDuration );
+					for (var i = 0; i < DefaultFailureRepeats; i++)
+						Console.Beep(DefaultFailureFrequency, DefaultFailureDuration);
 					break;
 				case BeepType.End:
-					Console.Beep ( DefaultEndFrequency, DefaultEndDuration );
+					Console.Beep(DefaultEndFrequency, DefaultEndDuration);
 					break;
 				case BeepType.Mute:
-					Console.Beep ( DefaultMuteFrequency, DefaultMuteDuration );
+					Console.Beep(DefaultMuteFrequency, DefaultMuteDuration);
 					break;
 				case BeepType.Unmute:
-					Console.Beep ( DefaultUnmuteFrequency, DefaultUnmuteDuration );
+					Console.Beep(DefaultUnmuteFrequency, DefaultUnmuteDuration);
 					break;
 			}
 		}
 
-		public static void DisposePlayers ( )
+		public static void DisposePlayers()
 		{
-			_playerStart?.Dispose ( );
-			_playerSuccess?.Dispose ( );
-			_playerFailure?.Dispose ( );
-			_playerEnd?.Dispose ( );
-			_playerMute?.Dispose ( );
-			_playerUnmute?.Dispose ( );
+			_playerStart?.Dispose();
+			_playerSuccess?.Dispose();
+			_playerFailure?.Dispose();
+			_playerEnd?.Dispose();
+			_playerMute?.Dispose();
+			_playerUnmute?.Dispose();
 			_playerStart = null;
 			_playerSuccess = null;
 			_playerFailure = null;

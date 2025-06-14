@@ -1,16 +1,12 @@
 ﻿using CognitiveSupport;
 using Newtonsoft.Json;
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Windows.Storage;
-using CognitiveSupport;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -562,7 +558,7 @@ When you are asked to apply revision corrections, you should do the following:
 	}
 
 	// Helper to resolve audio file paths relative to the executable directory
-	private static string ResolveAudioFilePath(string path)
+	public static string ResolveAudioFilePath(string path)
 	{
 		if (string.IsNullOrWhiteSpace(path))
 			return path;

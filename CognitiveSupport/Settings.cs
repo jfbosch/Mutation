@@ -57,6 +57,18 @@ public class AudioSettings
 		public string? BeepEndFile { get; set; }
 		public string? BeepMuteFile { get; set; }
 		public string? BeepUnmuteFile { get; set; }
+
+		// Helper to resolve audio file paths relative to the executable directory
+		public string ResolveAudioFilePath(string path)
+		{
+			if (string.IsNullOrWhiteSpace(path))
+				return path;
+			if (Path.IsPathRooted(path))
+				return path;
+			// Use AppContext.BaseDirectory for the exe location
+			return Path.Combine(AppContext.BaseDirectory, path);
+		}
+
 	}
 }
 
