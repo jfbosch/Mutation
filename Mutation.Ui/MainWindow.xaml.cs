@@ -89,8 +89,28 @@ namespace Mutation.Ui
 
                         CmbSpeechService.ItemsSource = _speechServices;
                         CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
-                        if (_activeSpeechService != null)
-                                CmbSpeechService.SelectedItem = _activeSpeechService;
+
+                        // Restore persisted speech service selection
+                        string? savedServiceName = _settings.SpeetchToTextSettings?.ActiveSpeetchToTextService;
+                        if (!string.IsNullOrWhiteSpace(savedServiceName))
+                        {
+                            var match = _speechServices.FirstOrDefault(s => s.ServiceName == savedServiceName);
+                            if (match != null)
+                            {
+                                CmbSpeechService.SelectedItem = match;
+                                _activeSpeechService = match;
+                            }
+                            else if (_speechServices.Length > 0)
+                            {
+                                CmbSpeechService.SelectedIndex = 0;
+                                _activeSpeechService = _speechServices[0];
+                            }
+                        }
+                        else if (_speechServices.Length > 0)
+                        {
+                            CmbSpeechService.SelectedIndex = 0;
+                            _activeSpeechService = _speechServices[0];
+                        }
 
                         TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
                         TxtReviewPrompt.Text = _settings.LlmSettings?.ReviewTranscriptPrompt ?? string.Empty;
