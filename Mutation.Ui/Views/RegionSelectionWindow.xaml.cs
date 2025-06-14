@@ -31,6 +31,7 @@ namespace Mutation.Ui.Views
         public RegionSelectionWindow()
         {
             this.InitializeComponent();
+            this.KeyDown += Window_KeyDown;
             _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         }
 
