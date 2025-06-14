@@ -137,21 +137,21 @@ namespace Mutation.Ui
                 private async void BtnScreenshot_Click(object sender, RoutedEventArgs e)
                 {
                         await _ocrManager.TakeScreenshotToClipboardAsync();
-                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, 50);
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotKeyAfterOcrOperation ?? string.Empty, 50);
                 }
 
                 private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
                 {
                         var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
                         TxtOcr.Text = result.Message;
-                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
                 }
 
                 private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
                 {
                         var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
                         TxtOcr.Text = result.Message;
-                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
                 }
 
                 public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
@@ -193,13 +193,13 @@ namespace Mutation.Ui
                                 _clipboard.SetText(text);
                                 InsertIntoActiveApplication(text);
                                 BeepPlayer.Play(BeepType.Success);
-                                HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
+                                HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendHotKeyAfterTranscriptionOperation ?? string.Empty, 50);
                         }
                 }
 
-                public void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
+                public async void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
                 {
-                        string text = _clipboard.GetText();
+                        string text = await _clipboard.GetTextAsync();
                         _textToSpeech.SpeakText(text);
                 }
 
