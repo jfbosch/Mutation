@@ -124,7 +124,7 @@ internal class SettingsManager : ISettingsManager
 			var beepIssues = new List<string>();
 
 			string successPath = audioSettings.CustomBeepSettings?.BeepSuccessFile ?? string.Empty;
-			string resolvedSuccessPath = ResolveAudioFilePath(successPath);
+			string resolvedSuccessPath = audioSettings.CustomBeepSettings.ResolveAudioFilePath(successPath);
 			if (string.IsNullOrWhiteSpace(successPath) ||
 				!allowedExtensions.Contains(Path.GetExtension(successPath)?.ToLower()) ||
 				!File.Exists(resolvedSuccessPath))
@@ -138,7 +138,7 @@ internal class SettingsManager : ISettingsManager
 			}
 
 			string failurePath = audioSettings.CustomBeepSettings?.BeepFailureFile ?? string.Empty;
-			string resolvedFailurePath = ResolveAudioFilePath(failurePath);
+			string resolvedFailurePath = audioSettings.CustomBeepSettings.ResolveAudioFilePath(failurePath);
 			if (string.IsNullOrWhiteSpace(failurePath) ||
 				!allowedExtensions.Contains(Path.GetExtension(failurePath)?.ToLower()) ||
 				!File.Exists(resolvedFailurePath))
@@ -152,7 +152,7 @@ internal class SettingsManager : ISettingsManager
 			}
 
 			string startPath = audioSettings.CustomBeepSettings?.BeepStartFile ?? string.Empty;
-			string resolvedStartPath = ResolveAudioFilePath(startPath);
+			string resolvedStartPath = audioSettings.CustomBeepSettings.ResolveAudioFilePath(startPath);
 			if (string.IsNullOrWhiteSpace(startPath) ||
 				!allowedExtensions.Contains(Path.GetExtension(startPath)?.ToLower()) ||
 				!File.Exists(resolvedStartPath))
@@ -166,7 +166,7 @@ internal class SettingsManager : ISettingsManager
 			}
 
 			string endPath = audioSettings.CustomBeepSettings?.BeepEndFile ?? string.Empty;
-			string resolvedEndPath = ResolveAudioFilePath(endPath);
+			string resolvedEndPath = audioSettings.CustomBeepSettings.ResolveAudioFilePath(endPath);
 			if (string.IsNullOrWhiteSpace(endPath) ||
 				!allowedExtensions.Contains(Path.GetExtension(endPath)?.ToLower()) ||
 				!File.Exists(resolvedEndPath))
@@ -180,7 +180,7 @@ internal class SettingsManager : ISettingsManager
 			}
 
 			string mutePath = audioSettings.CustomBeepSettings?.BeepMuteFile ?? string.Empty;
-			string resolvedMutePath = ResolveAudioFilePath(mutePath);
+			string resolvedMutePath = audioSettings.CustomBeepSettings.ResolveAudioFilePath(mutePath);
 			if (string.IsNullOrWhiteSpace(mutePath) ||
 				!allowedExtensions.Contains(Path.GetExtension(mutePath)?.ToLower()) ||
 				!File.Exists(resolvedMutePath))
@@ -194,7 +194,7 @@ internal class SettingsManager : ISettingsManager
 			}
 
 			string unmutePath = audioSettings.CustomBeepSettings?.BeepUnmuteFile ?? string.Empty;
-			string resolvedUnmutePath = ResolveAudioFilePath(unmutePath);
+			string resolvedUnmutePath = audioSettings.CustomBeepSettings.ResolveAudioFilePath(unmutePath);
 			if (string.IsNullOrWhiteSpace(unmutePath) ||
 				!allowedExtensions.Contains(Path.GetExtension(unmutePath)?.ToLower()) ||
 				!File.Exists(resolvedUnmutePath))
@@ -555,17 +555,6 @@ When you are asked to apply revision corrections, you should do the following:
 		}
 
 		return somethingWasMissing;
-	}
-
-	// Helper to resolve audio file paths relative to the executable directory
-	public static string ResolveAudioFilePath(string path)
-	{
-		if (string.IsNullOrWhiteSpace(path))
-			return path;
-		if (Path.IsPathRooted(path))
-			return path;
-		// Use AppContext.BaseDirectory for the exe location
-		return Path.Combine(AppContext.BaseDirectory, path);
 	}
 
 	public void UpgradeSettings()
