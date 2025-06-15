@@ -329,7 +329,7 @@ namespace Mutation.Ui
 			}
 		}
 
-		private async Task ShowErrorDialog(string title, Exception ex)
+		public async Task ShowErrorDialog(string title, Exception ex)
 		{
 			string message = $"An error occurred:\n{ex.Message}\n\n{ex}";
 			var dialog = new ContentDialog

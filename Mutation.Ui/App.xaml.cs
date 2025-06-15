@@ -1,4 +1,5 @@
 ﻿using CognitiveSupport;
+using CognitiveSupport.Extensions;
 using CoreAudio;
 using Deepgram;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +11,7 @@ using OpenAI;
 using OpenAI.Managers;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Net.Http;
 
@@ -128,53 +130,84 @@ public partial class App : Application
 			{
 				hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotHotKey!),
-						  () => _ = ocrMgr.TakeScreenshotToClipboardAsync());
+						  async () =>
+						  {
+							  try { await ocrMgr.TakeScreenshotToClipboardAsync(); }
+							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot Error", ex); }
+						  });
 			}
 			if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotOcrHotKey))
 			{
 				hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotOcrHotKey!),
-						  () => _ = ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware));
+						  async () =>
+						  {
+							  try { await ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware); }
+							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot + OCR Error", ex); }
+						  });
 			}
 			if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotLeftToRightTopToBottomOcrHotKey))
 			{
 				hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey!),
-						  () => _ = ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom));
+						  async () =>
+						  {
+							  try { await ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom); }
+							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot + OCR (LRTB) Error", ex); }
+						  });
 			}
-
 			if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.OcrHotKey))
 			{
 				hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.OcrHotKey!),
-						  () => _ = ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware));
+						  async () =>
+						  {
+							  try { await ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware); }
+							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("OCR Clipboard Error", ex); }
+						  });
 			}
 			if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.OcrLeftToRightTopToBottomHotKey))
 			{
 				hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey!),
-						  () => _ = ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom));
+						  async () =>
+						  {
+							  try { await ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom); }
+							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("OCR Clipboard (LRTB) Error", ex); }
+						  });
 			}
 
 			if (!string.IsNullOrWhiteSpace(settingsSvc.AudioSettings?.MicrophoneToggleMuteHotKey))
 			{
 				hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.AudioSettings.MicrophoneToggleMuteHotKey!),
-						  () => _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnToggleMic_Click(null!, null!)));
+						  () =>
+						  {
+							  try { _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnToggleMic_Click(null!, null!)); }
+							  catch (Exception ex) { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).ShowErrorDialog("Toggle Mic Error", ex)); }
+						  });
 			}
 
 			if (!string.IsNullOrWhiteSpace(settingsSvc.SpeetchToTextSettings?.SpeechToTextHotKey))
 			{
 				hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.SpeetchToTextSettings.SpeechToTextHotKey!),
-						  () => _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).StartStopSpeechToTextAsync()));
+						  () =>
+						  {
+							  try { _window.DispatcherQueue.TryEnqueue(async () => { try { await ((MainWindow)_window).StartStopSpeechToTextAsync(); } catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Speech to Text Error", ex); } }); }
+							  catch (Exception ex) { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).ShowErrorDialog("Speech to Text Error", ex)); }
+						  });
 			}
 
 			if (!string.IsNullOrWhiteSpace(settingsSvc.TextToSpeechSettings?.TextToSpeechHotKey))
 			{
 				hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.TextToSpeechSettings.TextToSpeechHotKey!),
-						  () => _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnTextToSpeech_Click(null!, null!)));
+						  () =>
+						  {
+							  try { _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnTextToSpeech_Click(null!, null!)); }
+							  catch (Exception ex) { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).ShowErrorDialog("Text to Speech Error", ex)); }
+						  });
 			}
 
 			hkManager.RegisterRouterHotkeys();
