@@ -153,64 +153,99 @@ namespace Mutation.Ui
 
 		private async void BtnScreenshot_Click(object sender, RoutedEventArgs e)
 		{
-			await _ocrManager.TakeScreenshotToClipboardAsync();
-			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, 50);
+			try
+			{
+				await _ocrManager.TakeScreenshotToClipboardAsync();
+				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, 50);
+			}
+			catch (Exception ex)
+			{
+				await ShowErrorDialog("Screenshot Error", ex);
+			}
 		}
 
 		private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
 		{
-			var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
-			TxtOcr.Text = result.Message;
-			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
+			try
+			{
+				var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
+				TxtOcr.Text = result.Message;
+				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
+			}
+			catch (Exception ex)
+			{
+				await ShowErrorDialog("Screenshot + OCR Error", ex);
+			}
 		}
 
 		private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
 		{
-			var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
-			TxtOcr.Text = result.Message;
-			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
+			try
+			{
+				var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
+				TxtOcr.Text = result.Message;
+				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
+			}
+			catch (Exception ex)
+			{
+				await ShowErrorDialog("OCR Clipboard Error", ex);
+			}
 		}
 
 		public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
 		{
-			await StartStopSpeechToTextAsync();
+			try
+			{
+				await StartStopSpeechToTextAsync();
+			}
+			catch (Exception ex)
+			{
+				await ShowErrorDialog("Speech to Text Error", ex);
+			}
 		}
 
 		public async Task StartStopSpeechToTextAsync()
 		{
-			if (_activeSpeechService == null)
+			try
 			{
-				var dlg = new ContentDialog
+				if (_activeSpeechService == null)
 				{
-					Title = "Warning",
-					Content = "No speech-to-text service selected.",
-					CloseButtonText = "OK",
-					XamlRoot = this.Content.XamlRoot
-				};
-				await dlg.ShowAsync();
-				return;
-			}
+					var dlg = new ContentDialog
+					{
+						Title = "Warning",
+						Content = "No speech-to-text service selected.",
+						CloseButtonText = "OK",
+						XamlRoot = this.Content.XamlRoot
+					};
+					await dlg.ShowAsync();
+					return;
+				}
 
-			if (!_speechManager.Recording)
-			{
-				TxtSpeechToText.Text = "Recording...";
-				BtnSpeechToText.Content = "Stop";
-				BeepPlayer.Play(BeepType.Start);
-				await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+				if (!_speechManager.Recording)
+				{
+					TxtSpeechToText.Text = "Recording...";
+					BtnSpeechToText.Content = "Stop";
+					BeepPlayer.Play(BeepType.Start);
+					await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+				}
+				else
+				{
+					BtnSpeechToText.IsEnabled = false;
+					TxtSpeechToText.Text = "Transcribing...";
+					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+					BeepPlayer.Play(BeepType.End);
+					TxtSpeechToText.Text = text;
+					BtnSpeechToText.Content = "Record";
+					BtnSpeechToText.IsEnabled = true;
+					_clipboard.SetText(text);
+					InsertIntoActiveApplication(text);
+					BeepPlayer.Play(BeepType.Success);
+					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
+				}
 			}
-			else
+			catch (Exception ex)
 			{
-				BtnSpeechToText.IsEnabled = false;
-				TxtSpeechToText.Text = "Transcribing...";
-				string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-				BeepPlayer.Play(BeepType.End);
-				TxtSpeechToText.Text = text;
-				BtnSpeechToText.Content = "Record";
-				BtnSpeechToText.IsEnabled = true;
-				_clipboard.SetText(text);
-				InsertIntoActiveApplication(text);
-				BeepPlayer.Play(BeepType.Success);
-				HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
+				await ShowErrorDialog("Speech to Text Error", ex);
 			}
 		}
 
@@ -232,45 +267,79 @@ namespace Mutation.Ui
 
 		public async void BtnFormatLlm_Click(object? sender, RoutedEventArgs? e)
 		{
-			TxtFormatTranscript.Text = "Formatting...";
-			string raw = TxtSpeechToText.Text;
-			string prompt = TxtFormatPrompt.Text;
-			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
-			TxtFormatTranscript.Text = formatted;
-			_clipboard.SetText(formatted);
-			InsertIntoActiveApplication(formatted);
-			BeepPlayer.Play(BeepType.Success);
+			try
+			{
+				TxtFormatTranscript.Text = "Formatting...";
+				string raw = TxtSpeechToText.Text;
+				string prompt = TxtFormatPrompt.Text;
+				string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
+				TxtFormatTranscript.Text = formatted;
+				_clipboard.SetText(formatted);
+				InsertIntoActiveApplication(formatted);
+				BeepPlayer.Play(BeepType.Success);
+			}
+			catch (Exception ex)
+			{
+				await ShowErrorDialog("Format with LLM Error", ex);
+			}
 		}
 
 		public async void BtnReviewTranscript_Click(object? sender, RoutedEventArgs? e)
 		{
-			string transcript = TxtFormatTranscript.Text;
-			string prompt = TxtReviewPrompt.Text;
-			string review = await _transcriptReviewer.ReviewAsync(transcript, prompt, 0.4m);
-			TxtReviewTranscript.Text = review;
-			var issues = review.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+			try
+			{
+				string transcript = TxtFormatTranscript.Text;
+				string prompt = TxtReviewPrompt.Text;
+				string review = await _transcriptReviewer.ReviewAsync(transcript, prompt, 0.4m);
+				TxtReviewTranscript.Text = review;
+				var issues = review.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
 										.Select(i => new ReviewItem { Apply = false, Issue = i })
 										.ToList();
-			GridReview.ItemsSource = issues;
+				GridReview.ItemsSource = issues;
+			}
+			catch (Exception ex)
+			{
+				await ShowErrorDialog("Review Transcript Error", ex);
+			}
 		}
 
 		private async void BtnApplySelectedReviewIssues_Click(object sender, RoutedEventArgs e)
 		{
-			if (GridReview.ItemsSource is IEnumerable<ReviewItem> items)
+			try
 			{
-				var selected = items.Where(i => i.Apply).Select(i => i.Issue).ToArray();
-				if (selected.Length > 0)
+				if (GridReview.ItemsSource is IEnumerable<ReviewItem> items)
 				{
-					TxtFormatTranscript.IsReadOnly = true;
-					string transcript = TxtFormatTranscript.Text;
-					string prompt = TxtReviewPrompt.Text;
-					string revision = await _transcriptReviewer.ApplyCorrectionsAsync(transcript, prompt, selected);
-					TxtFormatTranscript.Text = revision;
-					TxtFormatTranscript.IsReadOnly = false;
-					GridReview.ItemsSource = items.Where(i => !i.Apply).ToList();
-					BeepPlayer.Play(BeepType.Success);
+					var selected = items.Where(i => i.Apply).Select(i => i.Issue).ToArray();
+					if (selected.Length > 0)
+					{
+						TxtFormatTranscript.IsReadOnly = true;
+						string transcript = TxtFormatTranscript.Text;
+						string prompt = TxtReviewPrompt.Text;
+						string revision = await _transcriptReviewer.ApplyCorrectionsAsync(transcript, prompt, selected);
+						TxtFormatTranscript.Text = revision;
+						TxtFormatTranscript.IsReadOnly = false;
+						GridReview.ItemsSource = items.Where(i => !i.Apply).ToList();
+						BeepPlayer.Play(BeepType.Success);
+					}
 				}
 			}
+			catch (Exception ex)
+			{
+				await ShowErrorDialog("Apply Review Issues Error", ex);
+			}
+		}
+
+		private async Task ShowErrorDialog(string title, Exception ex)
+		{
+			string message = $"An error occurred:\n{ex.Message}\n\n{ex}";
+			var dialog = new ContentDialog
+			{
+				Title = title,
+				Content = message,
+				CloseButtonText = "OK",
+				XamlRoot = (this.Content as FrameworkElement)?.XamlRoot
+			};
+			await dialog.ShowAsync();
 		}
 
 		private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
