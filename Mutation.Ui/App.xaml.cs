@@ -101,10 +101,13 @@ public partial class App : Application
 					var dialog = new ContentDialog
 					{
 						Title = title,
-						Content = message,
+						Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
 						CloseButtonText = "OK",
 						XamlRoot = fe.XamlRoot
 					};
+					// Provide accessible name/help text for screen readers
+					Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
+					Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
 					await dialog.ShowAsync();
 				}
 				else
@@ -221,10 +224,13 @@ public partial class App : Application
 					var dialog = new ContentDialog
 					{
 						Title = title,
-						Content = message,
+						Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
 						CloseButtonText = "OK",
 						XamlRoot = fe.XamlRoot
 					};
+					// Provide accessible name/help text for screen readers
+					Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
+					Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
 					await dialog.ShowAsync();
 				}
 				else
@@ -247,9 +253,12 @@ public partial class App : Application
 				var errorDialog = new ContentDialog
 				{
 					Title = "Startup Error",
-					Content = $"An error occurred during startup:\n\n{ex}",
+					Content = new TextBlock { Text = $"An error occurred during startup:\n\n{ex}", TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
 					CloseButtonText = "OK"
 				};
+				// Accessibility: set name/help text so screen readers announce the dialog clearly
+				Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(errorDialog, "Startup Error");
+				Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(errorDialog, ex.ToString());
 				// Try to set XamlRoot if available
 				if (_window is not null && _window.Content is FrameworkElement fe && fe.XamlRoot is not null)
 					errorDialog.XamlRoot = fe.XamlRoot;

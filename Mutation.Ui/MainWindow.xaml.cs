@@ -160,7 +160,7 @@ namespace Mutation.Ui
 			try
 			{
 				await _ocrManager.TakeScreenshotToClipboardAsync();
-				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, 50);
+				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, 70);
 			}
 			catch (Exception ex)
 			{
@@ -174,7 +174,7 @@ namespace Mutation.Ui
 			{
 				var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
 				TxtOcr.Text = result.Message;
-				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
+				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? 70 : 25);
 			}
 			catch (Exception ex)
 			{
@@ -217,10 +217,12 @@ namespace Mutation.Ui
 					var dlg = new ContentDialog
 					{
 						Title = "Warning",
-						Content = "No speech-to-text service selected.",
+						Content = new TextBlock { Text = "No speech-to-text service selected.", TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
 						CloseButtonText = "OK",
 						XamlRoot = this.Content.XamlRoot
 					};
+					Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dlg, "Warning");
+					Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
 					await dlg.ShowAsync();
 					return;
 				}
@@ -253,7 +255,7 @@ namespace Mutation.Ui
 					BeepPlayer.Play(BeepType.Success);
 					TxtSpeechToText.IsReadOnly = false;
 					_suppressAutoActions = false;
-					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, 50);
+					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, 70);
 				}
 			}
 			catch (Exception ex)
@@ -267,10 +269,12 @@ namespace Mutation.Ui
 			var dialog = new ContentDialog
 			{
 				Title = title,
-				Content = message,
+				Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
 				CloseButtonText = "OK",
 				XamlRoot = this.Content.XamlRoot // important in WinUI 3
 			};
+			Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
+			Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
 
 			await dialog.ShowAsync();
 		}
@@ -361,10 +365,12 @@ namespace Mutation.Ui
 			var dialog = new ContentDialog
 			{
 				Title = title,
-				Content = message,
+				Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
 				CloseButtonText = "OK",
 				XamlRoot = (this.Content as FrameworkElement)?.XamlRoot
 			};
+			Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
+			Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
 			await dialog.ShowAsync();
 		}
 
