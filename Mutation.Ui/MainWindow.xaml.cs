@@ -395,7 +395,7 @@ namespace Mutation.Ui
 				case DictationInsertOption.Paste:
 					_clipboard.SetText(text);
 					BeepPlayer.Play(BeepType.Start);
-					SendKeys.SendWait("^v");
+					HotkeyManager.SendHotkey("^v");
 					break;
 			}
 		}

@@ -2,6 +2,7 @@
 using Microsoft.UI.Xaml;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -143,41 +144,9 @@ public class HotkeyManager : IDisposable
 		if (string.IsNullOrWhiteSpace(hotkey))
 			return;
 
-		SendKeys.SendWait(hotkey);
+		string mappedHotkey =  SendKeysMapper.Map(hotkey);
 
-		//Hotkey hk = Hotkey.Parse(hotkey);
-		//
-		//List<INPUT> inputs = new();
-		//void Add(VirtualKey key, bool up)
-		//{
-		//	inputs.Add(new INPUT
-		//	{
-		//		type = INPUT_KEYBOARD,
-		//		U = new INPUTUNION
-		//		{
-		//			ki = new KEYBDINPUT
-		//			{
-		//				wVk = (ushort)key,
-		//				dwFlags = up ? KEYEVENTF_KEYUP : 0
-		//			}
-		//		}
-		//	});
-		//}
-
-		//if (hk.Control) Add(VirtualKey.Control, false);
-		//if (hk.Shift) Add(VirtualKey.Shift, false);
-		//if (hk.Alt) Add(VirtualKey.Menu, false);
-		//if (hk.Win) Add(VirtualKey.LeftWindows, false);
-
-		//Add(hk.Key, false);
-		//Add(hk.Key, true);
-
-		//if (hk.Win) Add(VirtualKey.LeftWindows, true);
-		//if (hk.Alt) Add(VirtualKey.Menu, true);
-		//if (hk.Shift) Add(VirtualKey.Shift, true);
-		//if (hk.Control) Add(VirtualKey.Control, true);
-
-		//SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
+		SendKeys.SendWait(mappedHotkey);
 	}
 
 	public static void SendText(string text)
