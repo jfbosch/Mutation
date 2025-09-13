@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -394,7 +395,7 @@ namespace Mutation.Ui
 				case DictationInsertOption.Paste:
 					_clipboard.SetText(text);
 					BeepPlayer.Play(BeepType.Start);
-					HotkeyManager.SendHotkey("CTRL+V");
+					SendKeys.SendWait("^v");
 					break;
 			}
 		}
