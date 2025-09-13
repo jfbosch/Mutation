@@ -3,451 +3,400 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Mutation.Ui.Services;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
-namespace Mutation.Ui
+namespace Mutation.Ui;
+
+/// <summary>
+/// An empty window that can be used on its own or navigated to within a Frame.
+/// </summary>
+public sealed partial class MainWindow : Window
 {
-	/// <summary>
-	/// An empty window that can be used on its own or navigated to within a Frame.
-	/// </summary>
-	public sealed partial class MainWindow : Window
+	private const int SendHotkeyDelay = 100;
+	private readonly ClipboardManager _clipboard;
+	private readonly UiStateManager _uiStateManager;
+	private readonly ISettingsManager _settingsManager;
+	private readonly AudioDeviceManager _audioDeviceManager;
+	private readonly OcrManager _ocrManager;
+	private readonly ISpeechToTextService[] _speechServices;
+	private readonly SpeechToTextManager _speechManager;
+	private readonly TranscriptFormatter _transcriptFormatter;
+	private readonly ITextToSpeechService _textToSpeech;
+	private readonly Settings _settings;
+
+	// Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
+	private bool _suppressAutoActions = false;
+
+	private ISpeechToTextService? _activeSpeechService;
+	private CancellationTokenSource _formatDebounceCts = new();
+	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
+
+	public MainWindow(
+			  ClipboardManager clipboard,
+			  UiStateManager uiStateManager,
+			  AudioDeviceManager audioDeviceManager,
+			  OcrManager ocrManager,
+			  ISpeechToTextService[] speechServices,
+			  ITextToSpeechService textToSpeech,
+			  TranscriptFormatter transcriptFormatter,
+
+			  ISettingsManager settingsManager,
+			  Settings settings)
 	{
-		private readonly ClipboardManager _clipboard;
-		private readonly UiStateManager _uiStateManager;
-		private readonly ISettingsManager _settingsManager;
-		private readonly AudioDeviceManager _audioDeviceManager;
-		private readonly OcrManager _ocrManager;
-		private readonly ISpeechToTextService[] _speechServices;
-		private readonly SpeechToTextManager _speechManager;
-		private readonly TranscriptFormatter _transcriptFormatter;
-		private readonly TranscriptReviewer _transcriptReviewer;
-		private readonly ITextToSpeechService _textToSpeech;
-		private readonly Settings _settings;
+		_clipboard = clipboard;
+		_uiStateManager = uiStateManager;
+		_settingsManager = settingsManager;
+		_audioDeviceManager = audioDeviceManager;
+		_ocrManager = ocrManager;
+		_speechServices = speechServices;
+		_textToSpeech = textToSpeech;
+		_transcriptFormatter = transcriptFormatter;
+		_settings = settings;
+		_speechManager = new SpeechToTextManager(settings);
 
-		// Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
-		private bool _suppressAutoActions = false;
+		// Ensure a default microphone is selected
+		_audioDeviceManager.EnsureDefaultMicrophoneSelected();
 
-		private ISpeechToTextService? _activeSpeechService;
-		private CancellationTokenSource _formatDebounceCts = new();
-		private DictationInsertOption _insertOption = DictationInsertOption.Paste;
+		InitializeComponent();
+		TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
+		var micList = _audioDeviceManager.CaptureDevices.ToList();
+		CmbMicrophone.ItemsSource = micList;
+		CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
 
-		public MainWindow(
-				  ClipboardManager clipboard,
-				  UiStateManager uiStateManager,
-				  AudioDeviceManager audioDeviceManager,
-				  OcrManager ocrManager,
-				  ISpeechToTextService[] speechServices,
-				  ITextToSpeechService textToSpeech,
-				  TranscriptFormatter transcriptFormatter,
-				  TranscriptReviewer transcriptReviewer,
-				  ISettingsManager settingsManager,
-				  Settings settings)
+		// Restore persisted microphone selection
+		string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
+		if (!string.IsNullOrWhiteSpace(savedMicFullName))
 		{
-			_clipboard = clipboard;
-			_uiStateManager = uiStateManager;
-			_settingsManager = settingsManager;
-			_audioDeviceManager = audioDeviceManager;
-			_ocrManager = ocrManager;
-			_speechServices = speechServices;
-			_textToSpeech = textToSpeech;
-			_transcriptFormatter = transcriptFormatter;
-			_transcriptReviewer = transcriptReviewer;
-			_settings = settings;
-			_speechManager = new SpeechToTextManager(settings);
-
-			// Ensure a default microphone is selected
-			_audioDeviceManager.EnsureDefaultMicrophoneSelected();
-
-			InitializeComponent();
-			TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
-			var micList = _audioDeviceManager.CaptureDevices.ToList();
-			CmbMicrophone.ItemsSource = micList;
-			CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
-
-			// Restore persisted microphone selection
-			string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
-			if (!string.IsNullOrWhiteSpace(savedMicFullName))
-			{
-				var match = micList.FirstOrDefault(m => m.FriendlyName == savedMicFullName);
-				if (match != null)
-					CmbMicrophone.SelectedItem = match;
-				else if (_audioDeviceManager.Microphone != null)
-					CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
-				else if (micList.Count > 0)
-					CmbMicrophone.SelectedIndex = 0;
-			}
+			var match = micList.FirstOrDefault(m => m.FriendlyName == savedMicFullName);
+			if (match != null)
+				CmbMicrophone.SelectedItem = match;
 			else if (_audioDeviceManager.Microphone != null)
 				CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
 			else if (micList.Count > 0)
 				CmbMicrophone.SelectedIndex = 0;
+		}
+		else if (_audioDeviceManager.Microphone != null)
+			CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
+		else if (micList.Count > 0)
+			CmbMicrophone.SelectedIndex = 0;
 
-			CmbSpeechService.ItemsSource = _speechServices;
-			CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
+		CmbSpeechService.ItemsSource = _speechServices;
+		CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
 
-			// Restore persisted speech service selection
-			string? savedServiceName = _settings.SpeetchToTextSettings?.ActiveSpeetchToTextService;
-			if (!string.IsNullOrWhiteSpace(savedServiceName))
+		// Restore persisted speech service selection
+		string? savedServiceName = _settings.SpeetchToTextSettings?.ActiveSpeetchToTextService;
+		if (!string.IsNullOrWhiteSpace(savedServiceName))
+		{
+			var match = _speechServices.FirstOrDefault(s => s.ServiceName == savedServiceName);
+			if (match != null)
 			{
-				var match = _speechServices.FirstOrDefault(s => s.ServiceName == savedServiceName);
-				if (match != null)
-				{
-					CmbSpeechService.SelectedItem = match;
-					_activeSpeechService = match;
-				}
-				else if (_speechServices.Length > 0)
-				{
-					CmbSpeechService.SelectedIndex = 0;
-					_activeSpeechService = _speechServices[0];
-				}
+				CmbSpeechService.SelectedItem = match;
+				_activeSpeechService = match;
 			}
 			else if (_speechServices.Length > 0)
 			{
 				CmbSpeechService.SelectedIndex = 0;
 				_activeSpeechService = _speechServices[0];
 			}
-
-			TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
-			TxtReviewPrompt.Text = _settings.LlmSettings?.ReviewTranscriptPrompt ?? string.Empty;
-
-			var tooltipManager = new TooltipManager(_settings);
-			tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
-
-			CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
-			CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
-
-			this.Closed += MainWindow_Closed;
+		}
+		else if (_speechServices.Length > 0)
+		{
+			CmbSpeechService.SelectedIndex = 0;
+			_activeSpeechService = _speechServices[0];
 		}
 
-		private async void MainWindow_Closed(object sender, WindowEventArgs args)
+		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
+
+		var tooltipManager = new TooltipManager(_settings);
+		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
+
+		CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
+		CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
+
+		this.Closed += MainWindow_Closed;
+	}
+
+	private async void MainWindow_Closed(object sender, WindowEventArgs args)
+	{
+		_uiStateManager.Save(this);
+
+		if (_activeSpeechService != null)
+			_settings.SpeetchToTextSettings!.ActiveSpeetchToTextService = _activeSpeechService.ServiceName;
+		_settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
+
+		_settingsManager.SaveSettingsToFile(_settings);
+		BeepPlayer.DisposePlayers();
+	}
+
+	private void BtnBeep_Click(object sender, RoutedEventArgs e)
+	{
+		BeepPlayer.Play(BeepType.Success);
+	}
+
+	private void CopyText_Click(object sender, RoutedEventArgs e)
+	{
+		_clipboard.SetText(TxtClipboard.Text);
+	}
+
+	public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
+	{
+		_audioDeviceManager.ToggleMute();
+		TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
+		BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
+	}
+
+	private async void BtnScreenshot_Click(object sender, RoutedEventArgs e)
+	{
+		try
 		{
-			_uiStateManager.Save(this);
-
-			if (_activeSpeechService != null)
-				_settings.SpeetchToTextSettings!.ActiveSpeetchToTextService = _activeSpeechService.ServiceName;
-			_settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
-			_settings.LlmSettings!.ReviewTranscriptPrompt = TxtReviewPrompt.Text;
-
-			_settingsManager.SaveSettingsToFile(_settings);
-			BeepPlayer.DisposePlayers();
+			await _ocrManager.TakeScreenshotToClipboardAsync();
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, SendHotkeyDelay);
 		}
-
-		private void BtnBeep_Click(object sender, RoutedEventArgs e)
+		catch (Exception ex)
 		{
-			BeepPlayer.Play(BeepType.Success);
+			await ShowErrorDialog("Screenshot Error", ex);
 		}
+	}
 
-		private void CopyText_Click(object sender, RoutedEventArgs e)
+	private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
+	{
+		try
 		{
-			_clipboard.SetText(TxtClipboard.Text);
+			var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
+			TxtOcr.Text = result.Message;
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? SendHotkeyDelay : 25);
 		}
-
-		public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
+		catch (Exception ex)
 		{
-			_audioDeviceManager.ToggleMute();
-			TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
-			BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
+			await ShowErrorDialog("Screenshot + OCR Error", ex);
 		}
+	}
 
-		private async void BtnScreenshot_Click(object sender, RoutedEventArgs e)
+	private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
+	{
+		try
 		{
-			try
-			{
-				await _ocrManager.TakeScreenshotToClipboardAsync();
-				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, 70);
-			}
-			catch (Exception ex)
-			{
-				await ShowErrorDialog("Screenshot Error", ex);
-			}
+			var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
+			TxtOcr.Text = result.Message;
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? SendHotkeyDelay : 25);
 		}
-
-		private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
+		catch (Exception ex)
 		{
-			try
-			{
-				var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
-				TxtOcr.Text = result.Message;
-				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? 70 : 25);
-			}
-			catch (Exception ex)
-			{
-				await ShowErrorDialog("Screenshot + OCR Error", ex);
-			}
+			await ShowErrorDialog("OCR Clipboard Error", ex);
 		}
+	}
 
-		private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
+	public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
 		{
-			try
-			{
-				var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
-				TxtOcr.Text = result.Message;
-				HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? 50 : 25);
-			}
-			catch (Exception ex)
-			{
-				await ShowErrorDialog("OCR Clipboard Error", ex);
-			}
+			await StartStopSpeechToTextAsync();
 		}
-
-		public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
+		catch (Exception ex)
 		{
-			try
-			{
-				await StartStopSpeechToTextAsync();
-			}
-			catch (Exception ex)
-			{
-				await ShowErrorDialog("Speech to Text Error", ex);
-			}
+			await ShowErrorDialog("Speech to Text Error", ex);
 		}
+	}
 
-		public async Task StartStopSpeechToTextAsync()
+	public async Task StartStopSpeechToTextAsync()
+	{
+		try
 		{
-			try
+			if (_activeSpeechService == null)
 			{
-				if (_activeSpeechService == null)
+				var dlg = new ContentDialog
 				{
-					var dlg = new ContentDialog
-					{
-						Title = "Warning",
-						Content = new TextBlock { Text = "No speech-to-text service selected.", TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
-						CloseButtonText = "OK",
-						XamlRoot = this.Content.XamlRoot
-					};
-					Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dlg, "Warning");
-					Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
-					await dlg.ShowAsync();
-					return;
-				}
-
-				if (!_speechManager.Recording)
-				{
-					// Enter recording state without triggering TextChanged side-effects
-					_suppressAutoActions = true;
-					TxtSpeechToText.IsReadOnly = true;
-					TxtSpeechToText.Text = "Recording...";
-					BtnSpeechToText.Content = "Stop";
-					BeepPlayer.Play(BeepType.Start);
-					await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
-					_suppressAutoActions = false;
-				}
-				else
-				{
-					BtnSpeechToText.IsEnabled = false;
-					// Show transcribing status without triggering TextChanged side-effects
-					_suppressAutoActions = true;
-					TxtSpeechToText.Text = "Transcribing...";
-					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-					//BeepPlayer.Play(BeepType.End);
-					// Set final transcript without triggering TextChanged side-effects
-					TxtSpeechToText.Text = text;
-					BtnSpeechToText.Content = "Record";
-					BtnSpeechToText.IsEnabled = true;
-					_clipboard.SetText(text);
-					InsertIntoActiveApplication(text);
-					BeepPlayer.Play(BeepType.Success);
-					TxtSpeechToText.IsReadOnly = false;
-					_suppressAutoActions = false;
-					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, 70);
-				}
+					Title = "Warning",
+					Content = new TextBlock { Text = "No speech-to-text service selected.", TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
+					CloseButtonText = "OK",
+					XamlRoot = this.Content.XamlRoot
+				};
+				Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dlg, "Warning");
+				Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
+				await dlg.ShowAsync();
+				return;
 			}
-			catch (Exception ex)
+
+			if (!_speechManager.Recording)
 			{
-				await ShowErrorDialog("Speech to Text Error", ex);
+				// Enter recording state without triggering TextChanged side-effects
+				_suppressAutoActions = true;
+				TxtSpeechToText.IsReadOnly = true;
+				TxtSpeechToText.Text = "Recording...";
+				BtnSpeechToText.Content = "Stop";
+				BeepPlayer.Play(BeepType.Start);
+				await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+				_suppressAutoActions = false;
+			}
+			else
+			{
+				BtnSpeechToText.IsEnabled = false;
+				// Show transcribing status without triggering TextChanged side-effects
+				_suppressAutoActions = true;
+				TxtSpeechToText.Text = "Transcribing...";
+				string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+				//BeepPlayer.Play(BeepType.End);
+				// Set final transcript without triggering TextChanged side-effects
+				TxtSpeechToText.Text = text;
+				BtnSpeechToText.Content = "Record";
+				BtnSpeechToText.IsEnabled = true;
+				_clipboard.SetText(text);
+				InsertIntoActiveApplication(text);
+				BeepPlayer.Play(BeepType.Success);
+				TxtSpeechToText.IsReadOnly = false;
+				_suppressAutoActions = false;
+				HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, SendHotkeyDelay);
 			}
 		}
-
-		private async void ShowMessage(string title, string message)
+		catch (Exception ex)
 		{
-			var dialog = new ContentDialog
-			{
-				Title = title,
-				Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
-				CloseButtonText = "OK",
-				XamlRoot = this.Content.XamlRoot // important in WinUI 3
-			};
-			Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
-			Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
-
-			await dialog.ShowAsync();
+			await ShowErrorDialog("Speech to Text Error", ex);
 		}
+	}
 
-		public void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
+	private async void ShowMessage(string title, string message)
+	{
+		var dialog = new ContentDialog
 		{
-			string text = _clipboard.GetText();
-			_textToSpeech.SpeakText(text);
-		}
+			Title = title,
+			Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
+			CloseButtonText = "OK",
+			XamlRoot = this.Content.XamlRoot // important in WinUI 3
+		};
+		Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
+		Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
 
-		public void BtnFormatTranscript_Click(object? sender, RoutedEventArgs? e)
+		await dialog.ShowAsync();
+	}
+
+	public void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
+	{
+		string text = _clipboard.GetText();
+		_textToSpeech.SpeakText(text);
+	}
+
+	public void BtnFormatTranscript_Click(object? sender, RoutedEventArgs? e)
+	{
+		string raw = TxtSpeechToText.Text;
+		string formatted = _transcriptFormatter.ApplyRules(raw, false);
+		TxtFormatTranscript.Text = formatted;
+		_clipboard.SetText(formatted);
+		InsertIntoActiveApplication(formatted);
+		BeepPlayer.Play(BeepType.Success);
+	}
+
+	public async void BtnFormatLlm_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
 		{
+			TxtFormatTranscript.Text = "Formatting...";
 			string raw = TxtSpeechToText.Text;
-			string formatted = _transcriptFormatter.ApplyRules(raw, false);
+			string prompt = TxtFormatPrompt.Text;
+			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
 			TxtFormatTranscript.Text = formatted;
 			_clipboard.SetText(formatted);
 			InsertIntoActiveApplication(formatted);
 			BeepPlayer.Play(BeepType.Success);
 		}
-
-		public async void BtnFormatLlm_Click(object? sender, RoutedEventArgs? e)
+		catch (Exception ex)
 		{
-			try
+			await ShowErrorDialog("Format with LLM Error", ex);
+		}
+	}
+
+
+
+	// Apply review issues functionality removed
+
+	public async Task ShowErrorDialog(string title, Exception ex)
+	{
+		string message = $"An error occurred:\n{ex.Message}\n\n{ex}";
+		var dialog = new ContentDialog
+		{
+			Title = title,
+			Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
+			CloseButtonText = "OK",
+			XamlRoot = (this.Content as FrameworkElement)?.XamlRoot
+		};
+		Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
+		Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
+		await dialog.ShowAsync();
+	}
+
+	private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
+		{
+			_audioDeviceManager.SelectMicrophone(device);
+			if (_settings.AudioSettings != null)
 			{
-				TxtFormatTranscript.Text = "Formatting...";
+				_settings.AudioSettings.ActiveCaptureDeviceFullName = device.FriendlyName;
+				_settingsManager.SaveSettingsToFile(_settings);
+			}
+		}
+	}
+
+	private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
+			_activeSpeechService = svc;
+	}
+
+	private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (CmbInsertOption.SelectedItem is DictationInsertOption opt)
+			_insertOption = opt;
+	}
+
+	private void InsertIntoActiveApplication(string text)
+	{
+		if (string.IsNullOrWhiteSpace(text))
+			return;
+
+		switch (_insertOption)
+		{
+			case DictationInsertOption.SendKeys:
+				BeepPlayer.Play(BeepType.Start);
+				HotkeyManager.SendText(text);
+				break;
+			case DictationInsertOption.Paste:
+				_clipboard.SetText(text);
+				//BeepPlayer.Play(BeepType.Start);
+				HotkeyManager.SendHotkey("^v");
+				break;
+		}
+	}
+
+	private async void TxtSpeechToText_TextChanged(object sender, TextChangedEventArgs e)
+	{
+		// Avoid auto actions during programmatic updates or while recording/transcribing
+		if (_suppressAutoActions || TxtSpeechToText.IsReadOnly || _speechManager.Recording || _speechManager.Transcribing)
+			return;
+
+		_formatDebounceCts.Cancel();
+		_formatDebounceCts = new CancellationTokenSource();
+		var token = _formatDebounceCts.Token;
+		try
+		{
+			await Task.Delay(300, token);
+			if (!token.IsCancellationRequested)
+			{
 				string raw = TxtSpeechToText.Text;
-				string prompt = TxtFormatPrompt.Text;
-				string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
+				string formatted = _transcriptFormatter.ApplyRules(raw, false);
 				TxtFormatTranscript.Text = formatted;
 				_clipboard.SetText(formatted);
 				InsertIntoActiveApplication(formatted);
-				BeepPlayer.Play(BeepType.Success);
-			}
-			catch (Exception ex)
-			{
-				await ShowErrorDialog("Format with LLM Error", ex);
+				// Removed automatic success beep here to avoid duplicate beeps when
+				// transcription completes (success is played explicitly at completion).
 			}
 		}
-
-		public async void BtnReviewTranscript_Click(object? sender, RoutedEventArgs? e)
-		{
-			try
-			{
-				string transcript = TxtFormatTranscript.Text;
-				string prompt = TxtReviewPrompt.Text;
-				string review = await _transcriptReviewer.ReviewAsync(transcript, prompt, 0.4m);
-				TxtReviewTranscript.Text = review;
-				var issues = review.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-										.Select(i => new ReviewItem { Apply = false, Issue = i })
-										.ToList();
-				GridReview.ItemsSource = issues;
-			}
-			catch (Exception ex)
-			{
-				await ShowErrorDialog("Review Transcript Error", ex);
-			}
-		}
-
-		private async void BtnApplySelectedReviewIssues_Click(object sender, RoutedEventArgs e)
-		{
-			try
-			{
-				if (GridReview.ItemsSource is IEnumerable<ReviewItem> items)
-				{
-					var selected = items.Where(i => i.Apply).Select(i => i.Issue).ToArray();
-					if (selected.Length > 0)
-					{
-						TxtFormatTranscript.IsReadOnly = true;
-						string transcript = TxtFormatTranscript.Text;
-						string prompt = TxtReviewPrompt.Text;
-						string revision = await _transcriptReviewer.ApplyCorrectionsAsync(transcript, prompt, selected);
-						TxtFormatTranscript.Text = revision;
-						TxtFormatTranscript.IsReadOnly = false;
-						GridReview.ItemsSource = items.Where(i => !i.Apply).ToList();
-						BeepPlayer.Play(BeepType.Success);
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				await ShowErrorDialog("Apply Review Issues Error", ex);
-			}
-		}
-
-		public async Task ShowErrorDialog(string title, Exception ex)
-		{
-			string message = $"An error occurred:\n{ex.Message}\n\n{ex}";
-			var dialog = new ContentDialog
-			{
-				Title = title,
-				Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
-				CloseButtonText = "OK",
-				XamlRoot = (this.Content as FrameworkElement)?.XamlRoot
-			};
-			Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
-			Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
-			await dialog.ShowAsync();
-		}
-
-		private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
-		{
-			if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
-			{
-				_audioDeviceManager.SelectMicrophone(device);
-				if (_settings.AudioSettings != null)
-				{
-					_settings.AudioSettings.ActiveCaptureDeviceFullName = device.FriendlyName;
-					_settingsManager.SaveSettingsToFile(_settings);
-				}
-			}
-		}
-
-		private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
-		{
-			if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
-				_activeSpeechService = svc;
-		}
-
-		private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
-		{
-			if (CmbInsertOption.SelectedItem is DictationInsertOption opt)
-				_insertOption = opt;
-		}
-
-		private void InsertIntoActiveApplication(string text)
-		{
-			if (string.IsNullOrWhiteSpace(text))
-				return;
-
-			switch (_insertOption)
-			{
-				case DictationInsertOption.SendKeys:
-					BeepPlayer.Play(BeepType.Start);
-					HotkeyManager.SendText(text);
-					break;
-				case DictationInsertOption.Paste:
-					_clipboard.SetText(text);
-					//BeepPlayer.Play(BeepType.Start);
-					HotkeyManager.SendHotkey("^v");
-					break;
-			}
-		}
-
-		private async void TxtSpeechToText_TextChanged(object sender, TextChangedEventArgs e)
-		{
-			// Avoid auto actions during programmatic updates or while recording/transcribing
-			if (_suppressAutoActions || TxtSpeechToText.IsReadOnly || _speechManager.Recording || _speechManager.Transcribing)
-				return;
-
-			_formatDebounceCts.Cancel();
-			_formatDebounceCts = new CancellationTokenSource();
-			var token = _formatDebounceCts.Token;
-			try
-			{
-				await Task.Delay(300, token);
-				if (!token.IsCancellationRequested)
-				{
-					string raw = TxtSpeechToText.Text;
-					string formatted = _transcriptFormatter.ApplyRules(raw, false);
-					TxtFormatTranscript.Text = formatted;
-					_clipboard.SetText(formatted);
-					InsertIntoActiveApplication(formatted);
-					// Removed automatic success beep here to avoid duplicate beeps when
-					// transcription completes (success is played explicitly at completion).
-				}
-			}
-			catch (TaskCanceledException) { }
-		}
-
-		private class ReviewItem
-		{
-			public bool Apply { get; set; }
-			public string Issue { get; set; } = string.Empty;
-		}
+		catch (TaskCanceledException) { }
 	}
+
+	// ReviewItem removed
 }

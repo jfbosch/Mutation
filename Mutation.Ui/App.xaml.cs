@@ -76,7 +76,7 @@ public partial class App : Application
 							 settings.LlmSettings?.ResourceName ?? string.Empty,
 							 settings.LlmSettings?.ModelDeploymentIdMaps ?? new List<LlmSettings.ModelDeploymentIdMap>()));
 			builder.Services.AddSingleton<TranscriptFormatter>();
-			builder.Services.AddSingleton<TranscriptReviewer>();
+			// TranscriptReviewer and review transcript UI removed
 			builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 			builder.Services.AddHttpClient(OpenAiHttpClientName);
 			AddSpeechToTextServices(builder, settings);

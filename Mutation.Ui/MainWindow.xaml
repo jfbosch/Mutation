@@ -41,11 +41,7 @@
                 <Button x:Name="BtnFormatLlm" Content="Format Transcript with LLM" Click="BtnFormatLlm_Click"/>
                 <TextBox x:Name="TxtFormatTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80" AutomationProperties.Name="Formatted Transcript" />
 
-                <TextBox x:Name="TxtReviewPrompt" PlaceholderText="Review prompt" AcceptsReturn="True" TextWrapping="Wrap" Height="60" AutomationProperties.Name="Review Prompt" />
-                <Button x:Name="BtnReviewTranscript" Content="Review Transcript" Click="BtnReviewTranscript_Click"/>
-                <TextBox x:Name="TxtReviewTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80" AutomationProperties.Name="Review Transcript" />
-                <datagrid:DataGrid x:Name="GridReview" Height="150" AutomationProperties.Name="Review Issues" />
-                <Button x:Name="BtnApplyReview" Content="Apply Selected Issues" Click="BtnApplySelectedReviewIssues_Click"/>
+                <!-- Review transcript UI removed -->
 
                 <TextBox x:Name="TxtClipboard" PlaceholderText="Clipboard text" AutomationProperties.Name="Clipboard Text" />
                 <Button Content="Copy Text" Click="CopyText_Click"/>

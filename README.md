@@ -1,7 +1,7 @@
 # Mutation
 
 ## Introduction
-Mutation is a .NET multifaceted tool that boosts productivity and accessibility through configurable global hotkeys. It lets you toggle microphones, capture screens, run Optical Character Recognition (OCR), convert speech to text, and review transcripts with the ChatGPT-4 LLM—using Azure Vision Services, OpenAI, Deepgram, and other APIs under the hood.
+Mutation is a .NET multifaceted tool that boosts productivity and accessibility through configurable global hotkeys. It lets you toggle microphones, capture screens, run Optical Character Recognition (OCR), and convert speech to text—using Azure Vision Services, OpenAI, Deepgram, and other APIs under the hood.
 
 ## Features
 ### 1. Toggle Microphone Mute  
@@ -31,9 +31,6 @@ Press one hotkey to start recording, press it again to stop and send the audio f
 * Any service exposing an OpenAI-compatible Whisper API
 
 The transcribed text is copied to the clipboard and can optionally be injected into the active text field.
-
-### 4. Transcript Review with ChatGPT  
-Send any block of text to ChatGPT (via Azure OpenAI) for summarisation, proofreading, or rewriting, directly from a hotkey.
 
 ## Getting Started
 Install the .NET 7 runtime (or newer) and run **Mutation.exe**. On first launch, the app writes *Mutation.json* and opens it in Notepad for you to configure.
@@ -104,9 +101,8 @@ All hotkeys are global and fully customisable. Below is a comprehensive example 
 * Follow each provider’s portal to create an account and API key.
 * Paste the credentials into the relevant object under `SpeetchToTextSettings → Providers`.
 
-### Enabling ChatGPT Review
-
-Deploy `gpt-4o` or `gpt-4.1`, or other preferred model, and add the key and endpoint to `LlmSettings`. You pay only for actual **token** usage.
+### 4. (Removed) Transcript review
+The transcript review feature has been removed from this build. The app still supports formatting transcriptions and using transcript-formatting rules configured in settings.
 
 ## Contribute
 
