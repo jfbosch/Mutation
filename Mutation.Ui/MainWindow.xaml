@@ -31,7 +31,10 @@
 
                 <Button x:Name="BtnSpeechToText" Content="Record" Click="BtnSpeechToText_Click"/>
                 <TextBox x:Name="TxtSpeechToText" AcceptsReturn="True" TextWrapping="Wrap" Height="80" TextChanged="TxtSpeechToText_TextChanged"/>
-                <ComboBox x:Name="CmbInsertOption" SelectionChanged="CmbInsertOption_SelectionChanged" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock x:Name="LblThirdPartyInteraction" Text="third party application interaction" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="CmbInsertOption" SelectionChanged="CmbInsertOption_SelectionChanged" AutomationProperties.LabeledBy="{Binding ElementName=LblThirdPartyInteraction}" AutomationProperties.Name="third party application interaction" />
+                </StackPanel>
 
                 <TextBox x:Name="TxtFormatPrompt" PlaceholderText="Format prompt" AcceptsReturn="True" TextWrapping="Wrap" Height="60"/>
                 <Button x:Name="BtnFormatTranscript" Content="Format Transcript" Click="BtnFormatTranscript_Click"/>
