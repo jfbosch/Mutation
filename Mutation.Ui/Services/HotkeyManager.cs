@@ -5,25 +5,25 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.System;
+using System.Windows.Forms;
 using WinRT.Interop;
 
 namespace Mutation.Ui.Services;
 
 public class HotkeyManager : IDisposable
 {
-        private readonly IntPtr _hwnd;
-        private readonly Dictionary<int, Action> _callbacks = new();
-        private readonly List<int> _routerIds = new();
-        private readonly Settings _settings;
-        private int _id;
-        private IntPtr _prevWndProc;
-        private WndProcDelegate? _newWndProc;
+	private readonly IntPtr _hwnd;
+	private readonly Dictionary<int, Action> _callbacks = new();
+	private readonly List<int> _routerIds = new();
+	private readonly Settings _settings;
+	private int _id;
+	private IntPtr _prevWndProc;
+	private WndProcDelegate? _newWndProc;
 
-        /// <summary>
-        /// Gets the list of hotkeys that failed to register.
-        /// </summary>
-        public List<string> FailedRegistrations { get; } = new();
+	/// <summary>
+	/// Gets the list of hotkeys that failed to register.
+	/// </summary>
+	public List<string> FailedRegistrations { get; } = new();
 
 	private const int WM_HOTKEY = 0x0312;
 	private const int GWLP_WNDPROC = -4;
@@ -76,24 +76,24 @@ public class HotkeyManager : IDisposable
 		_prevWndProc = SetWindowLongPtr(_hwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_newWndProc));
 	}
 
-        public int RegisterHotkey(Hotkey hotkey, Action callback)
-        {
-                int id = Interlocked.Increment(ref _id);
-                uint mods = (hotkey.Alt ? MOD_ALT : 0) |
-                                                (hotkey.Control ? MOD_CONTROL : 0) |
-                                                (hotkey.Shift ? MOD_SHIFT : 0) |
-                                                (hotkey.Win ? MOD_WIN : 0);
-                bool success = RegisterHotKey(_hwnd, id, mods, (uint)hotkey.Key);
-                if (success)
-                {
-                        _callbacks[id] = callback;
-                }
-                else
-                {
-                        FailedRegistrations.Add(hotkey.ToString());
-                }
-                return id;
-        }
+	public int RegisterHotkey(Hotkey hotkey, Action callback)
+	{
+		int id = Interlocked.Increment(ref _id);
+		uint mods = (hotkey.Alt ? MOD_ALT : 0) |
+												  (hotkey.Control ? MOD_CONTROL : 0) |
+												  (hotkey.Shift ? MOD_SHIFT : 0) |
+												  (hotkey.Win ? MOD_WIN : 0);
+		bool success = RegisterHotKey(_hwnd, id, mods, (uint)hotkey.Key);
+		if (success)
+		{
+			_callbacks[id] = callback;
+		}
+		else
+		{
+			FailedRegistrations.Add(hotkey.ToString());
+		}
+		return id;
+	}
 
 	public void RegisterRouterHotkeys()
 	{
@@ -140,39 +140,44 @@ public class HotkeyManager : IDisposable
 
 	public static void SendHotkey(string hotkey)
 	{
-		Hotkey hk = Hotkey.Parse(hotkey);
+		if (string.IsNullOrWhiteSpace(hotkey))
+			return;
 
-		List<INPUT> inputs = new();
-		void Add(VirtualKey key, bool up)
-		{
-			inputs.Add(new INPUT
-			{
-				type = INPUT_KEYBOARD,
-				U = new INPUTUNION
-				{
-					ki = new KEYBDINPUT
-					{
-						wVk = (ushort)key,
-						dwFlags = up ? KEYEVENTF_KEYUP : 0
-					}
-				}
-			});
-		}
+		SendKeys.SendWait(hotkey);
 
-		if (hk.Control) Add(VirtualKey.Control, false);
-		if (hk.Shift) Add(VirtualKey.Shift, false);
-		if (hk.Alt) Add(VirtualKey.Menu, false);
-		if (hk.Win) Add(VirtualKey.LeftWindows, false);
+		//Hotkey hk = Hotkey.Parse(hotkey);
+		//
+		//List<INPUT> inputs = new();
+		//void Add(VirtualKey key, bool up)
+		//{
+		//	inputs.Add(new INPUT
+		//	{
+		//		type = INPUT_KEYBOARD,
+		//		U = new INPUTUNION
+		//		{
+		//			ki = new KEYBDINPUT
+		//			{
+		//				wVk = (ushort)key,
+		//				dwFlags = up ? KEYEVENTF_KEYUP : 0
+		//			}
+		//		}
+		//	});
+		//}
 
-		Add(hk.Key, false);
-		Add(hk.Key, true);
+		//if (hk.Control) Add(VirtualKey.Control, false);
+		//if (hk.Shift) Add(VirtualKey.Shift, false);
+		//if (hk.Alt) Add(VirtualKey.Menu, false);
+		//if (hk.Win) Add(VirtualKey.LeftWindows, false);
 
-		if (hk.Win) Add(VirtualKey.LeftWindows, true);
-		if (hk.Alt) Add(VirtualKey.Menu, true);
-		if (hk.Shift) Add(VirtualKey.Shift, true);
-		if (hk.Control) Add(VirtualKey.Control, true);
+		//Add(hk.Key, false);
+		//Add(hk.Key, true);
 
-		SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
+		//if (hk.Win) Add(VirtualKey.LeftWindows, true);
+		//if (hk.Alt) Add(VirtualKey.Menu, true);
+		//if (hk.Shift) Add(VirtualKey.Shift, true);
+		//if (hk.Control) Add(VirtualKey.Control, true);
+
+		//SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
 	}
 
 	public static void SendText(string text)
