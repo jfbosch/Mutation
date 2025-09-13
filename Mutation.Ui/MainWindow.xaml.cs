@@ -30,6 +30,9 @@ namespace Mutation.Ui
 		private readonly ITextToSpeechService _textToSpeech;
 		private readonly Settings _settings;
 
+		// Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
+		private bool _suppressAutoActions = false;
+
 		private ISpeechToTextService? _activeSpeechService;
 		private CancellationTokenSource _formatDebounceCts = new();
 		private DictationInsertOption _insertOption = DictationInsertOption.Paste;
@@ -223,23 +226,33 @@ namespace Mutation.Ui
 
 				if (!_speechManager.Recording)
 				{
+					// Enter recording state without triggering TextChanged side-effects
+					_suppressAutoActions = true;
+					TxtSpeechToText.IsReadOnly = true;
 					TxtSpeechToText.Text = "Recording...";
 					BtnSpeechToText.Content = "Stop";
 					BeepPlayer.Play(BeepType.Start);
 					await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+					_suppressAutoActions = false;
 				}
 				else
 				{
 					BtnSpeechToText.IsEnabled = false;
+					// Show transcribing status without triggering TextChanged side-effects
+					_suppressAutoActions = true;
 					TxtSpeechToText.Text = "Transcribing...";
 					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
 					BeepPlayer.Play(BeepType.End);
+					// Set final transcript without triggering TextChanged side-effects
 					TxtSpeechToText.Text = text;
 					BtnSpeechToText.Content = "Record";
 					BtnSpeechToText.IsEnabled = true;
 					_clipboard.SetText(text);
 					InsertIntoActiveApplication(text);
 					BeepPlayer.Play(BeepType.Success);
+					// Leave read-only mode after operation completes
+					TxtSpeechToText.IsReadOnly = false;
+					_suppressAutoActions = false;
 					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
 				}
 			}
@@ -388,7 +401,8 @@ namespace Mutation.Ui
 
 		private async void TxtSpeechToText_TextChanged(object sender, TextChangedEventArgs e)
 		{
-			if (TxtSpeechToText.IsReadOnly)
+			// Avoid auto actions during programmatic updates or while recording/transcribing
+			if (_suppressAutoActions || TxtSpeechToText.IsReadOnly || _speechManager.Recording || _speechManager.Transcribing)
 				return;
 
 			_formatDebounceCts.Cancel();

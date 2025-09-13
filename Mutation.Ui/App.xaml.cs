@@ -1,5 +1,4 @@
 ﻿using CognitiveSupport;
-using CognitiveSupport.Extensions;
 using CoreAudio;
 using Deepgram;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +10,6 @@ using OpenAI;
 using OpenAI.Managers;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Net.Http;
 
