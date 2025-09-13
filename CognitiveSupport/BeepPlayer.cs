@@ -20,6 +20,8 @@ namespace CognitiveSupport
 		public const int DefaultUnmuteDuration = 50;
 
 		private static readonly object SyncLock = new();
+		private static readonly TimeSpan DuplicateSuppressWindow = TimeSpan.FromMilliseconds(500);
+		private static readonly Dictionary<BeepType, DateTime> _lastPlayed = new();
 		private static SoundPlayer? _playerStart;
 		private static SoundPlayer? _playerSuccess;
 		private static SoundPlayer? _playerFailure;
@@ -68,6 +70,16 @@ namespace CognitiveSupport
 
 		public static void Play(BeepType type)
 		{
+			lock (SyncLock)
+			{
+				var now = DateTime.UtcNow;
+				if (_lastPlayed.TryGetValue(type, out var last) && (now - last) < DuplicateSuppressWindow)
+				{
+					// Suppress near-duplicate beep
+					return;
+				}
+				_lastPlayed[type] = now;
+			}
 			if (TryPlayCustom(type))
 				return;
 			PlayDefault(type);

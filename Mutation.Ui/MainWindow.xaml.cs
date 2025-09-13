@@ -418,7 +418,8 @@ namespace Mutation.Ui
 					TxtFormatTranscript.Text = formatted;
 					_clipboard.SetText(formatted);
 					InsertIntoActiveApplication(formatted);
-					BeepPlayer.Play(BeepType.Success);
+					// Removed automatic success beep here to avoid duplicate beeps when
+					// transcription completes (success is played explicitly at completion).
 				}
 			}
 			catch (TaskCanceledException) { }
