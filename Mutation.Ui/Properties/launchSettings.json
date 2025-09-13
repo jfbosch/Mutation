@@ -1,10 +1,7 @@
 {
-  "profiles": {
-    "Mutation.Ui (Package)": {
-      "commandName": "MsixPackage"
-    },
-    "Mutation.Ui (Unpackaged)": {
-      "commandName": "Project"
-    }
-  }
+	"profiles": {
+		"Mutation.Ui": {
+			"commandName": "Project"
+		}
+	}
 }

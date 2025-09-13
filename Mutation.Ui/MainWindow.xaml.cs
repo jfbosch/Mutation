@@ -243,7 +243,7 @@ namespace Mutation.Ui
 					_suppressAutoActions = true;
 					TxtSpeechToText.Text = "Transcribing...";
 					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-					BeepPlayer.Play(BeepType.End);
+					//BeepPlayer.Play(BeepType.End);
 					// Set final transcript without triggering TextChanged side-effects
 					TxtSpeechToText.Text = text;
 					BtnSpeechToText.Content = "Record";
@@ -251,16 +251,28 @@ namespace Mutation.Ui
 					_clipboard.SetText(text);
 					InsertIntoActiveApplication(text);
 					BeepPlayer.Play(BeepType.Success);
-					// Leave read-only mode after operation completes
 					TxtSpeechToText.IsReadOnly = false;
 					_suppressAutoActions = false;
-					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation ?? string.Empty, 50);
+					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, 50);
 				}
 			}
 			catch (Exception ex)
 			{
 				await ShowErrorDialog("Speech to Text Error", ex);
 			}
+		}
+
+		private async void ShowMessage(string title, string message)
+		{
+			var dialog = new ContentDialog
+			{
+				Title = title,
+				Content = message,
+				CloseButtonText = "OK",
+				XamlRoot = this.Content.XamlRoot // important in WinUI 3
+			};
+
+			await dialog.ShowAsync();
 		}
 
 		public void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
@@ -394,7 +406,7 @@ namespace Mutation.Ui
 					break;
 				case DictationInsertOption.Paste:
 					_clipboard.SetText(text);
-					BeepPlayer.Play(BeepType.Start);
+					//BeepPlayer.Play(BeepType.Start);
 					HotkeyManager.SendHotkey("^v");
 					break;
 			}
