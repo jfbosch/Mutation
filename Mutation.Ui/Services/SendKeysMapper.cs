@@ -408,20 +408,24 @@ public static class SendKeysMapper
 	private static bool TrySingleCharLiteral(string token, out string literal)
 	{
 		literal = "";
-		// A lone single visible character counts (letter, digit, or symbol).
-		// Trim spaces to catch " V " etc.
 		var t = token.Trim();
 
+		static char LowerIfLetter(char ch)
+		{
+			return char.IsLetter(ch) ? char.ToLowerInvariant(ch) : ch;
+		}
+
+		// Lone single visible character
 		if (t.Length == 1)
 		{
-			literal = t;
+			literal = LowerIfLetter(t[0]).ToString();
 			return true;
 		}
 
-		// Also allow quoted single char like "'" or "\""
+		// Quoted single char like "'" or "\""
 		if (t.Length == 3 && t[0] == '"' && t[2] == '"')
 		{
-			literal = t[1].ToString();
+			literal = LowerIfLetter(t[1]).ToString();
 			return true;
 		}
 
