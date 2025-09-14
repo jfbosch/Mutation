@@ -132,11 +132,6 @@ public sealed partial class MainWindow : Window
 		BeepPlayer.DisposePlayers();
 	}
 
-	private void BtnBeep_Click(object sender, RoutedEventArgs e)
-	{
-		BeepPlayer.Play(BeepType.Success);
-	}
-
 	private void CopyText_Click(object sender, RoutedEventArgs e)
 	{
 		_clipboard.SetText(TxtClipboard.Text);

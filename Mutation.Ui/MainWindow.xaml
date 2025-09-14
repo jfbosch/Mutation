@@ -17,7 +17,6 @@
     <Grid Padding="20">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="10">
-                <Button x:Name="BtnBeep" Content="Play Success Beep" Click="BtnBeep_Click"/>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                     <TextBlock x:Name="LblMicrophone" Text="Microphone" VerticalAlignment="Center" />
                     <ComboBox x:Name="CmbMicrophone" SelectionChanged="CmbMicrophone_SelectionChanged" AutomationProperties.LabeledBy="{Binding ElementName=LblMicrophone}" AutomationProperties.Name="Microphone" />
@@ -30,9 +29,11 @@
                     <ComboBox x:Name="CmbSpeechService" SelectionChanged="CmbSpeechService_SelectionChanged" AutomationProperties.LabeledBy="{Binding ElementName=LblSpeechService}" AutomationProperties.Name="Speech-to-Text Service" />
                 </StackPanel>
 
-                <Button x:Name="BtnScreenshot" Content="Screenshot to Clipboard" Click="BtnScreenshot_Click"/>
-                <Button x:Name="BtnScreenshotOcr" Content="Screenshot &amp; OCR" Click="BtnScreenshotOcr_Click"/>
-                <Button x:Name="BtnOcrClipboard" Content="OCR Clipboard" Click="BtnOcrClipboard_Click"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <Button x:Name="BtnScreenshot" Content="Screenshot to Clipboard" Click="BtnScreenshot_Click"/>
+                    <Button x:Name="BtnScreenshotOcr" Content="Screenshot &amp; OCR" Click="BtnScreenshotOcr_Click"/>
+                    <Button x:Name="BtnOcrClipboard" Content="OCR Clipboard" Click="BtnOcrClipboard_Click"/>
+                </StackPanel>
                 <TextBox x:Name="TxtOcr" AcceptsReturn="True" TextWrapping="Wrap" Height="80" AutomationProperties.Name="OCR Result" />
 
                 <Button x:Name="BtnSpeechToText" Content="Record" Click="BtnSpeechToText_Click"/>
