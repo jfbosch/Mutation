@@ -1,4 +1,4 @@
-using CoreAudio;
+﻿using CoreAudio;
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;

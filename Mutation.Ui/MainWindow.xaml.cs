@@ -17,7 +17,6 @@ namespace Mutation.Ui;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
-	private const int SendHotkeyDelay = 100;
 	private readonly ClipboardManager _clipboard;
 	private readonly UiStateManager _uiStateManager;
 	private readonly ISettingsManager _settingsManager;
@@ -155,7 +154,6 @@ public sealed partial class MainWindow : Window
 		try
 		{
 			await _ocrManager.TakeScreenshotToClipboardAsync();
-			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, SendHotkeyDelay);
 		}
 		catch (Exception ex)
 		{
@@ -169,7 +167,7 @@ public sealed partial class MainWindow : Window
 		{
 			var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
 			TxtOcr.Text = result.Message;
-			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? SendHotkeyDelay : 25);
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : 25);
 		}
 		catch (Exception ex)
 		{
@@ -183,7 +181,7 @@ public sealed partial class MainWindow : Window
 		{
 			var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
 			TxtOcr.Text = result.Message;
-			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? SendHotkeyDelay : 25);
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : 25);
 		}
 		catch (Exception ex)
 		{
@@ -250,7 +248,7 @@ public sealed partial class MainWindow : Window
 				BeepPlayer.Play(BeepType.Success);
 				TxtSpeechToText.IsReadOnly = false;
 				_suppressAutoActions = false;
-				HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, SendHotkeyDelay);
+				HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
 			}
 		}
 		catch (Exception ex)

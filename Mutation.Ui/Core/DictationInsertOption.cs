@@ -1,7 +1,5 @@
 ﻿using System.ComponentModel;
 
-using System.ComponentModel;
-
 namespace Mutation.Ui;
 
 public enum DictationInsertOption
