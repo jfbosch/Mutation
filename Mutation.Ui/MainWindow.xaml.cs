@@ -62,7 +62,7 @@ public sealed partial class MainWindow : Window
 		_audioDeviceManager.EnsureDefaultMicrophoneSelected();
 
 		InitializeComponent();
-		TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
+		BtnToggleMic.Content = _audioDeviceManager.IsMuted ? "Unmute" : "Mute";
 		var micList = _audioDeviceManager.CaptureDevices.ToList();
 		CmbMicrophone.ItemsSource = micList;
 		CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
@@ -145,7 +145,7 @@ public sealed partial class MainWindow : Window
 	public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
 	{
 		_audioDeviceManager.ToggleMute();
-		TxtMicState.Text = _audioDeviceManager.IsMuted ? "Muted" : "Unmuted";
+		BtnToggleMic.Content = _audioDeviceManager.IsMuted ? "Unmute" : "Mute";
 		BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
 	}
 

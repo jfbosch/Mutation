@@ -21,9 +21,9 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                     <TextBlock x:Name="LblMicrophone" Text="Microphone" VerticalAlignment="Center" />
                     <ComboBox x:Name="CmbMicrophone" SelectionChanged="CmbMicrophone_SelectionChanged" AutomationProperties.LabeledBy="{Binding ElementName=LblMicrophone}" AutomationProperties.Name="Microphone" />
-                    <TextBlock x:Name="TxtMicState" Text="Microphone" VerticalAlignment="Center" />
+                    <Button x:Name="BtnToggleMic" Content="Toggle Mic Mute" Click="BtnToggleMic_Click"/>
                 </StackPanel>
-                <Button x:Name="BtnToggleMic" Content="Toggle Mic Mute" Click="BtnToggleMic_Click"/>
+                
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                     <TextBlock x:Name="LblSpeechService" Text="Speech-to-Text Service" VerticalAlignment="Center" />
