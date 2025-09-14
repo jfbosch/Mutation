@@ -177,6 +177,8 @@ public partial class App : Application
 							  try
 							  {
 								  var result = await ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
+								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+								  mainWindow.SetOcrText(result.Message);
 								  HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : 25);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot + OCR Error", ex); }
@@ -192,6 +194,8 @@ public partial class App : Application
 							  try
 							  {
 								  var result = await ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom);
+								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+								  mainWindow.SetOcrText(result.Message);
 								  HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : 25);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot + OCR (LRTB) Error", ex); }
@@ -207,6 +211,8 @@ public partial class App : Application
 							  try
 							  {
 								  var result = await ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
+								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+								  mainWindow.SetOcrText(result.Message);
 								  HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : 25);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("OCR Clipboard Error", ex); }
@@ -222,6 +228,8 @@ public partial class App : Application
 							  try
 							  {
 								  var result = await ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom);
+								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+								  mainWindow.SetOcrText(result.Message);
 								  HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : 25);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("OCR Clipboard (LRTB) Error", ex); }

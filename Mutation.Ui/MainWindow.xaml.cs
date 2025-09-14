@@ -166,7 +166,7 @@ public sealed partial class MainWindow : Window
 		try
 		{
 			var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
-			TxtOcr.Text = result.Message;
+			SetOcrText(result.Message);
 			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : 25);
 		}
 		catch (Exception ex)
@@ -180,7 +180,7 @@ public sealed partial class MainWindow : Window
 		try
 		{
 			var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
-			TxtOcr.Text = result.Message;
+			SetOcrText(result.Message);
 			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : 25);
 		}
 		catch (Exception ex)
@@ -394,6 +394,11 @@ public sealed partial class MainWindow : Window
 			}
 		}
 		catch (TaskCanceledException) { }
+	}
+
+	internal void SetOcrText(string message)
+	{
+		TxtOcr.Text = message;
 	}
 
 	// ReviewItem removed
