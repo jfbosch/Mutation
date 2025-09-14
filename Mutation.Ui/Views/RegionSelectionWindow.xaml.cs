@@ -36,6 +36,13 @@ public sealed partial class RegionSelectionWindow : Window
 	private const int IDC_CROSS = 32515;
 	private const int IDC_ARROW = 32512;
 
+	[StructLayout(LayoutKind.Sequential)]
+	private struct POINT { public int X; public int Y; }
+	[DllImport("user32.dll", SetLastError = false)]
+	private static extern bool GetCursorPos(out POINT lpPoint);
+	[DllImport("user32.dll", SetLastError = false)]
+	private static extern uint GetDpiForWindow(IntPtr hWnd);
+
 	[DllImport("user32.dll")]
 	private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
@@ -94,6 +101,9 @@ public sealed partial class RegionSelectionWindow : Window
 			_img.Height = bounds.Height;
 		}
 
+		// Place the crosshair instantly at current cursor position and span full screen
+		InitializeCrosshairAtCursor(bounds);
+
 		// Do not show here; window will be activated in SelectRegionAsync after content is ready.
 		return Task.CompletedTask;
 	}
@@ -104,6 +114,7 @@ public sealed partial class RegionSelectionWindow : Window
 		// Activate now that image is loaded and sizes set, then ensure TopMost without forcing a show beforehand.
 		this.Activate();
 		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+		InitializeCrosshairAtCursor(bounds);
 		SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOMOVE | SWP_NOSIZE);
 		return _tcs.Task;
 	}
@@ -168,6 +179,35 @@ public sealed partial class RegionSelectionWindow : Window
 		_tcs?.TrySetResult(rectPx);
 		Close();
 	}
+				private void InitializeCrosshairAtCursor(System.Drawing.Rectangle bounds)
+				{
+					EnsureElementRefs();
+					if (_overlay is null || _crosshairV is null || _crosshairH is null) return;
+					// Determine DPI scale for mapping screen pixels to DIPs
+					double scale = 1.0;
+					try { var dpi = GetDpiForWindow(_hwnd); if (dpi > 0) scale = dpi / 96.0; } catch { }
+					// Compute overlay size in DIPs
+					double overlayW = _overlay.ActualWidth > 0 ? _overlay.ActualWidth : bounds.Width / scale;
+					double overlayH = _overlay.ActualHeight > 0 ? _overlay.ActualHeight : bounds.Height / scale;
+					_crosshairV.Height = overlayH;
+					_crosshairH.Width = overlayW;
+					// Map current cursor (screen px) to overlay DIPs
+					double cx, cy;
+					if (GetCursorPos(out POINT p))
+					{
+						cx = (p.X - bounds.Left) / scale;
+						cy = (p.Y - bounds.Top) / scale;
+					}
+					else
+					{
+						cx = overlayW / 2.0;
+						cy = overlayH / 2.0;
+					}
+					Canvas.SetLeft(_crosshairV, Math.Round(cx));
+					Canvas.SetTop(_crosshairV, 0);
+					Canvas.SetTop(_crosshairH, Math.Round(cy));
+					Canvas.SetLeft(_crosshairH, 0);
+				}
 
 	private void Window_KeyDown(object sender, KeyRoutedEventArgs e)
 	{
@@ -194,11 +234,11 @@ public sealed partial class RegionSelectionWindow : Window
 		if (double.IsNaN(w) || double.IsNaN(h) || w <= 0 || h <= 0) return;
 
 		_crosshairV.Height = h;
-		Canvas.SetLeft(_crosshairV, Math.Round(pos.X) + 0.5);
+		Canvas.SetLeft(_crosshairV, Math.Round(pos.X));
 		Canvas.SetTop(_crosshairV, 0);
 
 		_crosshairH.Width = w;
-		Canvas.SetTop(_crosshairH, Math.Round(pos.Y) + 0.5);
+		Canvas.SetTop(_crosshairH, Math.Round(pos.Y));
 		Canvas.SetLeft(_crosshairH, 0);
 	}
 

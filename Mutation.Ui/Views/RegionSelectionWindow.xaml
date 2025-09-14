@@ -19,11 +19,11 @@
         PointerExited="Overlay_PointerExited"
                 SizeChanged="Overlay_SizeChanged">
             <!-- Selection rectangle -->
-        <Rectangle x:Name="Selection" Stroke="#FFFFC300" StrokeThickness="4" Fill="#33FFFFFF" Visibility="Collapsed"/>
+    <Rectangle x:Name="Selection" Stroke="#FFFFC300" StrokeThickness="4" Fill="#33FFFFFF" Visibility="Collapsed" Canvas.ZIndex="10"/>
 
             <!-- Crosshair lines spanning the screen -->
-            <Rectangle x:Name="CrosshairV" Width="1" Fill="#80FFFFFF" IsHitTestVisible="False"/>
-            <Rectangle x:Name="CrosshairH" Height="1" Fill="#80FFFFFF" IsHitTestVisible="False"/>
+            <Rectangle x:Name="CrosshairV" Width="2" Fill="#FFFFC300" IsHitTestVisible="False" Canvas.ZIndex="20"/>
+            <Rectangle x:Name="CrosshairH" Height="2" Fill="#FFFFC300" IsHitTestVisible="False" Canvas.ZIndex="20"/>
         </Canvas>
     </Grid>
 </Window>
