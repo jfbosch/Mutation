@@ -34,6 +34,7 @@ public sealed partial class RegionSelectionWindow : Window
 	[DllImport("user32.dll", SetLastError = false)]
 	private static extern IntPtr SetCursor(IntPtr hCursor);
 	private const int IDC_CROSS = 32515;
+	private const int IDC_ARROW = 32512;
 
 	[DllImport("user32.dll")]
 	private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
@@ -219,6 +220,22 @@ public sealed partial class RegionSelectionWindow : Window
 		try
 		{
 			IntPtr cur = LoadCursor(IntPtr.Zero, IDC_CROSS);
+			if (cur != IntPtr.Zero) SetCursor(cur);
+		}
+		catch { }
+	}
+
+	private void Overlay_PointerEntered(object sender, PointerRoutedEventArgs e)
+	{
+		EnsureElementRefs();
+		EnsureCrossCursor();
+	}
+
+	private void Overlay_PointerExited(object sender, PointerRoutedEventArgs e)
+	{
+		try
+		{
+			IntPtr cur = LoadCursor(IntPtr.Zero, IDC_ARROW);
 			if (cur != IntPtr.Zero) SetCursor(cur);
 		}
 		catch { }

@@ -11,13 +11,15 @@
     <Image x:Name="Img" Stretch="Fill"/>
 
         <!-- Interactive overlay: selection + crosshair -->
-        <Canvas x:Name="Overlay" Background="Transparent"
+    <Canvas x:Name="Overlay" Background="Transparent"
                 PointerPressed="Overlay_PointerPressed"
                 PointerMoved="Overlay_PointerMoved"
                 PointerReleased="Overlay_PointerReleased"
+        PointerEntered="Overlay_PointerEntered"
+        PointerExited="Overlay_PointerExited"
                 SizeChanged="Overlay_SizeChanged">
             <!-- Selection rectangle -->
-            <Rectangle x:Name="Selection" Stroke="#FF3A86FF" StrokeThickness="2" Fill="#40FFFFFF" Visibility="Collapsed"/>
+        <Rectangle x:Name="Selection" Stroke="#FFFFC300" StrokeThickness="4" Fill="#33FFFFFF" Visibility="Collapsed"/>
 
             <!-- Crosshair lines spanning the screen -->
             <Rectangle x:Name="CrosshairV" Width="1" Fill="#80FFFFFF" IsHitTestVisible="False"/>
