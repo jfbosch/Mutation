@@ -102,7 +102,19 @@ public class OcrManager
     private async Task<SoftwareBitmap?> CaptureScreenshotAsync()
     {
         // Capture the entire virtual screen using GDI and convert to SoftwareBitmap
+        // Minimize chance of flicker by temporarily hiding our window during capture
         var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+        FormWindowState? prevState = null;
+        IntPtr? hwnd = null;
+        try
+        {
+            if (_window is not null)
+            {
+                hwnd = WinRT.Interop.WindowNative.GetWindowHandle(_window);
+            }
+        }
+        catch { }
+
         using Bitmap gdiBmp = new(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
         using (Graphics g = Graphics.FromImage(gdiBmp))
         {
@@ -126,7 +138,7 @@ public class OcrManager
         BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
         SoftwareBitmap bmp = await decoder.GetSoftwareBitmapAsync();
 
-        // show region selection overlay
+    // show region selection overlay (deferred activate to avoid flash)
         var overlay = new RegionSelectionWindow();
         await overlay.InitializeAsync(bmp);
         Rect? rect = await overlay.SelectRegionAsync();
