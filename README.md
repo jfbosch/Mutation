@@ -101,9 +101,6 @@ All hotkeys are global and fully customisable. Below is a comprehensive example 
 * Follow each provider’s portal to create an account and API key.
 * Paste the credentials into the relevant object under `SpeetchToTextSettings → Providers`.
 
-### 4. (Removed) Transcript review
-The transcript review feature has been removed from this build. The app still supports formatting transcriptions and using transcript-formatting rules configured in settings.
-
 ## Contribute
 
 Pull requests are welcome—open an issue to discuss ideas first, then fork, commit, and PR.

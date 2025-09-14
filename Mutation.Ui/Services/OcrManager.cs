@@ -118,6 +118,8 @@ public class OcrManager
         {
             writer.WriteBytes(ms.ToArray());
             await writer.StoreAsync();
+            // Ensure the underlying stream stays open after disposing the writer
+            writer.DetachStream();
         }
         stream.Seek(0);
 

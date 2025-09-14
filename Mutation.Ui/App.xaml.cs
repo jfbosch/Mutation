@@ -90,6 +90,33 @@ public partial class App : Application
 
 			_window.Activate();
 
+			// Preflight: check if screen capture via GDI works to avoid surprises
+			var preflight = ScreenCapturePreflight.TryCaptureProbe();
+			if (!preflight.ok)
+			{
+				string title = "Screen Capture Disabled";
+				string message = preflight.message ?? "Screen capture may be disabled by system policy.";
+				if (_window.Content is FrameworkElement fe0 && fe0.XamlRoot is not null)
+				{
+					var dialog = new ContentDialog
+					{
+						Title = title,
+						Content = new TextBlock { Text = message, TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
+						CloseButtonText = "OK",
+						XamlRoot = fe0.XamlRoot
+					};
+					Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
+					Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
+					await dialog.ShowAsync();
+				}
+				else
+				{
+					System.Windows.Forms.MessageBox.Show(message, title,
+						System.Windows.Forms.MessageBoxButtons.OK,
+						System.Windows.Forms.MessageBoxIcon.Warning);
+				}
+			}
+
 			if (BeepPlayer.LastInitializationIssues.Count > 0)
 			{
 				const string title = "Custom Beep Settings Issues";
