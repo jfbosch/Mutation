@@ -1,4 +1,4 @@
-using CognitiveSupport;
+﻿using CognitiveSupport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Mutation.Ui.Services;
@@ -36,16 +36,16 @@ public sealed partial class MainWindow : Window
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
 
 	public MainWindow(
-			  ClipboardManager clipboard,
-			  UiStateManager uiStateManager,
-			  AudioDeviceManager audioDeviceManager,
-			  OcrManager ocrManager,
-			  ISpeechToTextService[] speechServices,
-			  ITextToSpeechService textToSpeech,
-			  TranscriptFormatter transcriptFormatter,
+		ClipboardManager clipboard,
+		UiStateManager uiStateManager,
+		AudioDeviceManager audioDeviceManager,
+		OcrManager ocrManager,
+		ISpeechToTextService[] speechServices,
+		ITextToSpeechService textToSpeech,
+		TranscriptFormatter transcriptFormatter,
 
-			  ISettingsManager settingsManager,
-			  Settings settings)
+		ISettingsManager settingsManager,
+		Settings settings)
 	{
 		_clipboard = clipboard;
 		_uiStateManager = uiStateManager;
@@ -59,7 +59,6 @@ public sealed partial class MainWindow : Window
 		_speechManager = new SpeechToTextManager(settings);
 
 		InitializeComponent();
-		// Ensure a default microphone is selected
 		_audioDeviceManager.EnsureDefaultMicrophoneSelected();
 
 		BtnToggleMic.Content = _audioDeviceManager.IsMuted ? "Unmute" : "Mute";
@@ -67,27 +66,26 @@ public sealed partial class MainWindow : Window
 		CmbMicrophone.ItemsSource = micList;
 		CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
 
-		// Restore persisted microphone selection
-		string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
-		if (!string.IsNullOrWhiteSpace(savedMicFullName))
-		{
-			var match = micList.FirstOrDefault(m => m.FriendlyName == savedMicFullName);
-			if (match != null)
-				CmbMicrophone.SelectedItem = match;
-			else if (_audioDeviceManager.Microphone != null)
-				CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
-			else if (micList.Count > 0)
-				CmbMicrophone.SelectedIndex = 0;
-		}
-		else if (_audioDeviceManager.Microphone != null)
-			CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
-		else if (micList.Count > 0)
-			CmbMicrophone.SelectedIndex = 0;
+		RestorePersistedMicrophoneSelection(micList);
 
 		CmbSpeechService.ItemsSource = _speechServices;
 		CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
 
-		// Restore persisted speech service selection
+		RestorePersistedSpeechServiceSelection();
+
+		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
+
+		var tooltipManager = new TooltipManager(_settings);
+		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
+
+		CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
+		CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
+
+		this.Closed += MainWindow_Closed;
+	}
+
+	private void RestorePersistedSpeechServiceSelection()
+	{
 		string? savedServiceName = _settings.SpeetchToTextSettings?.ActiveSpeetchToTextService;
 		if (!string.IsNullOrWhiteSpace(savedServiceName))
 		{
@@ -108,16 +106,25 @@ public sealed partial class MainWindow : Window
 			CmbSpeechService.SelectedIndex = 0;
 			_activeSpeechService = _speechServices[0];
 		}
+	}
 
-		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
-
-		var tooltipManager = new TooltipManager(_settings);
-		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
-
-		CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
-		CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
-
-		this.Closed += MainWindow_Closed;
+	private void RestorePersistedMicrophoneSelection(System.Collections.Generic.List<CoreAudio.MMDevice> micList)
+	{
+		string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
+		if (!string.IsNullOrWhiteSpace(savedMicFullName))
+		{
+			var match = micList.FirstOrDefault(m => m.FriendlyName == savedMicFullName);
+			if (match != null)
+				CmbMicrophone.SelectedItem = match;
+			else if (_audioDeviceManager.Microphone != null)
+				CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
+			else if (micList.Count > 0)
+				CmbMicrophone.SelectedIndex = 0;
+		}
+		else if (_audioDeviceManager.Microphone != null)
+			CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
+		else if (micList.Count > 0)
+			CmbMicrophone.SelectedIndex = 0;
 	}
 
 	private async void MainWindow_Closed(object sender, WindowEventArgs args)
