@@ -1,4 +1,4 @@
-﻿using CognitiveSupport;
+using CognitiveSupport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Mutation.Ui.Services;
@@ -58,10 +58,10 @@ public sealed partial class MainWindow : Window
 		_settings = settings;
 		_speechManager = new SpeechToTextManager(settings);
 
+		InitializeComponent();
 		// Ensure a default microphone is selected
 		_audioDeviceManager.EnsureDefaultMicrophoneSelected();
 
-		InitializeComponent();
 		BtnToggleMic.Content = _audioDeviceManager.IsMuted ? "Unmute" : "Mute";
 		var micList = _audioDeviceManager.CaptureDevices.ToList();
 		CmbMicrophone.ItemsSource = micList;
