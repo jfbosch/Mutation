@@ -21,6 +21,7 @@ public sealed partial class RegionSelectionWindow : Window
 	private readonly IntPtr _hwnd;
 	private int _bmpW;
 	private int _bmpH;
+	private Point? _lastPointerPos; // track last known position in overlay coords
 
 	// Cache XAML elements to avoid reliance on generated fields
 	private Microsoft.UI.Xaml.Controls.Image? _img;
@@ -125,6 +126,9 @@ public sealed partial class RegionSelectionWindow : Window
 		EnsureElementRefs();
 		_start = e.GetCurrentPoint(_overlay).Position;
 		_dragging = true;
+		_lastPointerPos = _start;
+		// Capture the pointer so we still get the release even if cursor leaves the window/screen edge
+		try { _overlay.CapturePointer(e.Pointer); } catch { }
 		if (_selection is not null)
 		{
 			_selection.Visibility = Visibility.Visible;
@@ -141,6 +145,7 @@ public sealed partial class RegionSelectionWindow : Window
 	{
 		if (_overlay is null) return;
 		var pos = e.GetCurrentPoint(_overlay).Position;
+		_lastPointerPos = pos;
 		UpdateCrosshair(pos);
 		if (!_dragging) { EnsureCrossCursor(); return; }
 		double x = Math.Min(pos.X, _start.X);
@@ -159,10 +164,37 @@ public sealed partial class RegionSelectionWindow : Window
 
 	private void Overlay_PointerReleased(object sender, PointerRoutedEventArgs e)
 	{
+		if (_overlay is null) return;
+		// release pointer capture if any
+		try { _overlay.ReleasePointerCaptures(); } catch { }
 		if (!_dragging) return;
+		FinishSelection(e.GetCurrentPoint(_overlay).Position);
+	}
+    
+	// Handle cases where the system cancels the pointer (e.g., edge conditions) or capture is lost
+	private void Overlay_PointerCanceled(object sender, PointerRoutedEventArgs e)
+	{
+		if (_overlay is null) return;
+		try { _overlay.ReleasePointerCaptures(); } catch { }
+		if (!_dragging) return;
+		// Fall back to last known pointer position if current point unavailable
+		var pos = _lastPointerPos ?? (_overlay is not null ? new Point(_overlay.ActualWidth / 2.0, _overlay.ActualHeight / 2.0) : new Point(0, 0));
+		FinishSelection(pos);
+	}
+
+	private void Overlay_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+	{
+		if (_overlay is null) return;
+		try { _overlay.ReleasePointerCaptures(); } catch { }
+		if (!_dragging) return;
+		var pos = _lastPointerPos ?? (_overlay is not null ? new Point(_overlay.ActualWidth / 2.0, _overlay.ActualHeight / 2.0) : new Point(0, 0));
+		FinishSelection(pos);
+	}
+
+	private void FinishSelection(Point pos)
+	{
 		_dragging = false;
 		if (_overlay is null) return;
-		Point pos = e.GetCurrentPoint(_overlay).Position;
 		double x = Math.Min(pos.X, _start.X);
 		double y = Math.Min(pos.Y, _start.Y);
 		double w = Math.Abs(pos.X - _start.X);
@@ -171,10 +203,10 @@ public sealed partial class RegionSelectionWindow : Window
 		double scaleX = _bmpW / Math.Max(1.0, _overlay.ActualWidth);
 		double scaleY = _bmpH / Math.Max(1.0, _overlay.ActualHeight);
 		Rect rectPx = new(
-			 Math.Max(0, Math.Round(x * scaleX)),
-			 Math.Max(0, Math.Round(y * scaleY)),
-			 Math.Max(1, Math.Round(w * scaleX)),
-			 Math.Max(1, Math.Round(h * scaleY))
+			Math.Max(0, Math.Round(x * scaleX)),
+			Math.Max(0, Math.Round(y * scaleY)),
+			Math.Max(1, Math.Round(w * scaleX)),
+			Math.Max(1, Math.Round(h * scaleY))
 		);
 		_tcs?.TrySetResult(rectPx);
 		Close();
