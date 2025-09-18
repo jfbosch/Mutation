@@ -79,20 +79,15 @@ public sealed partial class RegionSelectionWindow : Window
 
 	public Task InitializeAsync(SoftwareBitmap bitmap)
 	{
-		// Convert SoftwareBitmap directly into a WriteableBitmap to avoid encode/decode latency
-		var converted = SoftwareBitmap.Convert(bitmap, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
-		WriteableBitmap wb = new(converted.PixelWidth, converted.PixelHeight);
-		converted.CopyToBuffer(wb.PixelBuffer);
-		wb.Invalidate();
+		PrepareWindow();
+		UpdateBitmap(bitmap);
+		return Task.CompletedTask;
+	}
+
+	private void PrepareWindow()
+	{
 		// Ensure refs in case constructor timing varies
 		EnsureElementRefs();
-		if (_img is not null)
-		{
-			_img.Source = wb;
-		}
-		_bmpW = wb.PixelWidth;
-		_bmpH = wb.PixelHeight;
-
 		// Prepare window for full-bleed content and no chrome; size to full virtual screen
 		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
 		var appWindow = this.AppWindow;
@@ -100,12 +95,10 @@ public sealed partial class RegionSelectionWindow : Window
 		{
 			try
 			{
-				// Size to the full virtual screen; avoid resizing again after activation to minimize flicker
 				appWindow.MoveAndResize(new RectInt32(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
 			}
 			catch { }
 		}
-
 		// Expand content into title bar area (hide chrome).
 		if (this.AppWindow?.TitleBar is AppWindowTitleBar tb)
 		{
@@ -113,16 +106,32 @@ public sealed partial class RegionSelectionWindow : Window
 			tb.ButtonBackgroundColor = Windows.UI.Color.FromArgb(1, 0, 0, 0);
 			tb.ButtonInactiveBackgroundColor = Windows.UI.Color.FromArgb(1, 0, 0, 0);
 		}
+	}
 
-		// Crosshair will be positioned on Overlay_Loaded once layout has valid ActualWidth/Height
-		// Do not show here; window will be activated in SelectRegionAsync after content is ready.
-		return Task.CompletedTask;
+	public void UpdateBitmap(SoftwareBitmap bitmap)
+	{
+		// Convert SoftwareBitmap directly into a WriteableBitmap to avoid encode/decode latency
+		var converted = SoftwareBitmap.Convert(bitmap, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
+		WriteableBitmap wb = new(converted.PixelWidth, converted.PixelHeight);
+		converted.CopyToBuffer(wb.PixelBuffer);
+		wb.Invalidate();
+		EnsureElementRefs();
+		if (_img is not null)
+		{
+			_img.Source = wb;
+		}
+		_bmpW = wb.PixelWidth;
+		_bmpH = wb.PixelHeight;
 	}
 
 	public Task<Rect?> SelectRegionAsync()
 	{
 		_tcs = new TaskCompletionSource<Rect?>();
-		// Activate now that image is loaded; set focus to overlay for immediate input
+		_dragging = false;
+		_lastPointerPos = null;
+		ResetSelection();
+		// Show and activate for input (in case window was hidden for reuse)
+		try { this.AppWindow?.Show(); } catch { }
 		this.Activate();
 		TryFocusOverlay();
 		// Ensure TopMost without using SWP_SHOWWINDOW to avoid flicker
@@ -141,7 +150,13 @@ public sealed partial class RegionSelectionWindow : Window
 		{
 			_dragging = false;
 			_tcs?.TrySetResult(null);
-			Close();
+			ResetSelection();
+			try { this.AppWindow?.Hide(); } catch { }
+			return;
+		}
+		// Only start selection on left button
+		if (!pp.Properties.IsLeftButtonPressed)
+		{
 			return;
 		}
 		_start = pp.Position;
@@ -191,7 +206,8 @@ public sealed partial class RegionSelectionWindow : Window
 		{
 			_dragging = false;
 			_tcs?.TrySetResult(null);
-			Close();
+			ResetSelection();
+			try { this.AppWindow?.Hide(); } catch { }
 			return;
 		}
 		if (!_dragging) return;
@@ -236,7 +252,8 @@ public sealed partial class RegionSelectionWindow : Window
 			Math.Max(1, Math.Round(h * scaleY))
 		);
 		_tcs?.TrySetResult(rectPx);
-		Close();
+		ResetSelection();
+		try { this.AppWindow?.Hide(); } catch { }
 	}
 
 	private void InitializeCrosshairAtCursor(System.Drawing.Rectangle bounds)
@@ -275,7 +292,7 @@ public sealed partial class RegionSelectionWindow : Window
 		{
 			_dragging = false;
 			_tcs?.TrySetResult(null);
-			Close();
+			try { this.AppWindow?.Hide(); } catch { }
 		}
 	}
 
@@ -340,6 +357,12 @@ public sealed partial class RegionSelectionWindow : Window
 		catch { }
 	}
 
+	public void PrepareWindowForReuse()
+	{
+		PrepareWindow();
+		try { this.AppWindow?.Hide(); } catch { }
+	}
+
 	private void Overlay_Loaded(object sender, RoutedEventArgs e)
 	{
 		if (_initialLayoutDone) return;
@@ -347,6 +370,19 @@ public sealed partial class RegionSelectionWindow : Window
 		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
 		InitializeCrosshairAtCursor(bounds);
 		TryFocusOverlay();
+	}
+
+	private void ResetSelection()
+	{
+		EnsureElementRefs();
+		if (_selection is not null)
+		{
+			_selection.Visibility = Visibility.Collapsed;
+			_selection.Width = 0;
+			_selection.Height = 0;
+			Canvas.SetLeft(_selection, 0);
+			Canvas.SetTop(_selection, 0);
+		}
 	}
 
 	private void TryFocusOverlay()

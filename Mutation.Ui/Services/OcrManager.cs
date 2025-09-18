@@ -26,6 +26,7 @@ public class OcrManager
     private readonly ClipboardManager _clipboard;
     private Window? _window;
     private RegionSelectionWindow? _activeOverlay;
+    private RegionSelectionWindow? _cachedOverlay;
 
     public OcrManager(Settings settings, IOcrService ocrService, ClipboardManager clipboard)
     {
@@ -37,6 +38,8 @@ public class OcrManager
     public void InitializeWindow(Window window)
     {
         _window = window;
+        // Pre-warm a reusable overlay instance to reduce first-use latency
+        try { _cachedOverlay = new RegionSelectionWindow(); _cachedOverlay.PrepareWindowForReuse(); } catch { _cachedOverlay = null; }
     }
 
     public async Task TakeScreenshotToClipboardAsync()
@@ -155,9 +158,11 @@ public class OcrManager
         }
 
     // show region selection overlay (deferred activate to avoid flash)
-        var overlay = new RegionSelectionWindow();
-        await overlay.InitializeAsync(bmp);
-        _activeOverlay = overlay;
+    var overlay = _cachedOverlay ?? new RegionSelectionWindow();
+    // Ensure window is prepared and update bitmap for this capture
+    await overlay.InitializeAsync(bmp);
+    overlay.UpdateBitmap(bmp);
+    _activeOverlay = overlay;
         try
         {
             // Activate and show overlay (inside SelectRegionAsync), then play start beep asynchronously to avoid UI delay
