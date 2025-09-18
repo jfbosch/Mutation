@@ -67,7 +67,6 @@
 		<PackageReference Include="Deepgram" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="StringExtensionsLibrary" Version="1.0.0" />
 		<PackageReference Include="System.Speech" Version="9.0.5" />
 		<PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
 	</ItemGroup>
