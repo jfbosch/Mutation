@@ -222,6 +222,19 @@ public sealed partial class MainWindow : Window
 	{
 		try
 		{
+			// If a transcription is currently in-flight, cancel it and play failure/cancel sound.
+			if (_speechManager.Transcribing)
+			{
+				_speechManager.CancelTranscription();
+				// Restore UI to idle state
+				BtnSpeechToText.Content = "Record";
+				BtnSpeechToText.IsEnabled = true;
+				TxtSpeechToText.IsReadOnly = false;
+				_suppressAutoActions = false;
+				BeepPlayer.Play(BeepType.Failure);
+				return;
+			}
+
 			if (_activeSpeechService == null)
 			{
 				var dlg = new ContentDialog
@@ -254,18 +267,30 @@ public sealed partial class MainWindow : Window
 				// Show transcribing status without triggering TextChanged side-effects
 				_suppressAutoActions = true;
 				TxtSpeechToText.Text = "Transcribing...";
-				string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-				//BeepPlayer.Play(BeepType.End);
-				// Set final transcript without triggering TextChanged side-effects
-				TxtSpeechToText.Text = text;
-				BtnSpeechToText.Content = "Record";
-				BtnSpeechToText.IsEnabled = true;
-				_clipboard.SetText(text);
-				InsertIntoActiveApplication(text);
-				BeepPlayer.Play(BeepType.Success);
-				TxtSpeechToText.IsReadOnly = false;
-				_suppressAutoActions = false;
-				HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
+				try
+				{
+					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+					//BeepPlayer.Play(BeepType.End);
+					// Set final transcript without triggering TextChanged side-effects
+					TxtSpeechToText.Text = text;
+					BtnSpeechToText.Content = "Record";
+					BtnSpeechToText.IsEnabled = true;
+					_clipboard.SetText(text);
+					InsertIntoActiveApplication(text);
+					BeepPlayer.Play(BeepType.Success);
+					TxtSpeechToText.IsReadOnly = false;
+					_suppressAutoActions = false;
+					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
+				}
+				catch (OperationCanceledException)
+				{
+					// Graceful cancel: ensure UI is reset; failure beep already played at cancel trigger.
+					BtnSpeechToText.Content = "Record";
+					BtnSpeechToText.IsEnabled = true;
+					TxtSpeechToText.IsReadOnly = false;
+					_suppressAutoActions = false;
+					return;
+				}
 			}
 		}
 		catch (Exception ex)
