@@ -22,6 +22,7 @@ public sealed partial class RegionSelectionWindow : Window
 	private int _bmpW;
 	private int _bmpH;
 	private Point? _lastPointerPos; // track last known position in overlay coords
+	private bool _initialLayoutDone;
 
 	// Cache XAML elements to avoid reliance on generated fields
 	private Microsoft.UI.Xaml.Controls.Image? _img;
@@ -36,6 +37,8 @@ public sealed partial class RegionSelectionWindow : Window
 	private static extern IntPtr SetCursor(IntPtr hCursor);
 	private const int IDC_CROSS = 32515;
 	private const int IDC_ARROW = 32512;
+	private static readonly IntPtr CURSOR_CROSS = LoadCursor(IntPtr.Zero, IDC_CROSS);
+	private static readonly IntPtr CURSOR_ARROW = LoadCursor(IntPtr.Zero, IDC_ARROW);
 
 	[StructLayout(LayoutKind.Sequential)]
 	private struct POINT { public int X; public int Y; }
@@ -47,6 +50,9 @@ public sealed partial class RegionSelectionWindow : Window
 	[DllImport("user32.dll")]
 	private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+	[DllImport("user32.dll")]
+	private static extern bool SetForegroundWindow(IntPtr hWnd);
+
 	private static readonly IntPtr HWND_TOPMOST = new(-1);
 	private const uint SWP_SHOWWINDOW = 0x0040; // keep for reference, but avoid using to prevent flicker
 	private const uint SWP_NOMOVE = 0x0002;
@@ -56,6 +62,19 @@ public sealed partial class RegionSelectionWindow : Window
 		this.InitializeComponent();
 		_hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
 		EnsureElementRefs();
+	}
+
+	public void BringToFront()
+	{
+		try
+		{
+			this.Activate();
+			SetForegroundWindow(_hwnd);
+			var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+			SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOMOVE | SWP_NOSIZE);
+			TryFocusOverlay();
+		}
+		catch { }
 	}
 
 	public Task InitializeAsync(SoftwareBitmap bitmap)
@@ -74,14 +93,19 @@ public sealed partial class RegionSelectionWindow : Window
 		_bmpW = wb.PixelWidth;
 		_bmpH = wb.PixelHeight;
 
+		// Prepare window for full-bleed content and no chrome; size to full virtual screen
 		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
 		var appWindow = this.AppWindow;
 		if (appWindow != null)
 		{
-			appWindow.MoveAndResize(new RectInt32(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
+			try
+			{
+				// Size to the full virtual screen; avoid resizing again after activation to minimize flicker
+				appWindow.MoveAndResize(new RectInt32(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
+			}
+			catch { }
 		}
 
-		// Compute composition scale (DPI) for the window to map pointer to physical pixels
 		// Expand content into title bar area (hide chrome).
 		if (this.AppWindow?.TitleBar is AppWindowTitleBar tb)
 		{
@@ -90,21 +114,7 @@ public sealed partial class RegionSelectionWindow : Window
 			tb.ButtonInactiveBackgroundColor = Windows.UI.Color.FromArgb(1, 0, 0, 0);
 		}
 
-		// Stretch overlay and image to the window size; actual DIP size will be known after layout.
-		if (_overlay is not null)
-		{
-			_overlay.Width = bounds.Width;
-			_overlay.Height = bounds.Height;
-		}
-		if (_img is not null)
-		{
-			_img.Width = bounds.Width;
-			_img.Height = bounds.Height;
-		}
-
-		// Place the crosshair instantly at current cursor position and span full screen
-		InitializeCrosshairAtCursor(bounds);
-
+		// Crosshair will be positioned on Overlay_Loaded once layout has valid ActualWidth/Height
 		// Do not show here; window will be activated in SelectRegionAsync after content is ready.
 		return Task.CompletedTask;
 	}
@@ -112,10 +122,11 @@ public sealed partial class RegionSelectionWindow : Window
 	public Task<Rect?> SelectRegionAsync()
 	{
 		_tcs = new TaskCompletionSource<Rect?>();
-		// Activate now that image is loaded and sizes set, then ensure TopMost without forcing a show beforehand.
+		// Activate now that image is loaded; set focus to overlay for immediate input
 		this.Activate();
+		TryFocusOverlay();
+		// Ensure TopMost without using SWP_SHOWWINDOW to avoid flicker
 		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-		InitializeCrosshairAtCursor(bounds);
 		SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOMOVE | SWP_NOSIZE);
 		return _tcs.Task;
 	}
@@ -124,7 +135,16 @@ public sealed partial class RegionSelectionWindow : Window
 	{
 		if (_overlay is null) return;
 		EnsureElementRefs();
-		_start = e.GetCurrentPoint(_overlay).Position;
+		// Right click cancels immediately
+		var pp = e.GetCurrentPoint(_overlay);
+		if (pp.Properties.IsRightButtonPressed)
+		{
+			_dragging = false;
+			_tcs?.TrySetResult(null);
+			Close();
+			return;
+		}
+		_start = pp.Position;
 		_dragging = true;
 		_lastPointerPos = _start;
 		// Capture the pointer so we still get the release even if cursor leaves the window/screen edge
@@ -147,7 +167,7 @@ public sealed partial class RegionSelectionWindow : Window
 		var pos = e.GetCurrentPoint(_overlay).Position;
 		_lastPointerPos = pos;
 		UpdateCrosshair(pos);
-		if (!_dragging) { EnsureCrossCursor(); return; }
+		if (!_dragging) { return; }
 		double x = Math.Min(pos.X, _start.X);
 		double y = Math.Min(pos.Y, _start.Y);
 		double w = Math.Abs(pos.X - _start.X);
@@ -159,7 +179,6 @@ public sealed partial class RegionSelectionWindow : Window
 			_selection.Width = w;
 			_selection.Height = h;
 		}
-		EnsureCrossCursor();
 	}
 
 	private void Overlay_PointerReleased(object sender, PointerRoutedEventArgs e)
@@ -167,6 +186,14 @@ public sealed partial class RegionSelectionWindow : Window
 		if (_overlay is null) return;
 		// release pointer capture if any
 		try { _overlay.ReleasePointerCaptures(); } catch { }
+		// Right click cancels
+		if (e.GetCurrentPoint(_overlay).Properties.IsRightButtonPressed)
+		{
+			_dragging = false;
+			_tcs?.TrySetResult(null);
+			Close();
+			return;
+		}
 		if (!_dragging) return;
 		FinishSelection(e.GetCurrentPoint(_overlay).Position);
 	}
@@ -211,35 +238,36 @@ public sealed partial class RegionSelectionWindow : Window
 		_tcs?.TrySetResult(rectPx);
 		Close();
 	}
-				private void InitializeCrosshairAtCursor(System.Drawing.Rectangle bounds)
-				{
-					EnsureElementRefs();
-					if (_overlay is null || _crosshairV is null || _crosshairH is null) return;
-					// Determine DPI scale for mapping screen pixels to DIPs
-					double scale = 1.0;
-					try { var dpi = GetDpiForWindow(_hwnd); if (dpi > 0) scale = dpi / 96.0; } catch { }
-					// Compute overlay size in DIPs
-					double overlayW = _overlay.ActualWidth > 0 ? _overlay.ActualWidth : bounds.Width / scale;
-					double overlayH = _overlay.ActualHeight > 0 ? _overlay.ActualHeight : bounds.Height / scale;
-					_crosshairV.Height = overlayH;
-					_crosshairH.Width = overlayW;
-					// Map current cursor (screen px) to overlay DIPs
-					double cx, cy;
-					if (GetCursorPos(out POINT p))
-					{
-						cx = (p.X - bounds.Left) / scale;
-						cy = (p.Y - bounds.Top) / scale;
-					}
-					else
-					{
-						cx = overlayW / 2.0;
-						cy = overlayH / 2.0;
-					}
-					Canvas.SetLeft(_crosshairV, Math.Round(cx));
-					Canvas.SetTop(_crosshairV, 0);
-					Canvas.SetTop(_crosshairH, Math.Round(cy));
-					Canvas.SetLeft(_crosshairH, 0);
-				}
+
+	private void InitializeCrosshairAtCursor(System.Drawing.Rectangle bounds)
+	{
+		EnsureElementRefs();
+		if (_overlay is null || _crosshairV is null || _crosshairH is null) return;
+		// Determine DPI scale for mapping screen pixels to DIPs
+		double scale = 1.0;
+		try { var dpi = GetDpiForWindow(_hwnd); if (dpi > 0) scale = dpi / 96.0; } catch { }
+		// Compute overlay size in DIPs
+		double overlayW = _overlay.ActualWidth > 0 ? _overlay.ActualWidth : bounds.Width / scale;
+		double overlayH = _overlay.ActualHeight > 0 ? _overlay.ActualHeight : bounds.Height / scale;
+		_crosshairV.Height = overlayH;
+		_crosshairH.Width = overlayW;
+		// Map current cursor (screen px) to overlay DIPs
+		double cx, cy;
+		if (GetCursorPos(out POINT p))
+		{
+			cx = (p.X - bounds.Left) / scale;
+			cy = (p.Y - bounds.Top) / scale;
+		}
+		else
+		{
+			cx = overlayW / 2.0;
+			cy = overlayH / 2.0;
+		}
+		Canvas.SetLeft(_crosshairV, Math.Round(cx));
+		Canvas.SetTop(_crosshairV, 0);
+		Canvas.SetTop(_crosshairH, Math.Round(cy));
+		Canvas.SetLeft(_crosshairH, 0);
+	}
 
 	private void Window_KeyDown(object sender, KeyRoutedEventArgs e)
 	{
@@ -253,8 +281,9 @@ public sealed partial class RegionSelectionWindow : Window
 
 	private void Overlay_SizeChanged(object sender, SizeChangedEventArgs e)
 	{
-		// Keep crosshair stretched to current size
-		UpdateCrosshair(new Point(e.NewSize.Width / 2.0, e.NewSize.Height / 2.0));
+		// Keep crosshair stretched to current size and at last pointer position (or center)
+		var pos = _lastPointerPos ?? new Point(e.NewSize.Width / 2.0, e.NewSize.Height / 2.0);
+		UpdateCrosshair(pos);
 	}
 
 	private void UpdateCrosshair(Point pos)
@@ -291,8 +320,7 @@ public sealed partial class RegionSelectionWindow : Window
 	{
 		try
 		{
-			IntPtr cur = LoadCursor(IntPtr.Zero, IDC_CROSS);
-			if (cur != IntPtr.Zero) SetCursor(cur);
+			if (CURSOR_CROSS != IntPtr.Zero) SetCursor(CURSOR_CROSS);
 		}
 		catch { }
 	}
@@ -307,9 +335,22 @@ public sealed partial class RegionSelectionWindow : Window
 	{
 		try
 		{
-			IntPtr cur = LoadCursor(IntPtr.Zero, IDC_ARROW);
-			if (cur != IntPtr.Zero) SetCursor(cur);
+			if (CURSOR_ARROW != IntPtr.Zero) SetCursor(CURSOR_ARROW);
 		}
 		catch { }
+	}
+
+	private void Overlay_Loaded(object sender, RoutedEventArgs e)
+	{
+		if (_initialLayoutDone) return;
+		_initialLayoutDone = true;
+		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+		InitializeCrosshairAtCursor(bounds);
+		TryFocusOverlay();
+	}
+
+	private void TryFocusOverlay()
+	{
+		try { _overlay?.Focus(FocusState.Programmatic); } catch { }
 	}
 }
