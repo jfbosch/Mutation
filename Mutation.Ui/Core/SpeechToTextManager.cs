@@ -73,4 +73,19 @@ internal class SpeechToTextManager
 	{
 		_state.StopTranscription();
 	}
+
+	public async Task StopRecordingAsync()
+	{
+		await _state.AudioRecorderLock.WaitAsync().ConfigureAwait(false);
+		try
+		{
+			_audioRecorder?.StopRecording();
+			_audioRecorder?.Dispose();
+			_audioRecorder = null;
+		}
+		finally
+		{
+			_state.AudioRecorderLock.Release();
+		}
+	}
 }

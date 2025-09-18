@@ -26,6 +26,7 @@ public partial class App : Application
 	private Window? _window;
 	private IHost? _host;
 	private const string OpenAiHttpClientName = "openai-http-client";
+	private bool _isShuttingDown = false;
 
 	/// <summary>
 	/// Initializes the singleton application object.  This is the first line of authored code
@@ -301,7 +302,13 @@ public partial class App : Application
 				}
 			}
 
-			_window.Closed += (_, __) => hkManager.Dispose();
+			_window.Closed += async (_, __) =>
+			{
+				// Ensure global hooks are released promptly
+				try { hkManager.Dispose(); } catch { }
+				// Stop background host services and exit the app
+				await ShutdownAsync();
+			};
 		}
 		catch (Exception ex)
 		{
@@ -343,6 +350,36 @@ public partial class App : Application
 					System.Windows.Forms.MessageBoxIcon.Error
 				);
 			}
+		}
+	}
+
+	private async System.Threading.Tasks.Task ShutdownAsync()
+	{
+		if (_isShuttingDown)
+			return;
+		_isShuttingDown = true;
+		try
+		{
+			if (_host is not null)
+			{
+				try
+				{
+					await _host.StopAsync(TimeSpan.FromSeconds(2));
+				}
+				catch { }
+				try
+				{
+					_host.Dispose();
+				}
+				catch { }
+				_host = null;
+			}
+		}
+		finally
+		{
+			// Request application shutdown; if background threads keep process alive,
+			// Exit() will terminate the message loop.
+			try { Exit(); } catch { }
 		}
 	}
 

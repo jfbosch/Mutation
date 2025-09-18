@@ -129,6 +129,21 @@ public sealed partial class MainWindow : Window
 
 	private async void MainWindow_Closed(object sender, WindowEventArgs args)
 	{
+		// Prevent auto actions during shutdown
+		_suppressAutoActions = true;
+		try
+		{
+			// Ensure we are not recording/transcribing when closing
+			if (_speechManager.Recording)
+			{
+				await _speechManager.StopRecordingAsync();
+			}
+			if (_speechManager.Transcribing)
+			{
+				_speechManager.CancelTranscription();
+			}
+		}
+		catch { }
 		_uiStateManager.Save(this);
 
 		if (_activeSpeechService != null)
