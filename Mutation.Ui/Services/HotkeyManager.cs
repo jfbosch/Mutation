@@ -101,7 +101,7 @@ public class HotkeyManager : IDisposable
 		{
 			if (string.IsNullOrWhiteSpace(map.FromHotKey) || string.IsNullOrWhiteSpace(map.ToHotKey))
 				continue;
-			int id = RegisterHotkey(Hotkey.Parse(map.FromHotKey!), () => SendHotkeyAfterDelay(map.ToHotKey!, 25));
+			int id = RegisterHotkey(Hotkey.Parse(map.FromHotKey!), () => SendHotkeyAfterDelay(map.ToHotKey!, Constants.FailureSendHotkeyDelay));
 			_routerIds.Add(id);
 		}
 	}
@@ -143,7 +143,7 @@ public class HotkeyManager : IDisposable
 		if (string.IsNullOrWhiteSpace(hotkey))
 			return;
 
-		string mappedHotkey =  SendKeysMapper.Map(hotkey);
+		string mappedHotkey = SendKeysMapper.Map(hotkey);
 
 		SendKeys.SendWait(mappedHotkey);
 	}

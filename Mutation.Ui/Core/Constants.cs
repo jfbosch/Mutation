@@ -4,4 +4,5 @@ internal static class Constants
 {
 	internal const string SessionsDirectoryName = "Sessions";
 	internal const int SendHotkeyDelay = 100;
+	internal const int FailureSendHotkeyDelay = 50;
 }
