@@ -479,7 +479,7 @@ End of summary.
 				},
 				new LlmSettings.TranscriptFormatRule
 				{
-					Find= "elipsis",
+					Find= "ellipsis",
 					ReplaceWith= $"... ",
 					CaseSensitive = false,
 					MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Smart,

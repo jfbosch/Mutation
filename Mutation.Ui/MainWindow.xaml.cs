@@ -270,13 +270,22 @@ public sealed partial class MainWindow : Window
 				try
 				{
 					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-					//BeepPlayer.Play(BeepType.End);
-					// Set final transcript without triggering TextChanged side-effects
+					// Compute formatted transcript immediately after transcription completes.
+					string formatted = _transcriptFormatter.ApplyRules(text, false);
+
+					// Keep auto-actions suppressed while updating UI and interacting with clipboard/target app
+					// to avoid triggering the debounced TextChanged handler.
+					// Show raw in the main transcript box and formatted in the formatted output box.
 					TxtSpeechToText.Text = text;
+					TxtFormatTranscript.Text = formatted;
+
 					BtnSpeechToText.Content = "Record";
 					BtnSpeechToText.IsEnabled = true;
-					_clipboard.SetText(text);
-					InsertIntoActiveApplication(text);
+
+					// Use formatted text for clipboard and insertion into the active application.
+					_clipboard.SetText(formatted);
+					InsertIntoActiveApplication(formatted);
+
 					BeepPlayer.Play(BeepType.Success);
 					TxtSpeechToText.IsReadOnly = false;
 					_suppressAutoActions = false;
