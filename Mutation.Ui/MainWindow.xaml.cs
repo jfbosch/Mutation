@@ -81,6 +81,11 @@ public sealed partial class MainWindow : Window
 		CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
 		CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
 
+		// After initializing and restoring the active microphone, play a sound
+		// representing the current state (mute/unmute) to reflect actual status.
+		if (_audioDeviceManager.Microphone != null)
+			BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
+
 		this.Closed += MainWindow_Closed;
 	}
 
