@@ -437,11 +437,10 @@ public sealed partial class MainWindow : Window
 			{
 				string raw = TxtSpeechToText.Text;
 				string formatted = _transcriptFormatter.ApplyRules(raw, false);
+				// Update UI preview only; do not modify clipboard or insert into active app here.
 				TxtFormatTranscript.Text = formatted;
-				_clipboard.SetText(formatted);
-				InsertIntoActiveApplication(formatted);
-				// Removed automatic success beep here to avoid duplicate beeps when
-				// transcription completes (success is played explicitly at completion).
+				// Intentionally do not call _clipboard.SetText or InsertIntoActiveApplication here.
+				// Insertion/clipboard updates happen on transcription completion to avoid duplicates.
 			}
 		}
 		catch (TaskCanceledException) { }

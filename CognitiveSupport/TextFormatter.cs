@@ -78,21 +78,25 @@ namespace CognitiveSupport
 		private static string CleanLine(
 			string line)
 		{
-			//line = line.RemovePrefix(", ");
-			//line = line.RemovePrefix(". ");
-			//line = line.RemovePrefix("; ");
+			if (line is null)
+				return line;
 
+			// Trim outer whitespace first
+			string output = line.Trim();
 
-			//line = line.Replace("- , ", "- ");
-			//line = line.Replace("- . ", "- ");
-			//line = line.Replace("- ; ", "- ");
+			// Remove simple leading punctuation prefixes like ", ", ". ", "; ", ": "
+			output = Regex.Replace(output, "^[,.;:]\\s+", string.Empty);
 
-			//line = line.Replace(", : ,", ":");
-			//line = line.Replace(". : .", ":");
-			//line = line.Replace(". : ,", ":");
-			//line = line.Replace(", : .", ":");
+			// Normalize bullet lines: "- , ", "- . ", "- ; ", "- : " → "- "
+			output = Regex.Replace(output, "^-\\s*[,.;:]\\s*", "- ");
 
-			return line;
+			// Clean a few known colon artifacts
+			output = output.Replace(", : ,", ":")
+						 .Replace(". : .", ":")
+						 .Replace(". : ,", ":")
+						 .Replace(", : .", ":");
+
+			return output;
 		}
 
 		public static string FormatWithRule(
