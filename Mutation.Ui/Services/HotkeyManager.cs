@@ -213,22 +213,52 @@ public class HotkeyManager : IDisposable
 
 	private static void SendKeysOnUiThread(string mapped)
 	{
+		// This used to block the calling thread with a ManualResetEvent and a 5s timeout
+		// which consistently timed out (delegate never executed on expected context).
+		// We now simply marshal to the captured SynchronizationContext (if any) in a
+		// fire-and-forget manner; if none is available we execute inline. This avoids
+		// deadlocks / timeouts and is more in line with modern async patterns.
 		try
 		{
-			if (s_uiCtx is null)
+			if (string.IsNullOrEmpty(mapped)) return;
+			// If no UI context was captured or we're already on it, just send directly
+			if (s_uiCtx is null || SynchronizationContext.Current == s_uiCtx)
 			{
 				System.Windows.Forms.SendKeys.SendWait(mapped);
 				return;
 			}
-			using var evt = new ManualResetEvent(false);
-			s_uiCtx.Post(_ =>
-			{
-				try { System.Windows.Forms.SendKeys.SendWait(mapped); }
-				finally { evt.Set(); }
-			}, null);
-			evt.WaitOne(5000);
+			// Post asynchronously; no need to wait/block.
+			_ = PostSendKeysAsync(mapped);
 		}
-		catch { }
+		catch { /* swallow intentionally as this is a best-effort fallback path */ }
+	}
+
+	private static Task PostSendKeysAsync(string mapped)
+	{
+		var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		try
+		{
+			s_uiCtx!.Post(_ =>
+			{
+				try
+				{
+					System.Windows.Forms.SendKeys.SendWait(mapped);
+					tcs.SetResult(null);
+				}
+				catch (Exception ex)
+				{
+					// Do not rethrow; log if desired.
+					Log($"SendKeys (fallback) failed: {ex.Message}");
+					if (!tcs.Task.IsCompleted) tcs.SetException(ex);
+				}
+			}, null);
+		}
+		catch (Exception ex)
+		{
+			Log($"Failed to post SendKeys: {ex.Message}");
+			if (!tcs.Task.IsCompleted) tcs.SetException(ex);
+		}
+		return tcs.Task;
 	}
 
 	public static void SendText(string text)
