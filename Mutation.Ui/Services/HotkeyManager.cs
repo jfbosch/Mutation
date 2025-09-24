@@ -2,11 +2,11 @@
 using Microsoft.UI.Xaml;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using WinRT.Interop;
-using System.IO;
 
 namespace Mutation.Ui.Services;
 
@@ -213,15 +213,9 @@ public class HotkeyManager : IDisposable
 
 	private static void SendKeysOnUiThread(string mapped)
 	{
-		// This used to block the calling thread with a ManualResetEvent and a 5s timeout
-		// which consistently timed out (delegate never executed on expected context).
-		// We now simply marshal to the captured SynchronizationContext (if any) in a
-		// fire-and-forget manner; if none is available we execute inline. This avoids
-		// deadlocks / timeouts and is more in line with modern async patterns.
 		try
 		{
 			if (string.IsNullOrEmpty(mapped)) return;
-			// If no UI context was captured or we're already on it, just send directly
 			if (s_uiCtx is null || SynchronizationContext.Current == s_uiCtx)
 			{
 				System.Windows.Forms.SendKeys.SendWait(mapped);
@@ -389,9 +383,9 @@ public class HotkeyManager : IDisposable
 	{
 		// Extended key flag for navigation cluster and some others
 		return vk is 0x21 /*PGUP*/ or 0x22 /*PGDN*/ or 0x23 /*END*/ or 0x24 /*HOME*/
-			   or 0x25 /*LEFT*/ or 0x26 /*UP*/ or 0x27 /*RIGHT*/ or 0x28 /*DOWN*/
-			   or 0x2D /*INSERT*/ or 0x2E /*DELETE*/ or 0x5B /*LWIN*/ or 0x5C /*RWIN*/
-			   or 0xA1 /*RSHIFT*/ or 0xA3 /*RCONTROL*/ or 0xA5 /*RMENU(ALT)*/;
+				or 0x25 /*LEFT*/ or 0x26 /*UP*/ or 0x27 /*RIGHT*/ or 0x28 /*DOWN*/
+				or 0x2D /*INSERT*/ or 0x2E /*DELETE*/ or 0x5B /*LWIN*/ or 0x5C /*RWIN*/
+				or 0xA1 /*RSHIFT*/ or 0xA3 /*RCONTROL*/ or 0xA5 /*RMENU(ALT)*/;
 	}
 
 	private static void WaitForModifierRelease(int timeoutMs)
