@@ -9,16 +9,18 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="Mutation Assistant"
-    MinHeight="600"
-    MinWidth="640"
-    Background="{StaticResource SurfaceBrush}">
+    Title="Mutation Assistant">
 
     <Window.SystemBackdrop>
         <MicaBackdrop Kind="BaseAlt" />
     </Window.SystemBackdrop>
 
-    <Grid Background="{StaticResource SurfaceBrush}" RowSpacing="16">
+    <Grid
+        x:Name="RootLayout"
+        Background="{StaticResource SurfaceBrush}"
+        MinHeight="600"
+        MinWidth="640"
+        RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
