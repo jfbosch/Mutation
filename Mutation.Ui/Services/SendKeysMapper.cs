@@ -5,10 +5,6 @@ using System.Globalization;
 
 namespace Mutation.Ui.Services;
 
-/// <summary>
-/// Maps human-friendly key chords (e.g. "Ctrl+Delete", "Ctrl++", "Ctrl+C, Ctrl+V")
-/// to Windows Forms SendKeys format (e.g. "^{DEL}", "^{+}", "^c^v").
-/// </summary>
 public static class SendKeysMapper
 {
 	// Modifiers in canonical order for stable output
@@ -117,11 +113,6 @@ public static class SendKeysMapper
 		["GREATERTHAN"] = ">"
 	};
 
-	/// <summary>
-	/// Convert a human-friendly chord or sequence into a SendKeys string.
-	/// - Returns input unchanged if it already looks like SendKeys.
-	/// - Accepts comma-separated sequence of chords, e.g. "Ctrl+C, Ctrl+V".
-	/// </summary>
 	public static string Map(string input)
 	{
 		if (input is null)
@@ -130,11 +121,9 @@ public static class SendKeysMapper
 		if (input.Length == 0)
 			throw new ArgumentException("Input cannot be empty.", nameof(input));
 
-		// If it already looks like SendKeys, trust the caller and return as-is
 		if (LooksLikeSendKeys(input))
 			return input;
 
-		// Split multiple chords by comma
 		var parts = SplitByComma(input);
 		var result = new System.Text.StringBuilder(input.Length * 2);
 
@@ -165,7 +154,6 @@ public static class SendKeysMapper
 		{
 			var norm = Normalize(token);
 
-			// Modifiers
 			if (IsCtrl(norm))
 			{
 				hasCtrl = true;
@@ -201,21 +189,18 @@ public static class SendKeysMapper
 				continue;
 			}
 
-			// F-keys
 			if (TryMapFunctionKey(norm, out var fKey))
 			{
 				keys.Add(fKey);
 				continue;
 			}
 
-			// Dictionary of known names/synonyms
 			if (KeyMap.TryGetValue(norm, out var mapped))
 			{
 				keys.Add(EscapeIfReserved(mapped));
 				continue;
 			}
 
-			// Single char literal (letters/digits/some punctuation)
 			if (TrySingleCharLiteral(token, out var literal))
 			{
 				keys.Add(EscapeIfReserved(literal));
@@ -330,7 +315,6 @@ public static class SendKeysMapper
 			tokenIndex++;
 		}
 
-		// Remove empty tokens created by stray separators
 		for (int t = tokens.Count - 1; t >= 0; t--)
 		{
 			if (string.IsNullOrWhiteSpace(tokens[t]))
@@ -415,14 +399,12 @@ public static class SendKeysMapper
 			return char.IsLetter(ch) ? char.ToLowerInvariant(ch) : ch;
 		}
 
-		// Lone single visible character
 		if (t.Length == 1)
 		{
 			literal = LowerIfLetter(t[0]).ToString();
 			return true;
 		}
 
-		// Quoted single char like "'" or "\""
 		if (t.Length == 3 && t[0] == '"' && t[2] == '"')
 		{
 			literal = LowerIfLetter(t[1]).ToString();

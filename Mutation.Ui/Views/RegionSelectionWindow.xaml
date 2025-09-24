@@ -7,30 +7,26 @@
     mc:Ignorable="d"
     Title="Select Region">
     <Grid Background="Transparent" UseLayoutRounding="True">
-        <!-- Full screenshot image -->
         <Image x:Name="Img" Stretch="Fill">
             <Image.CacheMode>
                 <BitmapCache />
             </Image.CacheMode>
         </Image>
 
-        <!-- Interactive overlay: selection + crosshair -->
-    <Canvas x:Name="Overlay" Background="Transparent"
-        IsTabStop="True"
-                PointerPressed="Overlay_PointerPressed"
-                PointerMoved="Overlay_PointerMoved"
-                PointerReleased="Overlay_PointerReleased"
-        PointerCanceled="Overlay_PointerCanceled"
-        PointerCaptureLost="Overlay_PointerCaptureLost"
-        PointerEntered="Overlay_PointerEntered"
-        PointerExited="Overlay_PointerExited"
-                SizeChanged="Overlay_SizeChanged"
-        Loaded="Overlay_Loaded"
-        KeyDown="Window_KeyDown">
-            <!-- Selection rectangle -->
+        <Canvas x:Name="Overlay" Background="Transparent"
+            IsTabStop="True"
+            PointerPressed="Overlay_PointerPressed"
+            PointerMoved="Overlay_PointerMoved"
+            PointerReleased="Overlay_PointerReleased"
+            PointerCanceled="Overlay_PointerCanceled"
+            PointerCaptureLost="Overlay_PointerCaptureLost"
+            PointerEntered="Overlay_PointerEntered"
+            PointerExited="Overlay_PointerExited"
+            SizeChanged="Overlay_SizeChanged"
+            Loaded="Overlay_Loaded"
+            KeyDown="Window_KeyDown">
             <Rectangle x:Name="Selection" Stroke="#FFFFC300" StrokeThickness="4" Fill="#33FFFFFF" Visibility="Collapsed" Canvas.ZIndex="10"/>
 
-            <!-- Crosshair lines spanning the screen -->
             <Rectangle x:Name="CrosshairV" Width="2" Fill="#FFFFC300" IsHitTestVisible="False" Canvas.ZIndex="20"/>
             <Rectangle x:Name="CrosshairH" Height="2" Fill="#FFFFC300" IsHitTestVisible="False" Canvas.ZIndex="20"/>
         </Canvas>

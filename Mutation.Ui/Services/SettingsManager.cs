@@ -101,7 +101,6 @@ internal class SettingsManager : ISettingsManager
 		}
 
 
-		//--------------------------------------
 		if (settings.AudioSettings is null)
 		{
 			settings.AudioSettings = new AudioSettings();
@@ -228,7 +227,6 @@ internal class SettingsManager : ISettingsManager
 		}
 
 
-		//----------------------------------
 		if (settings.SpeetchToTextSettings is null)
 		{
 			settings.SpeetchToTextSettings = new SpeetchToTextSettings();
@@ -270,8 +268,6 @@ internal class SettingsManager : ISettingsManager
 			if (string.IsNullOrWhiteSpace(s.SpeechToTextPrompt))
 			{
 				s.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro.";
-				// This is optional, so we don't need to flag that something was missing.
-				//somethingWasMissing = true;
 			}
 			if (s.TimeoutSeconds <= 0)
 			{
@@ -303,7 +299,6 @@ internal class SettingsManager : ISettingsManager
 		}
 
 
-		//-------------------------------
 		if (settings.LlmSettings is null)
 		{
 			settings.LlmSettings = new LlmSettings();
@@ -324,7 +319,6 @@ internal class SettingsManager : ISettingsManager
 
 		if (string.IsNullOrWhiteSpace(llmSettings.FormatTranscriptPrompt))
 		{
-			//TODO: formatting is now done with normal code, so this should be deleted.
 
 			llmSettings.FormatTranscriptPrompt = @"You are a helpful proofreader and editor. When you are asked to format a transcript, apply the following rules to improve the formatting of the text:
 Replace the words 'new line' (case insensitive) with an actual new line character, and replace the words 'new paragraph' (case insensitive) with 2 new line characters, and replace the words 'new bullet' (case insensitive) with a newline character and a bullet character, eg. '- ', and end the preceding sentence with a full stop '.', and start the new sentence with a capital letter, and do not make any other changes.
@@ -348,11 +342,8 @@ Depending on the results, this might include:
 Collaboration among various healthcare professionals ensures that the information gleaned from the radiology report is utilized to provide the most effective and individualized care tailored to your specific condition and needs.
 End of summary.
 ";
-			// No need to mark something as missing.
-			//somethingWasMissing = true;
 		}
 
-		// Review transcript prompt default removed; review functionality deprecated.
 
 
 		if (llmSettings.ModelDeploymentIdMaps == null || !llmSettings.ModelDeploymentIdMaps.Any())
@@ -371,8 +362,6 @@ End of summary.
 				},
 			};
 
-			// no need to flag as we set defaults.
-			//somethingWasMissing = true;
 		}
 
 		if (llmSettings.TranscriptFormatRules == null || !llmSettings.TranscriptFormatRules.Any())
@@ -495,11 +484,8 @@ End of summary.
 
 			};
 
-			// No need to flag something as missing as we set defaults.
-			//somethingWasMissing = true;
 		}
 
-		//----------------------------------
 		if (settings.TextToSpeechSettings is null)
 		{
 			settings.TextToSpeechSettings = new TextToSpeechSettings();
@@ -515,7 +501,6 @@ End of summary.
 		if (settings.HotKeyRouterSettings is null || !settings.HotKeyRouterSettings.Mappings.Any())
 		{
 			settings.HotKeyRouterSettings = new();
-			// Add a sample hotkey router mapping.
 			settings.HotKeyRouterSettings.Mappings.Add
 			(
 				new HotKeyRouterSettings.HotKeyRouterMap("CONTROL+SHIFT+ALT+8", "CONTROL+SHIFT+ALT+9")
@@ -534,34 +519,28 @@ End of summary.
 		if (!(jObj["SpeetchToTextSettings"] is JObject settings))
 			return;
 
-		// Check if the JSON is already in the desired format.
-		// Here, we assume correctness if a "Services" property (as an array) exists.
 		if (settings["Services"] == null || settings["Services"].Type != JTokenType.Array)
 		{
 			string providerName = settings.Value<string>("Service") ?? "";
 
-			// Create the new service object and migrate the relevant properties.
 			JObject serviceObj = new JObject
 			{
-				["Name"] = providerName,             // Use the provider name as the service Name.
-				["Provider"] = providerName,         // Also set the Provider.
+				["Name"] = providerName,
+				["Provider"] = providerName,
 				["ApiKey"] = settings["ApiKey"],
 				["BaseDomain"] = settings["BaseDomain"],
 				["ModelId"] = settings["ModelId"],
 				["SpeechToTextPrompt"] = settings["SpeechToTextPrompt"]
 			};
 
-			// Create a new services array with the service object as the first element.
 			JArray servicesArray = new JArray { serviceObj };
 
-			// Remove the migrated properties from the root of SpeetchToTextSettings.
 			settings.Remove("Service");
 			settings.Remove("ApiKey");
 			settings.Remove("BaseDomain");
 			settings.Remove("ModelId");
 			settings.Remove("SpeechToTextPrompt");
 
-			// Add the new properties: the active service and the services array.
 			settings["ActiveSpeetchToTextService"] = providerName;
 			settings["Services"] = servicesArray;
 		}

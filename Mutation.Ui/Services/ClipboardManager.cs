@@ -6,9 +6,6 @@ using Windows.Storage.Streams;
 
 namespace Mutation.Ui.Services;
 
-/// <summary>
-/// Provides clipboard helpers for WinUI.
-/// </summary>
 public class ClipboardManager
 {
 	public async Task<SoftwareBitmap?> TryGetImageAsync(int attempts = 5, int delayMs = 150)

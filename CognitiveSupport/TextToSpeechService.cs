@@ -16,11 +16,6 @@ namespace CognitiveSupport
 
 				synth.Speak(text);
 
-				//var voices = synth.GetInstalledVoices();
-				//string voiceNames = "";
-				//foreach (var voice in voices)
-				//	voiceNames += voice.VoiceInfo.Name + Environment.NewLine;
-				//MessageBox.Show(voiceNames, "Available Voices");
 			}
 
 		}

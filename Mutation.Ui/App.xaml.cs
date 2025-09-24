@@ -13,37 +13,23 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
-
 namespace Mutation.Ui;
 
-/// <summary>
-/// Provides application-specific behavior to supplement the default Application class.
-/// </summary>
 public partial class App : Application
 {
-	private Window? _window;
+        private Window? _window;
 	private IHost? _host;
 	private const string OpenAiHttpClientName = "openai-http-client";
 	private bool _isShuttingDown = false;
 
-	/// <summary>
-	/// Initializes the singleton application object.  This is the first line of authored code
-	/// executed, and as such is the logical equivalent of main() or WinMain().
-	/// </summary>
-	public App()
-	{
+        public App()
+        {
 
-	}
+        }
 
-	/// <summary>
-	/// Invoked when the application is launched.
-	/// </summary>
-	/// <param name="args">Details about the launch request and process.</param>
-	protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
-	{
-		try
+        protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        {
+                try
 		{
 			HostApplicationBuilder builder = Host.CreateApplicationBuilder();
 
@@ -77,8 +63,7 @@ public partial class App : Application
 							 settings.LlmSettings?.ResourceName ?? string.Empty,
 							 settings.LlmSettings?.ModelDeploymentIdMaps ?? new List<LlmSettings.ModelDeploymentIdMap>()));
 			builder.Services.AddSingleton<TranscriptFormatter>();
-			// TranscriptReviewer and review transcript UI removed
-			builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
+                        builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 			builder.Services.AddHttpClient(OpenAiHttpClientName);
 			AddSpeechToTextServices(builder, settings);
 			builder.Services.AddSingleton<MainWindow>();
@@ -91,8 +76,7 @@ public partial class App : Application
 
 			_window.Activate();
 
-			// Preflight: check if screen capture via GDI works to avoid surprises
-			var preflight = ScreenCapturePreflight.TryCaptureProbe();
+                        var preflight = ScreenCapturePreflight.TryCaptureProbe();
 			if (!preflight.ok)
 			{
 				string title = "Screen Capture Disabled";
@@ -151,8 +135,7 @@ public partial class App : Application
 			var ocrMgr = _host.Services.GetRequiredService<OcrManager>();
 			ocrMgr.InitializeWindow(_window);
 
-			// Register global hotkeys
-			var hkManager = _host.Services.GetRequiredService<HotkeyManager>();
+                        var hkManager = _host.Services.GetRequiredService<HotkeyManager>();
 			var settingsSvc = _host.Services.GetRequiredService<Settings>();
 
 			if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotHotKey))

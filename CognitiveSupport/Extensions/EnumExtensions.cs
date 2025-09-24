@@ -5,9 +5,6 @@ namespace CognitiveSupport.Extensions;
 
 public static class EnumExtensions
 {
-	/// <summary>
-	/// Returns the string specified in [EnumMember(Value = "...")], or the enum member name if no attribute is present.
-	/// </summary>
 	public static string ToEnumMemberValue<TEnum>(this TEnum enumValue)
 		 where TEnum : struct, Enum
 	{

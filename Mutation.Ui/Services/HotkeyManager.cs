@@ -21,9 +21,6 @@ public class HotkeyManager : IDisposable
 	private IntPtr _prevWndProc;
 	private WndProcDelegate? _newWndProc;
 
-	/// <summary>
-	/// Gets the list of hotkeys that failed to register.
-	/// </summary>
 	public List<string> FailedRegistrations { get; } = new();
 
 	private const int WM_HOTKEY = 0x0312;
@@ -313,12 +310,9 @@ public class HotkeyManager : IDisposable
 		if (needAlt) inputs.Add(KeyDown(VK_MENU));
 		if (needWin) inputs.Add(KeyDown(VK_LWIN));
 
-		// Press primary key
 		inputs.Add(KeyDown((ushort)hotkey.Key));
-		// Release primary key
 		inputs.Add(KeyUp((ushort)hotkey.Key));
 
-		// Release modifiers in reverse order
 		if (hotkey.Win) inputs.Add(KeyUp(VK_LWIN));
 		if (hotkey.Alt) inputs.Add(KeyUp(VK_MENU));
 		if (hotkey.Shift) inputs.Add(KeyUp(VK_SHIFT));
@@ -335,7 +329,6 @@ public class HotkeyManager : IDisposable
 		return ok;
 	}
 
-	// Virtual-key codes for common modifiers
 	private const ushort VK_CONTROL = 0x11;
 	private const ushort VK_SHIFT = 0x10;
 	private const ushort VK_MENU = 0x12; // ALT
