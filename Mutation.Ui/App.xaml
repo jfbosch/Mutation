@@ -75,17 +75,11 @@
 
             <!-- Button Styles -->
             <Style x:Key="BaseButtonStyle" TargetType="Button">
-                <Style.Resources>
-                    <SolidColorBrush x:Key="ButtonNormalBackgroundBrush" Color="{StaticResource SecondaryColor}" />
-                    <SolidColorBrush x:Key="ButtonPointerOverBackgroundBrush" Color="{StaticResource SecondaryColorHover}" />
-                    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource PrimaryColorPressed}" />
-                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource BorderColor}" />
-                </Style.Resources>
                 <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
                 <Setter Property="FontSize" Value="14" />
-                <Setter Property="Background" Value="{StaticResource ButtonNormalBackgroundBrush}" />
+                <Setter Property="Background" Value="{StaticResource SecondaryBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Padding" Value="16,12" />
                 <Setter Property="CornerRadius" Value="10" />
@@ -115,10 +109,6 @@
                                 <VisualStateGroup x:Name="CommonStates">
                                     <VisualState x:Name="Normal">
                                         <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
-                                                                           Storyboard.TargetProperty="Background">
-                                                <DiscreteObjectKeyFrame Value="{StaticResource ButtonNormalBackgroundBrush}" />
-                                            </ObjectAnimationUsingKeyFrames>
                                             <DoubleAnimation Storyboard.TargetName="ScaleTransform"
                                                              Storyboard.TargetProperty="ScaleX"
                                                              To="1"
@@ -139,10 +129,6 @@
                                     </VisualState>
                                     <VisualState x:Name="PointerOver">
                                         <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
-                                                                           Storyboard.TargetProperty="Background">
-                                                <DiscreteObjectKeyFrame Value="{StaticResource ButtonPointerOverBackgroundBrush}" />
-                                            </ObjectAnimationUsingKeyFrames>
                                             <DoubleAnimation Storyboard.TargetName="ScaleTransform"
                                                              Storyboard.TargetProperty="ScaleX"
                                                              To="1.02"
@@ -155,10 +141,6 @@
                                     </VisualState>
                                     <VisualState x:Name="Pressed">
                                         <Storyboard>
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
-                                                                           Storyboard.TargetProperty="Background">
-                                                <DiscreteObjectKeyFrame Value="{StaticResource ButtonPressedBackgroundBrush}" />
-                                            </ObjectAnimationUsingKeyFrames>
                                             <DoubleAnimation Storyboard.TargetName="ScaleTransform"
                                                              Storyboard.TargetProperty="ScaleX"
                                                              To="0.98"
@@ -215,36 +197,21 @@
             </Style>
 
             <Style x:Key="AccentButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-                <Style.Resources>
-                    <SolidColorBrush x:Key="ButtonNormalBackgroundBrush" Color="{StaticResource PrimaryColor}" />
-                    <SolidColorBrush x:Key="ButtonPointerOverBackgroundBrush" Color="{StaticResource PrimaryColorHover}" />
-                    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource PrimaryColorPressed}" />
-                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource PrimaryColor}" />
-                </Style.Resources>
+                <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource OnPrimaryBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
             </Style>
 
             <Style x:Key="OutlinedButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-                <Style.Resources>
-                    <SolidColorBrush x:Key="ButtonNormalBackgroundBrush" Color="{StaticResource SurfaceColor}" />
-                    <SolidColorBrush x:Key="ButtonPointerOverBackgroundBrush" Color="{StaticResource SecondaryColor}" />
-                    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource SecondaryColorHover}" />
-                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource BorderColor}" />
-                </Style.Resources>
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
             </Style>
 
             <Style x:Key="SubtleButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-                <Style.Resources>
-                    <SolidColorBrush x:Key="ButtonNormalBackgroundBrush" Color="{StaticResource SecondaryColor}" />
-                    <SolidColorBrush x:Key="ButtonPointerOverBackgroundBrush" Color="{StaticResource SecondaryColorHover}" />
-                    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource SecondaryColor}" />
-                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource SecondaryColor}" />
-                </Style.Resources>
+                <Setter Property="Background" Value="{StaticResource SecondaryBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource SecondaryBrush}" />
             </Style>
 
             <Style TargetType="ToggleButton" BasedOn="{StaticResource BaseButtonStyle}" />

@@ -13,7 +13,7 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid Background="{ThemeResource AppBackgroundBrush}" KeyboardNavigation.TabNavigation="Cycle">
+    <Grid Background="{ThemeResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -98,8 +98,8 @@
                                             x:Name="BtnToggleMicIcon"
                                             Glyph="&#xE720;"
                                             FontFamily="Segoe Fluent Icons"
-                                            AutomationProperties.IsInAccessibleTree="False" />
-                                        <TextBlock x:Name="BtnToggleMicLabel" Text="Mute microphone" AutomationProperties.IsInAccessibleTree="False" />
+                                        />
+                                        <TextBlock x:Name="BtnToggleMicLabel" Text="Mute microphone" />
                                     </StackPanel>
                                 </Button>
                             </Grid>
@@ -144,8 +144,8 @@
                                             x:Name="BtnSpeechToTextIcon"
                                             Glyph="&#xE768;"
                                             FontFamily="Segoe Fluent Icons"
-                                            AutomationProperties.IsInAccessibleTree="False" />
-                                        <TextBlock x:Name="BtnSpeechToTextLabel" Text="Start recording" AutomationProperties.IsInAccessibleTree="False" />
+                                        />
+                                        <TextBlock x:Name="BtnSpeechToTextLabel" Text="Start recording" />
                                     </StackPanel>
                                 </Button>
                             </Grid>
@@ -208,8 +208,8 @@
                                     AutomationProperties.Name="Format transcript"
                                     ToolTipService.ToolTip="Apply local formatting rules to the transcript">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8A1;" FontFamily="Segoe Fluent Icons" AutomationProperties.IsInAccessibleTree="False" />
-                                        <TextBlock Text="Format transcript" AutomationProperties.IsInAccessibleTree="False" />
+                                        <FontIcon Glyph="&#xE8A1;" FontFamily="Segoe Fluent Icons" />
+                                        <TextBlock Text="Format transcript" />
                                     </StackPanel>
                                 </Button>
 
@@ -221,8 +221,8 @@
                                     AutomationProperties.Name="Format transcript with LLM"
                                     ToolTipService.ToolTip="Send transcript through the configured language model">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe Fluent Icons" AutomationProperties.IsInAccessibleTree="False" />
-                                        <TextBlock Text="LLM formatting" AutomationProperties.IsInAccessibleTree="False" />
+                                        <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe Fluent Icons" />
+                                        <TextBlock Text="LLM formatting" />
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -254,8 +254,8 @@
                                     AutomationProperties.Name="Screenshot to clipboard"
                                     ToolTipService.ToolTip="Copy a screenshot directly to the clipboard">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE70F;" FontFamily="Segoe Fluent Icons" AutomationProperties.IsInAccessibleTree="False" />
-                                        <TextBlock Text="Screenshot to clipboard" AutomationProperties.IsInAccessibleTree="False" />
+                                        <FontIcon Glyph="&#xE70F;" FontFamily="Segoe Fluent Icons" />
+                                        <TextBlock Text="Screenshot to clipboard" />
                                     </StackPanel>
                                 </Button>
 
@@ -267,8 +267,8 @@
                                     AutomationProperties.Name="Screenshot and OCR"
                                     ToolTipService.ToolTip="Capture a screenshot and extract text automatically">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" AutomationProperties.IsInAccessibleTree="False" />
-                                        <TextBlock Text="Screenshot &amp; OCR" AutomationProperties.IsInAccessibleTree="False" />
+                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" />
+                                        <TextBlock Text="Screenshot &amp; OCR" />
                                     </StackPanel>
                                 </Button>
 
@@ -280,8 +280,8 @@
                                     AutomationProperties.Name="OCR clipboard"
                                     ToolTipService.ToolTip="Run OCR on an image stored in the clipboard">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" AutomationProperties.IsInAccessibleTree="False" />
-                                        <TextBlock Text="OCR clipboard" AutomationProperties.IsInAccessibleTree="False" />
+                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" />
+                                        <TextBlock Text="OCR clipboard" />
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -323,8 +323,8 @@
                                         AutomationProperties.Name="Copy clipboard text"
                                         ToolTipService.ToolTip="Copy the clipboard text to the system clipboard">
                                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <FontIcon Glyph="&#xE8C8;" FontFamily="Segoe Fluent Icons" AutomationProperties.IsInAccessibleTree="False" />
-                                            <TextBlock Text="Copy text" AutomationProperties.IsInAccessibleTree="False" />
+                                            <FontIcon Glyph="&#xE8C8;" FontFamily="Segoe Fluent Icons" />
+                                            <TextBlock Text="Copy text" />
                                         </StackPanel>
                                     </Button>
 
@@ -336,8 +336,8 @@
                                         AutomationProperties.Name="Speak clipboard text"
                                         ToolTipService.ToolTip="Play the clipboard text using text-to-speech">
                                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <FontIcon Glyph="&#xE76E;" FontFamily="Segoe Fluent Icons" AutomationProperties.IsInAccessibleTree="False" />
-                                            <TextBlock Text="Speak clipboard" AutomationProperties.IsInAccessibleTree="False" />
+                                            <FontIcon Glyph="&#xE76E;" FontFamily="Segoe Fluent Icons" />
+                                            <TextBlock Text="Speak clipboard" />
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>

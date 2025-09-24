@@ -431,7 +431,7 @@ public sealed partial class MainWindow : Window
 		StatusInfoBar.Visibility = Visibility.Collapsed;
 	}
 
-	private void StatusInfoBar_CloseButtonClick(InfoBar sender, InfoBarCloseButtonClickEventArgs args)
+	private void StatusInfoBar_CloseButtonClick(InfoBar sender, object args)
 	{
 		_statusDismissTimer.Stop();
 		StatusInfoBar.IsOpen = false;
