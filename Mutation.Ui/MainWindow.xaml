@@ -194,7 +194,7 @@
                                 AutomationProperties.Name="Formatting prompt"
                                 AutomationProperties.HelpText="Provide instructions for formatting the transcript." />
 
-                            <muxc:WrapPanel Spacing="12">
+                            <StackPanel x:Name="FormattingActionsPanel" Orientation="Horizontal" Spacing="12">
                                 <Button
                                     x:Name="BtnFormatTranscript"
                                     Click="BtnFormatTranscript_Click"
@@ -226,7 +226,7 @@
                                         <ToolTip Content="Format transcript with AI assistance (Alt+L)" />
                                     </ToolTipService.ToolTip>
                                 </Button>
-                            </muxc:WrapPanel>
+                            </StackPanel>
 
                             <TextBox
                                 x:Name="TxtFormatTranscript"
@@ -260,7 +260,7 @@
                                 </StackPanel>
                             </StackPanel>
 
-                            <muxc:WrapPanel Spacing="12">
+                            <StackPanel x:Name="UtilitiesActionsPanel" Orientation="Horizontal" Spacing="12">
                                 <Button
                                     x:Name="BtnScreenshot"
                                     Click="BtnScreenshot_Click"
@@ -308,7 +308,7 @@
                                         <ToolTip Content="Run OCR on clipboard (Alt+C)" />
                                     </ToolTipService.ToolTip>
                                 </Button>
-                            </muxc:WrapPanel>
+                            </StackPanel>
 
                             <TextBox
                                 x:Name="TxtOcr"
@@ -327,7 +327,7 @@
                                 AutomationProperties.Name="Clipboard text"
                                 AutomationProperties.HelpText="Review and edit the text currently in your clipboard." />
 
-                            <muxc:WrapPanel Spacing="12">
+                            <StackPanel x:Name="ClipboardActionsPanel" Orientation="Horizontal" Spacing="12">
                                 <Button
                                     Click="CopyText_Click"
                                     AccessKey="P"
@@ -358,7 +358,7 @@
                                         <ToolTip Content="Speak the clipboard text (Alt+T)" />
                                     </ToolTipService.ToolTip>
                                 </Button>
-                            </muxc:WrapPanel>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -375,6 +375,9 @@
                                     <Setter Target="UtilitiesPanel.(Grid.Row)" Value="2" />
                                     <Setter Target="UtilitiesPanel.(Grid.Column)" Value="0" />
                                     <Setter Target="UtilitiesPanel.(Grid.ColumnSpan)" Value="2" />
+                                    <Setter Target="FormattingActionsPanel.Orientation" Value="Vertical" />
+                                    <Setter Target="UtilitiesActionsPanel.Orientation" Value="Vertical" />
+                                    <Setter Target="ClipboardActionsPanel.Orientation" Value="Vertical" />
                                 </VisualState.Setters>
                             </VisualState>
                             <VisualState x:Name="WideState">
@@ -388,6 +391,9 @@
                                     <Setter Target="UtilitiesPanel.(Grid.Row)" Value="1" />
                                     <Setter Target="UtilitiesPanel.(Grid.Column)" Value="0" />
                                     <Setter Target="UtilitiesPanel.(Grid.ColumnSpan)" Value="2" />
+                                    <Setter Target="FormattingActionsPanel.Orientation" Value="Horizontal" />
+                                    <Setter Target="UtilitiesActionsPanel.Orientation" Value="Horizontal" />
+                                    <Setter Target="ClipboardActionsPanel.Orientation" Value="Horizontal" />
                                 </VisualState.Setters>
                             </VisualState>
                         </VisualStateGroup>

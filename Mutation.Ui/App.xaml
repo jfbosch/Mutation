@@ -54,16 +54,6 @@
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="HorizontalAlignment" Value="Stretch" />
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Setter Property="BackgroundTransition">
-                    <Setter.Value>
-                        <BrushTransition Duration="0:0:0.2" />
-                    </Setter.Value>
-                </Setter>
-                <Setter Property="BorderBrushTransition">
-                    <Setter.Value>
-                        <BrushTransition Duration="0:0:0.2" />
-                    </Setter.Value>
-                </Setter>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
