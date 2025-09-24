@@ -9,6 +9,284 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Color palette -->
+            <Color x:Key="PrimaryColor">#FF4C6EF5</Color>
+            <Color x:Key="PrimaryColorHover">#FF6A86FB</Color>
+            <Color x:Key="PrimaryColorPressed">#FF3C59D7</Color>
+            <Color x:Key="SecondaryColor">#FFE8EDFF</Color>
+            <Color x:Key="SecondaryColorHover">#FFD7DEFF</Color>
+            <Color x:Key="SurfaceColor">#FFFFFFFF</Color>
+            <Color x:Key="AppBackgroundColor">#FFF7F8FC</Color>
+            <Color x:Key="OnPrimaryColor">#FFFFFFFF</Color>
+            <Color x:Key="OnSurfaceColor">#FF1C2333</Color>
+            <Color x:Key="SecondaryTextColor">#FF4A5368</Color>
+            <Color x:Key="BorderColor">#FFD6DAE8</Color>
+            <Color x:Key="FocusColor">#FF254EDB</Color>
+            <Color x:Key="SuccessColor">#FF2EA94D</Color>
+            <Color x:Key="WarningColor">#FFE3A400</Color>
+            <Color x:Key="ErrorColor">#FFD64545</Color>
+
+            <!-- Brushes -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
+            <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{StaticResource PrimaryColorHover}" />
+            <SolidColorBrush x:Key="PrimaryPressedBrush" Color="{StaticResource PrimaryColorPressed}" />
+            <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SecondaryColor}" />
+            <SolidColorBrush x:Key="SecondaryHoverBrush" Color="{StaticResource SecondaryColorHover}" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
+            <SolidColorBrush x:Key="OnPrimaryBrush" Color="{StaticResource OnPrimaryColor}" />
+            <SolidColorBrush x:Key="OnSurfaceBrush" Color="{StaticResource OnSurfaceColor}" />
+            <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}" />
+            <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+            <SolidColorBrush x:Key="FocusBrush" Color="{StaticResource FocusColor}" />
+            <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+            <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+            <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+
+            <Thickness x:Key="CardPadding">20</Thickness>
+
+            <!-- Typography -->
+            <Style TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+                <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <Style x:Key="TitleTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="28" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <Style x:Key="SubtitleTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+            </Style>
+
+            <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13" />
+                <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+            </Style>
+
+            <!-- Button Styles -->
+            <Style x:Key="BaseButtonStyle" TargetType="Button">
+                <Style.Resources>
+                    <SolidColorBrush x:Key="ButtonNormalBackgroundBrush" Color="{StaticResource SecondaryColor}" />
+                    <SolidColorBrush x:Key="ButtonPointerOverBackgroundBrush" Color="{StaticResource SecondaryColorHover}" />
+                    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource PrimaryColorPressed}" />
+                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource BorderColor}" />
+                </Style.Resources>
+                <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Background" Value="{StaticResource ButtonNormalBackgroundBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Padding" Value="16,12" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid x:Name="Root" Background="Transparent" RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform>
+                                    <ScaleTransform x:Name="ScaleTransform" />
+                                </Grid.RenderTransform>
+                                <Border x:Name="BackgroundElement"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="{TemplateBinding CornerRadius}">
+                                    <ContentPresenter x:Name="ContentPresenter"
+                                                      Foreground="{TemplateBinding Foreground}"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      Padding="{TemplateBinding Padding}" />
+                                </Border>
+                            </Grid>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
+                                                                           Storyboard.TargetProperty="Background">
+                                                <DiscreteObjectKeyFrame Value="{StaticResource ButtonNormalBackgroundBrush}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <DoubleAnimation Storyboard.TargetName="ScaleTransform"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1"
+                                                             Duration="0:0:0.1" />
+                                            <DoubleAnimation Storyboard.TargetName="ScaleTransform"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1"
+                                                             Duration="0:0:0.1" />
+                                            <DoubleAnimation Storyboard.TargetName="BackgroundElement"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1"
+                                                             Duration="0:0:0.1" />
+                                            <DoubleAnimation Storyboard.TargetName="ContentPresenter"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1"
+                                                             Duration="0:0:0.1" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="PointerOver">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
+                                                                           Storyboard.TargetProperty="Background">
+                                                <DiscreteObjectKeyFrame Value="{StaticResource ButtonPointerOverBackgroundBrush}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <DoubleAnimation Storyboard.TargetName="ScaleTransform"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1.02"
+                                                             Duration="0:0:0.15" />
+                                            <DoubleAnimation Storyboard.TargetName="ScaleTransform"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1.02"
+                                                             Duration="0:0:0.15" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
+                                                                           Storyboard.TargetProperty="Background">
+                                                <DiscreteObjectKeyFrame Value="{StaticResource ButtonPressedBackgroundBrush}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <DoubleAnimation Storyboard.TargetName="ScaleTransform"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="0.98"
+                                                             Duration="0:0:0.1" />
+                                            <DoubleAnimation Storyboard.TargetName="ScaleTransform"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="0.98"
+                                                             Duration="0:0:0.1" />
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Disabled">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="BackgroundElement"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.5"
+                                                             Duration="0:0:0.1" />
+                                            <DoubleAnimation Storyboard.TargetName="ContentPresenter"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.6"
+                                                             Duration="0:0:0.1" />
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                                <VisualStateGroup x:Name="FocusStates">
+                                    <VisualState x:Name="Focused">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
+                                                                           Storyboard.TargetProperty="BorderBrush">
+                                                <DiscreteObjectKeyFrame Value="{StaticResource FocusBrush}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
+                                                                           Storyboard.TargetProperty="BorderThickness">
+                                                <DiscreteObjectKeyFrame Value="2" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Unfocused">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
+                                                                           Storyboard.TargetProperty="BorderBrush">
+                                                <DiscreteObjectKeyFrame Value="{TemplateBinding BorderBrush}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="BackgroundElement"
+                                                                           Storyboard.TargetProperty="BorderThickness">
+                                                <DiscreteObjectKeyFrame Value="{TemplateBinding BorderThickness}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="AccentButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+                <Style.Resources>
+                    <SolidColorBrush x:Key="ButtonNormalBackgroundBrush" Color="{StaticResource PrimaryColor}" />
+                    <SolidColorBrush x:Key="ButtonPointerOverBackgroundBrush" Color="{StaticResource PrimaryColorHover}" />
+                    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource PrimaryColorPressed}" />
+                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource PrimaryColor}" />
+                </Style.Resources>
+                <Setter Property="Foreground" Value="{StaticResource OnPrimaryBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderBrush}" />
+            </Style>
+
+            <Style x:Key="OutlinedButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+                <Style.Resources>
+                    <SolidColorBrush x:Key="ButtonNormalBackgroundBrush" Color="{StaticResource SurfaceColor}" />
+                    <SolidColorBrush x:Key="ButtonPointerOverBackgroundBrush" Color="{StaticResource SecondaryColor}" />
+                    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource SecondaryColorHover}" />
+                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource BorderColor}" />
+                </Style.Resources>
+                <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderBrush}" />
+            </Style>
+
+            <Style x:Key="SubtleButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+                <Style.Resources>
+                    <SolidColorBrush x:Key="ButtonNormalBackgroundBrush" Color="{StaticResource SecondaryColor}" />
+                    <SolidColorBrush x:Key="ButtonPointerOverBackgroundBrush" Color="{StaticResource SecondaryColorHover}" />
+                    <SolidColorBrush x:Key="ButtonPressedBackgroundBrush" Color="{StaticResource SecondaryColor}" />
+                    <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource SecondaryColor}" />
+                </Style.Resources>
+                <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource ButtonBorderBrush}" />
+            </Style>
+
+            <Style TargetType="ToggleButton" BasedOn="{StaticResource BaseButtonStyle}" />
+
+            <!-- Text input styles -->
+            <Style TargetType="TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">
+                <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Padding" Value="14,10" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+                <Setter Property="SelectionHighlightColor" Value="{StaticResource PrimaryBrush}" />
+            </Style>
+
+            <Style TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
+                <Setter Property="FontFamily" Value="Segoe UI Variable Text" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="10,6" />
+                <Setter Property="MinWidth" Value="220" />
+            </Style>
+
+            <Style TargetType="InfoBar">
+                <Setter Property="Margin" Value="0,0,0,12" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="IsClosable" Value="True" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+            </Style>
+
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+                <Setter Property="CornerRadius" Value="18" />
+                <Setter Property="Padding" Value="{StaticResource CardPadding}" />
+                <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Shadow">
+                    <Setter.Value>
+                        <ThemeShadow />
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

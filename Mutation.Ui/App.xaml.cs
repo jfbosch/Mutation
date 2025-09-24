@@ -237,7 +237,7 @@ public partial class App : Application
 						  Hotkey.Parse(settingsSvc.SpeetchToTextSettings.SpeechToTextHotKey!),
 						  () =>
 						  {
-							  try { _window.DispatcherQueue.TryEnqueue(async () => { try { await ((MainWindow)_window).StartStopSpeechToTextAsync(); } catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Speech to Text Error", ex); } }); }
+							  try { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).StartStopSpeechToTextAsync()); }
 							  catch (Exception ex) { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).ShowErrorDialog("Speech to Text Error", ex)); }
 						  });
 			}
