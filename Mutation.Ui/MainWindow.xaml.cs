@@ -7,14 +7,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace Mutation.Ui;
 
-/// <summary>
-/// An empty window that can be used on its own or navigated to within a Frame.
-/// </summary>
 public sealed partial class MainWindow : Window
 {
 	private readonly ClipboardManager _clipboard;
@@ -365,7 +360,6 @@ public sealed partial class MainWindow : Window
 
 
 
-	// Apply review issues functionality removed
 
 	public async Task ShowErrorDialog(string title, Exception ex)
 	{
@@ -420,7 +414,6 @@ public sealed partial class MainWindow : Window
 				break;
 			case DictationInsertOption.Paste:
 				_clipboard.SetText(text);
-				//BeepPlayer.Play(BeepType.Start);
 				HotkeyManager.SendHotkey("^v");
 				break;
 		}
@@ -442,7 +435,6 @@ public sealed partial class MainWindow : Window
 			{
 				string raw = TxtSpeechToText.Text;
 				string formatted = _transcriptFormatter.ApplyRules(raw, false);
-				// Update UI preview only; do not modify clipboard or insert into active app here.
 				TxtFormatTranscript.Text = formatted;
 				// Intentionally do not call _clipboard.SetText or InsertIntoActiveApplication here.
 				// Insertion/clipboard updates happen on transcription completion to avoid duplicates.
@@ -456,5 +448,4 @@ public sealed partial class MainWindow : Window
 		TxtOcr.Text = message;
 	}
 
-	// ReviewItem removed
 }

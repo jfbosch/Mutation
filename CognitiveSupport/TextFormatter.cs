@@ -81,16 +81,12 @@ namespace CognitiveSupport
 			if (line is null)
 				return line;
 
-			// Trim outer whitespace first
 			string output = line.Trim();
 
-			// Remove simple leading punctuation prefixes like ", ", ". ", "; ", ": "
 			output = Regex.Replace(output, "^[,.;:]\\s+", string.Empty);
 
-			// Normalize bullet lines: "- , ", "- . ", "- ; ", "- : " → "- "
 			output = Regex.Replace(output, "^-\\s*[,.;:]\\s*", "- ");
 
-			// Clean a few known colon artifacts
 			output = output.Replace(", : ,", ":")
 						 .Replace(". : .", ":")
 						 .Replace(". : ,", ":")

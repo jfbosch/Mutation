@@ -105,7 +105,6 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 			  FillerWords = false,
 			  Measurements = true,
 			  SmartFormat = true,
-			  //Diarize = true,
 		  }, cancellationTokenSource = cancellationTokenSource);
 		return response;
 	}

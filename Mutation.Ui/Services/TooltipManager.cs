@@ -6,9 +6,6 @@ using System.Linq;
 
 namespace Mutation.Ui.Services;
 
-/// <summary>
-/// Provides simple tooltip setup for WinUI controls.
-/// </summary>
 public class TooltipManager
 {
     private readonly Settings _settings;
@@ -18,9 +15,6 @@ public class TooltipManager
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
     }
 
-    /// <summary>
-    /// Apply tooltips describing speech prompt usage and formatting rules.
-    /// </summary>
     public void SetupTooltips(Control speechBox, Control transcriptBox)
     {
         string speechPromptTip =

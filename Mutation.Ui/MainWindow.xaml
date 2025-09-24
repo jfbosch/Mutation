@@ -41,7 +41,6 @@
                 <Button x:Name="BtnFormatLlm" Content="Format Transcript with LLM" Click="BtnFormatLlm_Click"/>
                 <TextBox x:Name="TxtFormatTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80" AutomationProperties.Name="Formatted Transcript" />
 
-                <!-- Review transcript UI removed -->
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                     <Button x:Name="BtnScreenshot" Content="Screenshot to Clipboard" Click="BtnScreenshot_Click"/>

@@ -16,9 +16,6 @@ namespace Mutation.Ui.Services;
 
 public record OcrResult(bool Success, string Message);
 
-/// <summary>
-/// Handles screenshot capturing and OCR for WinUI.
-/// </summary>
 public class OcrManager
 {
     private readonly Settings _settings;
@@ -44,7 +41,6 @@ public class OcrManager
 
     public async Task TakeScreenshotToClipboardAsync()
     {
-        // If an overlay is already active, just bring it to front and return (no beep)
         if (_activeOverlay is not null)
         {
             try { _activeOverlay.BringToFront(); } catch { }
@@ -60,7 +56,6 @@ public class OcrManager
 
     public async Task<OcrResult> TakeScreenshotAndExtractTextAsync(OcrReadingOrder order)
     {
-        // If an overlay is already active, focus it and return a neutral result (no beep)
         if (_activeOverlay is not null)
         {
             try { _activeOverlay.BringToFront(); } catch { }
@@ -116,8 +111,6 @@ public class OcrManager
 
     private async Task<SoftwareBitmap?> CaptureScreenshotAsync()
     {
-        // Capture the entire virtual screen using GDI and convert to SoftwareBitmap
-        // Minimize chance of flicker by temporarily hiding our window during capture
         var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
         FormWindowState? prevState = null;
         IntPtr? hwnd = null;
@@ -136,10 +129,10 @@ public class OcrManager
             g.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, bounds.Size);
         }
 
-    // Fast path: copy GDI pixels directly into a SoftwareBitmap without PNG encode/decode
-    SoftwareBitmap bmp;
-    var gdiRect = new Rectangle(0, 0, gdiBmp.Width, gdiBmp.Height);
-    var data = gdiBmp.LockBits(gdiRect, ImageLockMode.ReadOnly, PixelFormat.Format32bppPArgb);
+        // Fast path: copy GDI pixels directly into a SoftwareBitmap without PNG encode/decode
+        SoftwareBitmap bmp;
+        var gdiRect = new Rectangle(0, 0, gdiBmp.Width, gdiBmp.Height);
+        var data = gdiBmp.LockBits(gdiRect, ImageLockMode.ReadOnly, PixelFormat.Format32bppPArgb);
         try
         {
             int srcStride = data.Stride;
@@ -157,12 +150,10 @@ public class OcrManager
             gdiBmp.UnlockBits(data);
         }
 
-    // show region selection overlay (deferred activate to avoid flash)
-    var overlay = _cachedOverlay ?? new RegionSelectionWindow();
-    // Ensure window is prepared and update bitmap for this capture
-    await overlay.InitializeAsync(bmp);
-    overlay.UpdateBitmap(bmp);
-    _activeOverlay = overlay;
+        var overlay = _cachedOverlay ?? new RegionSelectionWindow();
+        await overlay.InitializeAsync(bmp);
+        overlay.UpdateBitmap(bmp);
+        _activeOverlay = overlay;
         try
         {
             // Activate and show overlay (inside SelectRegionAsync), then play start beep asynchronously to avoid UI delay

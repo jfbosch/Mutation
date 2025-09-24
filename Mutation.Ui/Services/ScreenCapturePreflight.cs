@@ -5,10 +5,6 @@ using System.IO;
 
 namespace Mutation.Ui.Services
 {
-    /// <summary>
-    /// Performs a lightweight screen-capture preflight to detect environment or policy issues early.
-    /// Uses GDI CopyFromScreen which doesn't prompt user; if this fails, we surface guidance.
-    /// </summary>
     internal static class ScreenCapturePreflight
     {
         public static (bool ok, string? message) TryCaptureProbe()
