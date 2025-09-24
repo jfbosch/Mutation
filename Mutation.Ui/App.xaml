@@ -9,6 +9,141 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Color palette -->
+            <Color x:Key="AppBackgroundColor">#F6F8FB</Color>
+            <Color x:Key="AppSurfaceColor">#FFFFFFFF</Color>
+            <Color x:Key="AppAccentColor">#4F6D7A</Color>
+            <Color x:Key="AppAccentColorSecondary">#6D8A99</Color>
+            <Color x:Key="AppAccentColorTertiary">#2B4C59</Color>
+            <Color x:Key="TextPrimaryColor">#22313F</Color>
+            <Color x:Key="TextSecondaryColor">#4A5A68</Color>
+
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
+            <SolidColorBrush x:Key="AppSurfaceBrush" Color="{StaticResource AppSurfaceColor}" />
+            <SolidColorBrush x:Key="AppAccentBrush" Color="{StaticResource AppAccentColor}" />
+            <SolidColorBrush x:Key="AppAccentBrushSecondary" Color="{StaticResource AppAccentColorSecondary}" />
+            <SolidColorBrush x:Key="AppAccentBrushTertiary" Color="{StaticResource AppAccentColorTertiary}" />
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+
+            <!-- Semantic states -->
+            <Color x:Key="SuccessColor">#2E8B57</Color>
+            <Color x:Key="WarningColor">#C27D0E</Color>
+            <Color x:Key="ErrorColor">#C83C3C</Color>
+
+            <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+            <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+            <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+
+            <!-- Typography -->
+            <Style TargetType="TextElement">
+                <Setter Property="FontFamily" Value="Segoe UI Variable" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            </Style>
+
+            <Style TargetType="Control">
+                <Setter Property="FontFamily" Value="Segoe UI Variable" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            </Style>
+
+            <Style x:Key="HeadlineTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="26" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            </Style>
+
+            <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="20" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            </Style>
+
+            <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            </Style>
+
+            <!-- Control metrics -->
+            <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+            <Thickness x:Key="ControlContentPadding">12,10</Thickness>
+
+            <!-- Shared theme resources -->
+            <SolidColorBrush x:Key="ButtonBackground" Color="#F0F4F8" />
+            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#E1E9F2" />
+            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#CED7E3" />
+            <SolidColorBrush x:Key="ButtonForeground" Color="{StaticResource TextPrimaryColor}" />
+            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />
+            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{StaticResource TextPrimaryColor}" />
+            <SolidColorBrush x:Key="TextBoxBackground" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="TextBoxBorderBrush" Color="#D6DFEA" />
+            <SolidColorBrush x:Key="TextBoxBorderBrushPointerOver" Color="#B7C6D6" />
+            <SolidColorBrush x:Key="TextBoxBorderBrushFocused" Color="{StaticResource AppAccentColor}" />
+
+            <!-- Button styles -->
+            <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="Padding" Value="{StaticResource ControlContentPadding}" />
+                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="FocusVisualMargin" Value="4" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AppAccentBrush}" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="Transitions">
+                    <Setter.Value>
+                        <TransitionCollection>
+                            <EntranceThemeTransition />
+                            <RepositionThemeTransition />
+                        </TransitionCollection>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="AccentButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource AppAccentBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Padding" Value="{StaticResource ControlContentPadding}" />
+                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="FocusVisualMargin" Value="4" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AppAccentBrushTertiary}" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+                <Setter Property="Transitions">
+                    <Setter.Value>
+                        <TransitionCollection>
+                            <EntranceThemeTransition />
+                            <RepositionThemeTransition />
+                        </TransitionCollection>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- TextBox style -->
+            <Style TargetType="TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">
+                <Setter Property="Padding" Value="10" />
+                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+                <Setter Property="MinHeight" Value="40" />
+                <Setter Property="FocusVisualMargin" Value="4" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AppAccentBrush}" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+            </Style>
+
+            <!-- ComboBox style -->
+            <Style TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
+                <Setter Property="MinHeight" Value="40" />
+                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="FocusVisualMargin" Value="4" />
+                <Setter Property="FocusVisualPrimaryBrush" Value="{StaticResource AppAccentBrush}" />
+                <Setter Property="FocusVisualPrimaryThickness" Value="2" />
+            </Style>
+
+            <!-- InfoBar style for consistent rounded visuals -->
+            <Style TargetType="InfoBar">
+                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+                <Setter Property="Margin" Value="0,8,0,0" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
