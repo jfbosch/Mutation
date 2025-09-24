@@ -57,6 +57,18 @@ public class AudioSettings
 		public string? BeepEndFile { get; set; }
 		public string? BeepMuteFile { get; set; }
 		public string? BeepUnmuteFile { get; set; }
+
+		// Helper to resolve audio file paths relative to the executable directory
+		public string ResolveAudioFilePath(string path)
+		{
+			if (string.IsNullOrWhiteSpace(path))
+				return path;
+			if (Path.IsPathRooted(path))
+				return path;
+			// Use AppContext.BaseDirectory for the exe location
+			return Path.Combine(AppContext.BaseDirectory, path);
+		}
+
 	}
 }
 
@@ -127,7 +139,7 @@ public class LlmSettings
 	public List<ModelDeploymentIdMap> ModelDeploymentIdMaps { get; set; }
 	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
 	public string? FormatTranscriptPrompt { get; set; }
-	public string? ReviewTranscriptPrompt { get; set; }
+
 
 	public LlmSettings()
 	{
@@ -135,14 +147,13 @@ public class LlmSettings
 		TranscriptFormatRules = new List<TranscriptFormatRule>();
 	}
 
-	public LlmSettings(string? apiKey, string? resourceName, List<ModelDeploymentIdMap> modelDeploymentIdMaps, List<TranscriptFormatRule> transcriptFormatRules, string? formatTranscriptPrompt, string? reviewTranscriptPrompt)
+	public LlmSettings(string? apiKey, string? resourceName, List<ModelDeploymentIdMap> modelDeploymentIdMaps, List<TranscriptFormatRule> transcriptFormatRules, string? formatTranscriptPrompt)
 	{
 		ApiKey = apiKey;
 		ResourceName = resourceName;
 		ModelDeploymentIdMaps = modelDeploymentIdMaps;
 		TranscriptFormatRules = transcriptFormatRules;
 		FormatTranscriptPrompt = formatTranscriptPrompt;
-		ReviewTranscriptPrompt = reviewTranscriptPrompt;
 	}
 
 	public class ModelDeploymentIdMap

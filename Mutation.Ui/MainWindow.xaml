@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Mutation.Ui.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Mutation.Ui"
+    xmlns:datagrid="using:CommunityToolkit.WinUI.UI.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Mutation.Ui">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid Padding="20">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock x:Name="LblMicrophone" Text="Microphone" VerticalAlignment="Center" />
+                    <ComboBox x:Name="CmbMicrophone" SelectionChanged="CmbMicrophone_SelectionChanged" AutomationProperties.LabeledBy="{Binding ElementName=LblMicrophone}" AutomationProperties.Name="Microphone" />
+                    <Button x:Name="BtnToggleMic" Content="Toggle Mic Mute" Click="BtnToggleMic_Click"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock x:Name="LblSpeechService" Text="Speech-to-Text Service" VerticalAlignment="Center" />
+                    <ComboBox x:Name="CmbSpeechService" SelectionChanged="CmbSpeechService_SelectionChanged" AutomationProperties.LabeledBy="{Binding ElementName=LblSpeechService}" AutomationProperties.Name="Speech-to-Text Service" />
+                </StackPanel>
+
+
+                <Button x:Name="BtnSpeechToText" Content="Record" Click="BtnSpeechToText_Click"/>
+                <TextBox x:Name="TxtSpeechToText" AcceptsReturn="True" TextWrapping="Wrap" Height="80" TextChanged="TxtSpeechToText_TextChanged" AutomationProperties.Name="Speech to Text Transcript" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock x:Name="LblThirdPartyInteraction" Text="third party application interaction" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="CmbInsertOption" SelectionChanged="CmbInsertOption_SelectionChanged" AutomationProperties.LabeledBy="{Binding ElementName=LblThirdPartyInteraction}" AutomationProperties.Name="third party application interaction" />
+                </StackPanel>
+
+                <TextBox x:Name="TxtFormatPrompt" PlaceholderText="Format prompt" AcceptsReturn="True" TextWrapping="Wrap" Height="60" AutomationProperties.Name="Format Prompt" />
+                <Button x:Name="BtnFormatTranscript" Content="Format Transcript" Click="BtnFormatTranscript_Click"/>
+                <Button x:Name="BtnFormatLlm" Content="Format Transcript with LLM" Click="BtnFormatLlm_Click"/>
+                <TextBox x:Name="TxtFormatTranscript" AcceptsReturn="True" TextWrapping="Wrap" Height="80" AutomationProperties.Name="Formatted Transcript" />
+
+                <!-- Review transcript UI removed -->
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                    <Button x:Name="BtnScreenshot" Content="Screenshot to Clipboard" Click="BtnScreenshot_Click"/>
+                    <Button x:Name="BtnScreenshotOcr" Content="Screenshot &amp; OCR" Click="BtnScreenshotOcr_Click"/>
+                    <Button x:Name="BtnOcrClipboard" Content="OCR Clipboard" Click="BtnOcrClipboard_Click"/>
+                </StackPanel>
+                <TextBox x:Name="TxtOcr" AcceptsReturn="True" TextWrapping="Wrap" Height="80" AutomationProperties.Name="OCR Result" />
+                <TextBox x:Name="TxtClipboard" PlaceholderText="Clipboard text" AutomationProperties.Name="Clipboard Text" />
+                <Button Content="Copy Text" Click="CopyText_Click"/>
+                <Button x:Name="BtnTextToSpeech" Content="Speak Clipboard" Click="BtnTextToSpeech_Click"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
