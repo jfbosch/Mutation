@@ -8,8 +8,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Background="{StaticResource AppBackgroundBrush}"
-    RequestedTheme="Light"
+    
     Title="Mutation.Ui"
     AutomationProperties.Name="Mutation productivity console">
 
@@ -57,7 +56,8 @@
                                 <EntranceThemeTransition />
                             </TransitionCollection>
                         </Border.Transitions>
-                        <StackPanel Spacing="20">
+                        <Grid>
+                            <StackPanel Spacing="20">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Speech workspace" Style="{StaticResource SectionHeaderTextStyle}" />
                                 <TextBlock Text="Choose your microphone, transcribe speech, and refine transcripts before sharing." Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
@@ -245,6 +245,17 @@
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
+
+                            <TextBox
+                                x:Name="TxtFormatTranscript"
+                                Header="Formatted transcript"
+                                AcceptsReturn="True"
+                                TextWrapping="Wrap"
+                                MinHeight="140"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                AutomationProperties.Name="Formatted transcript"
+                                AutomationProperties.HelpText="Shows the transcript after formatting rules or LLM processing" />
+                            </StackPanel>
                             <VisualStateManager.VisualStateGroups>
                                 <VisualStateGroup>
                                     <VisualState x:Name="FormattingButtonsNarrow">
@@ -267,17 +278,7 @@
                                     </VisualState>
                                 </VisualStateGroup>
                             </VisualStateManager.VisualStateGroups>
-
-                            <TextBox
-                                x:Name="TxtFormatTranscript"
-                                Header="Formatted transcript"
-                                AcceptsReturn="True"
-                                TextWrapping="Wrap"
-                                MinHeight="140"
-                                ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                AutomationProperties.Name="Formatted transcript"
-                                AutomationProperties.HelpText="Shows the transcript after formatting rules or LLM processing" />
-                        </StackPanel>
+                        </Grid>
                     </Border>
 
                     <Border x:Name="UtilitiesCard" Grid.Row="1" Grid.Column="0" Background="{StaticResource AppSurfaceBrush}" Padding="24" CornerRadius="16">
@@ -289,7 +290,8 @@
                                 <EntranceThemeTransition />
                             </TransitionCollection>
                         </Border.Transitions>
-                        <StackPanel Spacing="20">
+                        <Grid>
+                            <StackPanel Spacing="20">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Utilities" Style="{StaticResource SectionHeaderTextStyle}" />
                                 <TextBlock Text="Capture content, run optical character recognition, and work with the clipboard." Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" />
@@ -330,26 +332,6 @@
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
-                            <VisualStateManager.VisualStateGroups>
-                                <VisualStateGroup>
-                                    <VisualState x:Name="ScreenshotButtonsNarrow">
-                                        <VisualState.StateTriggers>
-                                            <AdaptiveTrigger MinWindowWidth="0" />
-                                        </VisualState.StateTriggers>
-                                        <VisualState.Setters>
-                                            <Setter Target="ScreenshotButtons.Orientation" Value="Vertical" />
-                                        </VisualState.Setters>
-                                    </VisualState>
-                                    <VisualState x:Name="ScreenshotButtonsWide">
-                                        <VisualState.StateTriggers>
-                                            <AdaptiveTrigger MinWindowWidth="720" />
-                                        </VisualState.StateTriggers>
-                                        <VisualState.Setters>
-                                            <Setter Target="ScreenshotButtons.Orientation" Value="Horizontal" />
-                                        </VisualState.Setters>
-                                    </VisualState>
-                                </VisualStateGroup>
-                            </VisualStateManager.VisualStateGroups>
 
                             <TextBox
                                 x:Name="TxtOcr"
@@ -394,7 +376,28 @@
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
-                        </StackPanel>
+                            </StackPanel>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup>
+                                    <VisualState x:Name="ScreenshotButtonsNarrow">
+                                        <VisualState.StateTriggers>
+                                            <AdaptiveTrigger MinWindowWidth="0" />
+                                        </VisualState.StateTriggers>
+                                        <VisualState.Setters>
+                                            <Setter Target="ScreenshotButtons.Orientation" Value="Vertical" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="ScreenshotButtonsWide">
+                                        <VisualState.StateTriggers>
+                                            <AdaptiveTrigger MinWindowWidth="720" />
+                                        </VisualState.StateTriggers>
+                                        <VisualState.Setters>
+                                            <Setter Target="ScreenshotButtons.Orientation" Value="Horizontal" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                        </Grid>
                     </Border>
 
                     <VisualStateManager.VisualStateGroups>
