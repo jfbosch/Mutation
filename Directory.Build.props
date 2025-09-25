@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Allow Windows-targeted TFMs to build on non‑Windows hosts -->
+    <EnableWindowsTargeting Condition="'$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
+  </PropertyGroup>
+</Project>
