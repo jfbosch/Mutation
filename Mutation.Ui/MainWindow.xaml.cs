@@ -33,11 +33,15 @@ public sealed partial class MainWindow : Window
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
 	private readonly DispatcherTimer _statusDismissTimer;
 
-	private const string MicOnGlyph = "\uE720";
-	private const string MicOffGlyph = "\uE721";
-	private const string RecordGlyph = "\uE768";
-	private const string StopGlyph = "\uE71A";
-	private const string ProcessingGlyph = "\uE8A0";
+        private const string MicOnGlyph = "\uE720";
+        private const string MicOffGlyph = "\uEC26";
+        private const string RecordGlyph = "\uE768";
+        private const string StopGlyph = "\uE71A";
+        private const string ProcessingGlyph = "\uE8A0";
+
+        private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
+        private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
+        private const string PasteExplanation = "Copies the transcript and pastes it into the active application.";
 
 	public MainWindow(
 		ClipboardManager clipboard,
@@ -589,9 +593,9 @@ public sealed partial class MainWindow : Window
         {
                 string explanation = option switch
                 {
-                        DictationInsertOption.DoNotInsert => "Keep the transcript inside Mutation without sending it anywhere.",
-                        DictationInsertOption.SendKeys => "Types the transcript into the active app as if you entered it yourself.",
-                        DictationInsertOption.Paste => "Copies the transcript and pastes it into the active application.",
+                        DictationInsertOption.DoNotInsert => DoNotInsertExplanation,
+                        DictationInsertOption.SendKeys => SendKeysExplanation,
+                        DictationInsertOption.Paste => PasteExplanation,
                         _ => string.Empty
                 };
 

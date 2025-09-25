@@ -299,9 +299,13 @@
                                     AccessKey="S"
                                     AutomationProperties.Name="Screenshot to clipboard"
                                     ToolTipService.ToolTip="Copy a screenshot directly to the clipboard">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE70F;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE70F;" FontFamily="Segoe Fluent Icons" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="Screenshot to clipboard" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotHotkey"
@@ -309,7 +313,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
 
                                 <Button
@@ -319,9 +323,13 @@
                                     AccessKey="C"
                                     AutomationProperties.Name="OCR clipboard"
                                     ToolTipService.ToolTip="Run OCR on an image stored in the clipboard">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="OCR clipboard" />
                                             <TextBlock
                                                 x:Name="BtnOcrClipboardHotkey"
@@ -329,7 +337,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
 
                                 <Button
@@ -339,9 +347,13 @@
                                     AccessKey="D"
                                     AutomationProperties.Name="OCR clipboard left to right"
                                     ToolTipService.ToolTip="Run OCR on an image stored in the clipboard using left-to-right reading order">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="OCR clipboard (L→R)" />
                                             <TextBlock
                                                 x:Name="BtnOcrClipboardLrtbHotkey"
@@ -349,7 +361,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
 
                                 <Button
@@ -359,9 +371,13 @@
                                     AccessKey="O"
                                     AutomationProperties.Name="Screenshot and OCR"
                                     ToolTipService.ToolTip="Capture a screenshot and extract text automatically">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="Screenshot &amp; OCR" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotOcrHotkey"
@@ -369,7 +385,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
 
                                 <Button
@@ -379,9 +395,13 @@
                                     AccessKey="B"
                                     AutomationProperties.Name="Screenshot and OCR left to right"
                                     ToolTipService.ToolTip="Capture a screenshot and extract text using left-to-right reading order">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="Screenshot &amp; OCR (L→R)" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotOcrLrtbHotkey"
@@ -389,7 +409,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
                             </StackPanel>
 
