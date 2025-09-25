@@ -19,10 +19,18 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Margin="32,24,32,12" Spacing="4">
-            <TextBlock Text="Mutation Workspace" Style="{StaticResource TitleTextStyle}" AutomationProperties.Name="Application Title" />
-            <TextBlock Text="Capture ideas, format transcripts, and automate workflows from one polished surface." Style="{StaticResource SubtitleTextStyle}" />
-        </StackPanel>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="1" Margin="32,24,32,12" Spacing="4">
+                <TextBlock Text="Mutation Workspace" Style="{StaticResource TitleTextStyle}" AutomationProperties.Name="Application Title" />
+                <TextBlock Text="Capture ideas, format transcripts, and automate workflows from one polished surface." Style="{StaticResource SubtitleTextStyle}" />
+            </StackPanel>
+        </Grid>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -39,14 +47,15 @@
                 VerticalScrollBarVisibility="Auto"
                 VerticalScrollMode="Auto">
                 <StackPanel x:Name="ContentStack" Spacing="20">
-                <InfoBar
-                    x:Name="StatusInfoBar"
-                    Title="Status"
-                    IsOpen="False"
-                    Visibility="Collapsed"
-                    AutomationProperties.Name="Status notifications"
-                    AutomationProperties.LiveSetting="Polite"
-                    AutomationProperties.HelpText="Latest status messages for Mutation workspace" />
+                <Grid x:Name="StatusRegion" MinHeight="72">
+                    <InfoBar
+                        x:Name="StatusInfoBar"
+                        Title="Status"
+                        IsOpen="False"
+                        AutomationProperties.Name="Status notifications"
+                        AutomationProperties.LiveSetting="Polite"
+                        AutomationProperties.HelpText="Latest status messages for Mutation workspace" />
+                </Grid>
 
                 <Grid x:Name="ContentGrid" ColumnSpacing="18" RowSpacing="18">
                     <Grid.ColumnDefinitions>
@@ -89,11 +98,30 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <FontIcon
-                                            x:Name="MicStatusIcon"
-                                            Glyph="&#xE720;"
-                                            FontFamily="Segoe Fluent Icons"
-                                            VerticalAlignment="Center" />
+                                        <Grid Width="28" Height="28" VerticalAlignment="Center">
+                                            <FontIcon
+                                                x:Name="MicStatusIcon"
+                                                Glyph="&#xE720;"
+                                                FontFamily="Segoe Fluent Icons"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center" />
+                                            <Rectangle
+                                                x:Name="MicStatusIconSlash"
+                                                Width="20"
+                                                Height="2"
+                                                RadiusX="1"
+                                                RadiusY="1"
+                                                Fill="{Binding Foreground, ElementName=MicStatusIcon}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Visibility="Collapsed"
+                                                IsHitTestVisible="False"
+                                                RenderTransformOrigin="0.5,0.5">
+                                                <Rectangle.RenderTransform>
+                                                    <CompositeTransform Rotation="-45" />
+                                                </Rectangle.RenderTransform>
+                                            </Rectangle>
+                                        </Grid>
                                         <ComboBox
                                             x:Name="CmbMicrophone"
                                             Grid.Column="1"
@@ -115,11 +143,31 @@
                                     AutomationProperties.Name="Toggle microphone"
                                     ToolTipService.ToolTip="Toggle microphone mute state">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon
-                                            x:Name="BtnToggleMicIcon"
-                                            Glyph="&#xE720;"
-                                            FontFamily="Segoe Fluent Icons"
-                                        />
+                                        <Grid Width="28" Height="28">
+                                            <FontIcon
+                                                x:Name="BtnToggleMicIcon"
+                                                Glyph="&#xE720;"
+                                                FontFamily="Segoe Fluent Icons"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                            />
+                                            <Rectangle
+                                                x:Name="BtnToggleMicSlash"
+                                                Width="20"
+                                                Height="2"
+                                                RadiusX="1"
+                                                RadiusY="1"
+                                                Fill="{Binding Foreground, ElementName=BtnToggleMicIcon}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Visibility="Collapsed"
+                                                IsHitTestVisible="False"
+                                                RenderTransformOrigin="0.5,0.5">
+                                                <Rectangle.RenderTransform>
+                                                    <CompositeTransform Rotation="-45" />
+                                                </Rectangle.RenderTransform>
+                                            </Rectangle>
+                                        </Grid>
                                         <StackPanel Spacing="2">
                                             <TextBlock x:Name="BtnToggleMicLabel" Text="Mute microphone" />
                                             <TextBlock
@@ -299,9 +347,17 @@
                                     AccessKey="S"
                                     AutomationProperties.Name="Screenshot to clipboard"
                                     ToolTipService.ToolTip="Copy a screenshot directly to the clipboard">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE70F;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="12" VerticalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="32" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            Glyph="&#xE70F;"
+                                            FontFamily="Segoe Fluent Icons"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
                                             <TextBlock Text="Screenshot to clipboard" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotHotkey"
@@ -309,7 +365,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
 
                                 <Button
@@ -319,9 +375,17 @@
                                     AccessKey="C"
                                     AutomationProperties.Name="OCR clipboard"
                                     ToolTipService.ToolTip="Run OCR on an image stored in the clipboard">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="12" VerticalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="32" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            Glyph="&#xE8F1;"
+                                            FontFamily="Segoe Fluent Icons"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
                                             <TextBlock Text="OCR clipboard" />
                                             <TextBlock
                                                 x:Name="BtnOcrClipboardHotkey"
@@ -329,7 +393,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
 
                                 <Button
@@ -339,9 +403,17 @@
                                     AccessKey="D"
                                     AutomationProperties.Name="OCR clipboard left to right"
                                     ToolTipService.ToolTip="Run OCR on an image stored in the clipboard using left-to-right reading order">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="12" VerticalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="32" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            Glyph="&#xE8F1;"
+                                            FontFamily="Segoe Fluent Icons"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
                                             <TextBlock Text="OCR clipboard (L→R)" />
                                             <TextBlock
                                                 x:Name="BtnOcrClipboardLrtbHotkey"
@@ -349,7 +421,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
 
                                 <Button
@@ -359,9 +431,17 @@
                                     AccessKey="O"
                                     AutomationProperties.Name="Screenshot and OCR"
                                     ToolTipService.ToolTip="Capture a screenshot and extract text automatically">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="12" VerticalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="32" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            Glyph="&#xE8D2;"
+                                            FontFamily="Segoe Fluent Icons"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
                                             <TextBlock Text="Screenshot &amp; OCR" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotOcrHotkey"
@@ -369,7 +449,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
 
                                 <Button
@@ -379,9 +459,17 @@
                                     AccessKey="B"
                                     AutomationProperties.Name="Screenshot and OCR left to right"
                                     ToolTipService.ToolTip="Capture a screenshot and extract text using left-to-right reading order">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" />
-                                        <StackPanel Spacing="2">
+                                    <Grid ColumnSpacing="12" VerticalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="32" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            Glyph="&#xE8D2;"
+                                            FontFamily="Segoe Fluent Icons"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
                                             <TextBlock Text="Screenshot &amp; OCR (L→R)" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotOcrLrtbHotkey"
@@ -389,7 +477,7 @@
                                                 Style="{StaticResource CaptionTextStyle}"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
-                                    </StackPanel>
+                                    </Grid>
                                 </Button>
                             </StackPanel>
 
