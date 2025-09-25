@@ -99,7 +99,14 @@
                                             Glyph="&#xE720;"
                                             FontFamily="Segoe Fluent Icons"
                                         />
-                                        <TextBlock x:Name="BtnToggleMicLabel" Text="Mute microphone" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="BtnToggleMicLabel" Text="Mute microphone" />
+                                            <TextBlock
+                                                x:Name="BtnToggleMicHotkey"
+                                                Text="Hotkey: ALT+Q"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </Button>
                             </Grid>
@@ -145,7 +152,14 @@
                                             Glyph="&#xE768;"
                                             FontFamily="Segoe Fluent Icons"
                                         />
-                                        <TextBlock x:Name="BtnSpeechToTextLabel" Text="Start recording" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock x:Name="BtnSpeechToTextLabel" Text="Start recording" />
+                                            <TextBlock
+                                                x:Name="BtnSpeechToTextHotkey"
+                                                Text="Hotkey: SHIFT+ALT+U"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </Button>
                             </Grid>
@@ -255,20 +269,14 @@
                                     ToolTipService.ToolTip="Copy a screenshot directly to the clipboard">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                                         <FontIcon Glyph="&#xE70F;" FontFamily="Segoe Fluent Icons" />
-                                        <TextBlock Text="Screenshot to clipboard" />
-                                    </StackPanel>
-                                </Button>
-
-                                <Button
-                                    x:Name="BtnScreenshotOcr"
-                                    Style="{StaticResource OutlinedButtonStyle}"
-                                    Click="BtnScreenshotOcr_Click"
-                                    AccessKey="O"
-                                    AutomationProperties.Name="Screenshot and OCR"
-                                    ToolTipService.ToolTip="Capture a screenshot and extract text automatically">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" />
-                                        <TextBlock Text="Screenshot &amp; OCR" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Screenshot to clipboard" />
+                                            <TextBlock
+                                                x:Name="BtnScreenshotHotkey"
+                                                Text="Hotkey: SHIFT+ALT+K"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </Button>
 
@@ -281,7 +289,74 @@
                                     ToolTipService.ToolTip="Run OCR on an image stored in the clipboard">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                                         <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" />
-                                        <TextBlock Text="OCR clipboard" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="OCR clipboard" />
+                                            <TextBlock
+                                                x:Name="BtnOcrClipboardHotkey"
+                                                Text="Hotkey: ALT+J"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button
+                                    x:Name="BtnOcrClipboardLrtb"
+                                    Style="{StaticResource OutlinedButtonStyle}"
+                                    Click="BtnOcrClipboardLrtb_Click"
+                                    AccessKey="D"
+                                    AutomationProperties.Name="OCR clipboard left to right"
+                                    ToolTipService.ToolTip="Run OCR on an image stored in the clipboard using left-to-right reading order">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                        <FontIcon Glyph="&#xE8F1;" FontFamily="Segoe Fluent Icons" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="OCR clipboard (L→R)" />
+                                            <TextBlock
+                                                x:Name="BtnOcrClipboardLrtbHotkey"
+                                                Text="Hotkey: ALT+K"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button
+                                    x:Name="BtnScreenshotOcr"
+                                    Style="{StaticResource OutlinedButtonStyle}"
+                                    Click="BtnScreenshotOcr_Click"
+                                    AccessKey="O"
+                                    AutomationProperties.Name="Screenshot and OCR"
+                                    ToolTipService.ToolTip="Capture a screenshot and extract text automatically">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Screenshot &amp; OCR" />
+                                            <TextBlock
+                                                x:Name="BtnScreenshotOcrHotkey"
+                                                Text="Hotkey: SHIFT+ALT+J"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button
+                                    x:Name="BtnScreenshotOcrLrtb"
+                                    Style="{StaticResource OutlinedButtonStyle}"
+                                    Click="BtnScreenshotOcrLrtb_Click"
+                                    AccessKey="B"
+                                    AutomationProperties.Name="Screenshot and OCR left to right"
+                                    ToolTipService.ToolTip="Capture a screenshot and extract text using left-to-right reading order">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                        <FontIcon Glyph="&#xE8D2;" FontFamily="Segoe Fluent Icons" />
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="Screenshot &amp; OCR (L→R)" />
+                                            <TextBlock
+                                                x:Name="BtnScreenshotOcrLrtbHotkey"
+                                                Text="Hotkey: SHIFT+ALT+E"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
@@ -337,7 +412,14 @@
                                         ToolTipService.ToolTip="Play the clipboard text using text-to-speech">
                                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                                             <FontIcon Glyph="&#xE76E;" FontFamily="Segoe Fluent Icons" />
-                                            <TextBlock Text="Speak clipboard" />
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="Speak clipboard" />
+                                                <TextBlock
+                                                    x:Name="BtnTextToSpeechHotkey"
+                                                    Text="Hotkey: CTRL+SHIFT+Q"
+                                                    Style="{StaticResource CaptionTextStyle}"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>
