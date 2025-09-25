@@ -21,7 +21,7 @@ internal class SpeechToTextManager
 	public bool Recording => _state.RecordingAudio;
 	public bool Transcribing => _state.TranscribingAudio;
 
-	private string SessionsDirectory => Path.Combine(_settings.SpeetchToTextSettings!.TempDirectory!, Constants.SessionsDirectoryName);
+        private string SessionsDirectory => Path.Combine(_settings.SpeechToTextSettings!.TempDirectory!, Constants.SessionsDirectoryName);
 	private string AudioFilePath => Path.Combine(SessionsDirectory, "mutation_recording.mp3");
 
 	public async Task StartRecordingAsync(int microphoneDeviceIndex)

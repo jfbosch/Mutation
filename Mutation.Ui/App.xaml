@@ -10,39 +10,60 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Color palette -->
-            <Color x:Key="PrimaryColor">#FF4C6EF5</Color>
-            <Color x:Key="PrimaryColorHover">#FF6A86FB</Color>
-            <Color x:Key="PrimaryColorPressed">#FF3C59D7</Color>
-            <Color x:Key="SecondaryColor">#FFE8EDFF</Color>
-            <Color x:Key="SecondaryColorHover">#FFD7DEFF</Color>
-            <Color x:Key="SurfaceColor">#FFFFFFFF</Color>
-            <Color x:Key="AppBackgroundColor">#FFF7F8FC</Color>
-            <Color x:Key="OnPrimaryColor">#FFFFFFFF</Color>
-            <Color x:Key="OnSurfaceColor">#FF1C2333</Color>
-            <Color x:Key="SecondaryTextColor">#FF4A5368</Color>
-            <Color x:Key="BorderColor">#FFD6DAE8</Color>
-            <Color x:Key="FocusColor">#FF254EDB</Color>
-            <Color x:Key="SuccessColor">#FF2EA94D</Color>
-            <Color x:Key="WarningColor">#FFE3A400</Color>
-            <Color x:Key="ErrorColor">#FFD64545</Color>
+            <!-- Theme-aware color palette -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="PrimaryColor">#FF4C6EF5</Color>
+                    <Color x:Key="PrimaryColorHover">#FF6A86FB</Color>
+                    <Color x:Key="PrimaryColorPressed">#FF3C59D7</Color>
+                    <Color x:Key="SecondaryColor">#FFE8EDFF</Color>
+                    <Color x:Key="SecondaryColorHover">#FFD7DEFF</Color>
+                    <Color x:Key="SurfaceColor">#FFFFFFFF</Color>
+                    <Color x:Key="AppBackgroundColor">#FFF7F8FC</Color>
+                    <Color x:Key="OnPrimaryColor">#FFFFFFFF</Color>
+                    <Color x:Key="OnSurfaceColor">#FF1C2333</Color>
+                    <Color x:Key="SecondaryTextColor">#FF4A5368</Color>
+                    <Color x:Key="BorderColor">#FFD6DAE8</Color>
+                    <Color x:Key="FocusColor">#FF254EDB</Color>
+                    <Color x:Key="SuccessColor">#FF2EA94D</Color>
+                    <Color x:Key="WarningColor">#FFE3A400</Color>
+                    <Color x:Key="ErrorColor">#FFD64545</Color>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="PrimaryColor">#FF879BFF</Color>
+                    <Color x:Key="PrimaryColorHover">#FFA1B3FF</Color>
+                    <Color x:Key="PrimaryColorPressed">#FF6F86E0</Color>
+                    <Color x:Key="SecondaryColor">#FF2B3140</Color>
+                    <Color x:Key="SecondaryColorHover">#FF353D4F</Color>
+                    <Color x:Key="SurfaceColor">#FF1D222C</Color>
+                    <Color x:Key="AppBackgroundColor">#FF11151C</Color>
+                    <Color x:Key="OnPrimaryColor">#FFFFFFFF</Color>
+                    <Color x:Key="OnSurfaceColor">#FFE7E9F2</Color>
+                    <Color x:Key="SecondaryTextColor">#FFA8B0C5</Color>
+                    <Color x:Key="BorderColor">#FF3D4352</Color>
+                    <Color x:Key="FocusColor">#FF6A96FF</Color>
+                    <Color x:Key="SuccessColor">#FF48C870</Color>
+                    <Color x:Key="WarningColor">#FFE6C15A</Color>
+                    <Color x:Key="ErrorColor">#FFFF6B6B</Color>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
 
             <!-- Brushes -->
-            <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
-            <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{StaticResource PrimaryColorHover}" />
-            <SolidColorBrush x:Key="PrimaryPressedBrush" Color="{StaticResource PrimaryColorPressed}" />
-            <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SecondaryColor}" />
-            <SolidColorBrush x:Key="SecondaryHoverBrush" Color="{StaticResource SecondaryColorHover}" />
-            <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
-            <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
-            <SolidColorBrush x:Key="OnPrimaryBrush" Color="{StaticResource OnPrimaryColor}" />
-            <SolidColorBrush x:Key="OnSurfaceBrush" Color="{StaticResource OnSurfaceColor}" />
-            <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}" />
-            <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
-            <SolidColorBrush x:Key="FocusBrush" Color="{StaticResource FocusColor}" />
-            <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
-            <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
-            <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+            <SolidColorBrush x:Key="PrimaryBrush" Color="{ThemeResource PrimaryColor}" />
+            <SolidColorBrush x:Key="PrimaryHoverBrush" Color="{ThemeResource PrimaryColorHover}" />
+            <SolidColorBrush x:Key="PrimaryPressedBrush" Color="{ThemeResource PrimaryColorPressed}" />
+            <SolidColorBrush x:Key="SecondaryBrush" Color="{ThemeResource SecondaryColor}" />
+            <SolidColorBrush x:Key="SecondaryHoverBrush" Color="{ThemeResource SecondaryColorHover}" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="{ThemeResource SurfaceColor}" />
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="{ThemeResource AppBackgroundColor}" />
+            <SolidColorBrush x:Key="OnPrimaryBrush" Color="{ThemeResource OnPrimaryColor}" />
+            <SolidColorBrush x:Key="OnSurfaceBrush" Color="{ThemeResource OnSurfaceColor}" />
+            <SolidColorBrush x:Key="SecondaryTextBrush" Color="{ThemeResource SecondaryTextColor}" />
+            <SolidColorBrush x:Key="BorderBrush" Color="{ThemeResource BorderColor}" />
+            <SolidColorBrush x:Key="FocusBrush" Color="{ThemeResource FocusColor}" />
+            <SolidColorBrush x:Key="SuccessBrush" Color="{ThemeResource SuccessColor}" />
+            <SolidColorBrush x:Key="WarningBrush" Color="{ThemeResource WarningColor}" />
+            <SolidColorBrush x:Key="ErrorBrush" Color="{ThemeResource ErrorColor}" />
 
             <Thickness x:Key="CardPadding">20</Thickness>
 
