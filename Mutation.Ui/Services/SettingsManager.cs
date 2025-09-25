@@ -227,44 +227,44 @@ internal class SettingsManager : ISettingsManager
 		}
 
 
-                if (settings.SpeechToTextSettings is null)
-                {
-                        settings.SpeechToTextSettings = new SpeechToTextSettings();
-                        somethingWasMissing = true;
-                }
-                var speechToTextSettings = settings.SpeechToTextSettings;
+		if (settings.SpeechToTextSettings is null)
+		{
+			settings.SpeechToTextSettings = new SpeechToTextSettings();
+			somethingWasMissing = true;
+		}
+		var speechToTextSettings = settings.SpeechToTextSettings;
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextHotKey))
 		{
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
 			somethingWasMissing = true;
 		}
-                if (speechToTextSettings.Services is null)
-                {
-                        speechToTextSettings.Services = Array.Empty<SpeechToTextServiceSettings>();
-                        somethingWasMissing = true;
-                }
-                if (!speechToTextSettings.Services.Any())
-                {
-                        speechToTextSettings.ActiveSpeechToTextService = "OpenAI Whisper 1";
-                        SpeechToTextServiceSettings service = new SpeechToTextServiceSettings
-                        {
-                                Name = speechToTextSettings.ActiveSpeechToTextService,
-                                Provider = SpeechToTextProviders.OpenAi,
-                                ModelId = "whisper-1",
-                                BaseDomain = "https://api.openai.com/",
-                        };
-                        speechToTextSettings.Services = speechToTextSettings.Services.Append(service).ToArray();
-                        somethingWasMissing = true;
-                }
+		if (speechToTextSettings.Services is null)
+		{
+			speechToTextSettings.Services = Array.Empty<SpeechToTextServiceSettings>();
+			somethingWasMissing = true;
+		}
+		if (!speechToTextSettings.Services.Any())
+		{
+			speechToTextSettings.ActiveSpeechToTextService = "OpenAI Whisper 1";
+			SpeechToTextServiceSettings service = new SpeechToTextServiceSettings
+			{
+				Name = speechToTextSettings.ActiveSpeechToTextService,
+				Provider = SpeechToTextProviders.OpenAi,
+				ModelId = "whisper-1",
+				BaseDomain = "https://api.openai.com/",
+			};
+			speechToTextSettings.Services = speechToTextSettings.Services.Append(service).ToArray();
+			somethingWasMissing = true;
+		}
 		foreach (var s in speechToTextSettings.Services)
 		{
 			if (s.Provider == SpeechToTextProviders.None)
 				s.Provider = SpeechToTextProviders.OpenAi;
 			if (string.IsNullOrWhiteSpace(s.ApiKey))
 			{
-                                s.ApiKey = PlaceholderValue;
-                                somethingWasMissing = true;
-                        }
+				s.ApiKey = PlaceholderValue;
+				somethingWasMissing = true;
+			}
 			if (string.IsNullOrWhiteSpace(s.SpeechToTextPrompt))
 			{
 				s.SpeechToTextPrompt = "Hello, let's use punctuation. Names: Kobus, Piro.";
@@ -291,12 +291,12 @@ internal class SettingsManager : ISettingsManager
 			 .Where(g => g.Count() > 1)
 			 .Select(g => g.Key)
 			 .ToArray();
-                if (duplicateNames.Any())
-                {
-                        throw new InvalidOperationException(
-                                 $"Duplicate service names found in SpeechToTextSettings.Services: {string.Join(", ", duplicateNames)}. " +
-                                 "Please ensure each speech-to-text service has a unique name to avoid conflicts.");
-                }
+		if (duplicateNames.Any())
+		{
+			throw new InvalidOperationException(
+						$"Duplicate service names found in SpeechToTextSettings.Services: {string.Join(", ", duplicateNames)}. " +
+						"Please ensure each speech-to-text service has a unique name to avoid conflicts.");
+		}
 
 
 		if (settings.LlmSettings is null)
@@ -510,93 +510,93 @@ End of summary.
 		return somethingWasMissing;
 	}
 
-        public void UpgradeSettings()
-        {
-                string json = File.ReadAllText(SettingsFileFullPath);
+	public void UpgradeSettings()
+	{
+		string json = File.ReadAllText(SettingsFileFullPath);
 
-                JObject jObj = JObject.Parse(json);
-                bool saveRequired = false;
+		JObject jObj = JObject.Parse(json);
+		bool saveRequired = false;
 
-                JObject? speechSettings = jObj["SpeechToTextSettings"] as JObject;
-                if (speechSettings is null && jObj["SpeetchToTextSettings"] is JObject legacySpeechSettings)
-                {
-                        speechSettings = legacySpeechSettings;
-                        jObj["SpeechToTextSettings"] = legacySpeechSettings;
-                        jObj.Remove("SpeetchToTextSettings");
-                        saveRequired = true;
-                }
+		JObject? speechSettings = jObj["SpeechToTextSettings"] as JObject;
+		if (speechSettings is null && jObj["SpeetchToTextSettings"] is JObject legacySpeechSettings)
+		{
+			speechSettings = legacySpeechSettings;
+			jObj["SpeechToTextSettings"] = legacySpeechSettings;
+			jObj.Remove("SpeetchToTextSettings");
+			saveRequired = true;
+		}
 
-                if (speechSettings is not null)
-                {
-                        if (speechSettings["Services"] == null || speechSettings["Services"].Type != JTokenType.Array)
-                        {
-                                string providerName = speechSettings.Value<string>("Service") ?? string.Empty;
+		if (speechSettings is not null)
+		{
+			if (speechSettings["Services"] == null || speechSettings["Services"].Type != JTokenType.Array)
+			{
+				string providerName = speechSettings.Value<string>("Service") ?? string.Empty;
 
-                                JObject serviceObj = new JObject
-                                {
-                                        ["Name"] = providerName,
-                                        ["Provider"] = providerName,
-                                        ["ApiKey"] = speechSettings["ApiKey"],
-                                        ["BaseDomain"] = speechSettings["BaseDomain"],
-                                        ["ModelId"] = speechSettings["ModelId"],
-                                        ["SpeechToTextPrompt"] = speechSettings["SpeechToTextPrompt"]
-                                };
+				JObject serviceObj = new JObject
+				{
+					["Name"] = providerName,
+					["Provider"] = providerName,
+					["ApiKey"] = speechSettings["ApiKey"],
+					["BaseDomain"] = speechSettings["BaseDomain"],
+					["ModelId"] = speechSettings["ModelId"],
+					["SpeechToTextPrompt"] = speechSettings["SpeechToTextPrompt"]
+				};
 
-                                JArray servicesArray = new JArray { serviceObj };
+				JArray createdServicesArray = new JArray { serviceObj };
 
-                                speechSettings.Remove("Service");
-                                speechSettings.Remove("ApiKey");
-                                speechSettings.Remove("BaseDomain");
-                                speechSettings.Remove("ModelId");
-                                speechSettings.Remove("SpeechToTextPrompt");
+				speechSettings.Remove("Service");
+				speechSettings.Remove("ApiKey");
+				speechSettings.Remove("BaseDomain");
+				speechSettings.Remove("ModelId");
+				speechSettings.Remove("SpeechToTextPrompt");
 
-                                speechSettings["ActiveSpeechToTextService"] = providerName;
-                                speechSettings["Services"] = servicesArray;
-                                saveRequired = true;
-                        }
+				speechSettings["ActiveSpeechToTextService"] = providerName;
+				speechSettings["Services"] = createdServicesArray;
+				saveRequired = true;
+			}
 
-                        if (speechSettings["ActiveSpeechToTextService"] == null && speechSettings["ActiveSpeetchToTextService"] != null)
-                        {
-                                speechSettings["ActiveSpeechToTextService"] = speechSettings["ActiveSpeetchToTextService"];
-                                speechSettings.Remove("ActiveSpeetchToTextService");
-                                saveRequired = true;
-                        }
+			if (speechSettings["ActiveSpeechToTextService"] == null && speechSettings["ActiveSpeetchToTextService"] != null)
+			{
+				speechSettings["ActiveSpeechToTextService"] = speechSettings["ActiveSpeetchToTextService"];
+				speechSettings.Remove("ActiveSpeetchToTextService");
+				saveRequired = true;
+			}
 
-                        if (speechSettings["SendHotkeyAfterTranscriptionOperation"] == null && speechSettings["SendKotKeyAfterTranscriptionOperation"] != null)
-                        {
-                                speechSettings["SendHotkeyAfterTranscriptionOperation"] = speechSettings["SendKotKeyAfterTranscriptionOperation"];
-                                speechSettings.Remove("SendKotKeyAfterTranscriptionOperation");
-                                saveRequired = true;
-                        }
+			if (speechSettings["SendHotkeyAfterTranscriptionOperation"] == null && speechSettings["SendKotKeyAfterTranscriptionOperation"] != null)
+			{
+				speechSettings["SendHotkeyAfterTranscriptionOperation"] = speechSettings["SendKotKeyAfterTranscriptionOperation"];
+				speechSettings.Remove("SendKotKeyAfterTranscriptionOperation");
+				saveRequired = true;
+			}
 
-                        if (speechSettings["Services"] is JArray servicesArray)
-                        {
-                                foreach (var service in servicesArray)
-                                {
-                                        if (service["Provider"]?.ToString() == "OpenAiWhisper")
-                                        {
-                                                service["Provider"] = "OpenAi";
-                                                saveRequired = true;
-                                        }
-                                }
-                        }
-                }
+			if (speechSettings["Services"] is JArray servicesArray)
+			{
+				foreach (var service in servicesArray)
+				{
+					if (service["Provider"]?.ToString() == "OpenAiWhisper")
+					{
+						service["Provider"] = "OpenAi";
+						saveRequired = true;
+					}
+				}
+			}
+		}
 
-                if (jObj["AzureComputerVisionSettings"] is JObject visionSettings)
-                {
-                        if (visionSettings["SendHotkeyAfterOcrOperation"] == null && visionSettings["SendKotKeyAfterOcrOperation"] != null)
-                        {
-                                visionSettings["SendHotkeyAfterOcrOperation"] = visionSettings["SendKotKeyAfterOcrOperation"];
-                                visionSettings.Remove("SendKotKeyAfterOcrOperation");
-                                saveRequired = true;
-                        }
-                }
+		if (jObj["AzureComputerVisionSettings"] is JObject visionSettings)
+		{
+			if (visionSettings["SendHotkeyAfterOcrOperation"] == null && visionSettings["SendKotKeyAfterOcrOperation"] != null)
+			{
+				visionSettings["SendHotkeyAfterOcrOperation"] = visionSettings["SendKotKeyAfterOcrOperation"];
+				visionSettings.Remove("SendKotKeyAfterOcrOperation");
+				saveRequired = true;
+			}
+		}
 
-                if (saveRequired)
-                {
-                        File.WriteAllText(SettingsFileFullPath, jObj.ToString(Formatting.Indented), Encoding.UTF8);
-                }
-        }
+		if (saveRequired)
+		{
+			File.WriteAllText(SettingsFileFullPath, jObj.ToString(Formatting.Indented), Encoding.UTF8);
+		}
+	}
 
 	public void SaveSettingsToFile(Settings settings)
 	{
