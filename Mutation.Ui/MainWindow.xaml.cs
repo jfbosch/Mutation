@@ -235,10 +235,18 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
-	{
-		await StartStopSpeechToTextAsync();
-	}
+        public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
+        {
+                try
+                {
+                        await StartStopSpeechToTextAsync();
+                }
+                catch (Exception ex)
+                {
+                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Speech to Text Error", ex);
+                }
+        }
 
 	public async Task StartStopSpeechToTextAsync()
 	{
