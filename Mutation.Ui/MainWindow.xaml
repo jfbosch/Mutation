@@ -361,6 +361,7 @@
                                 <Setter Target="CaptureCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="ClipboardCard.(Grid.Column)" Value="0" />
                                 <Setter Target="ClipboardCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="ClipboardCard.(Grid.Row)" Value="4" />
                                 <Setter Target="FormattingActionsPanel.Orientation" Value="Vertical" />
                                 <Setter Target="ClipboardActionsPanel.Orientation" Value="Vertical" />
                             </VisualState.Setters>
@@ -378,6 +379,7 @@
                                 <Setter Target="CaptureCard.(Grid.ColumnSpan)" Value="1" />
                                 <Setter Target="ClipboardCard.(Grid.Column)" Value="1" />
                                 <Setter Target="ClipboardCard.(Grid.ColumnSpan)" Value="1" />
+                                <Setter Target="ClipboardCard.(Grid.Row)" Value="3" />
                                 <Setter Target="FormattingActionsPanel.Orientation" Value="Horizontal" />
                                 <Setter Target="ClipboardActionsPanel.Orientation" Value="Horizontal" />
                             </VisualState.Setters>
