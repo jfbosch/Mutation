@@ -8,7 +8,7 @@ public class Settings
 
 	public AudioSettings? AudioSettings { get; set; }
 	public AzureComputerVisionSettings? AzureComputerVisionSettings { get; set; }
-	public SpeetchToTextSettings? SpeetchToTextSettings { get; set; }
+        public SpeechToTextSettings? SpeechToTextSettings { get; set; }
 	public LlmSettings? LlmSettings { get; set; }
 	public TextToSpeechSettings? TextToSpeechSettings { get; set; }
 
@@ -20,17 +20,17 @@ public class Settings
 	{
 	}
 
-	public Settings(string? userInstructions, AudioSettings? audioSettings, AzureComputerVisionSettings? azureComputerVisionSettings, SpeetchToTextSettings? speetchToTextSettings, LlmSettings? llmSettings, TextToSpeechSettings? textToSpeechSettings, MainWindowUiSettings mainWindowUiSettings, HotKeyRouterSettings hotKeyRouterSettings)
-	{
-		UserInstructions = userInstructions;
-		AudioSettings = audioSettings;
-		AzureComputerVisionSettings = azureComputerVisionSettings;
-		SpeetchToTextSettings = speetchToTextSettings;
-		LlmSettings = llmSettings;
-		TextToSpeechSettings = textToSpeechSettings;
-		MainWindowUiSettings = mainWindowUiSettings;
-		HotKeyRouterSettings = hotKeyRouterSettings;
-	}
+        public Settings(string? userInstructions, AudioSettings? audioSettings, AzureComputerVisionSettings? azureComputerVisionSettings, SpeechToTextSettings? speechToTextSettings, LlmSettings? llmSettings, TextToSpeechSettings? textToSpeechSettings, MainWindowUiSettings mainWindowUiSettings, HotKeyRouterSettings hotKeyRouterSettings)
+        {
+                UserInstructions = userInstructions;
+                AudioSettings = audioSettings;
+                AzureComputerVisionSettings = azureComputerVisionSettings;
+                SpeechToTextSettings = speechToTextSettings;
+                LlmSettings = llmSettings;
+                TextToSpeechSettings = textToSpeechSettings;
+                MainWindowUiSettings = mainWindowUiSettings;
+                HotKeyRouterSettings = hotKeyRouterSettings;
+        }
 }
 
 public class AudioSettings
@@ -98,7 +98,7 @@ public class AzureComputerVisionSettings
 	public string? OcrLeftToRightTopToBottomHotKey { get; set; }
 
 	// If this is not null, this hotkey will be sent to the system after an OCR operation completes. 
-	public string? SendKotKeyAfterOcrOperation { get; set; }
+        public string? SendHotkeyAfterOcrOperation { get; set; }
 
 	public string? ApiKey { get; set; }
 	public string? Endpoint { get; set; }
@@ -109,21 +109,21 @@ public class AzureComputerVisionSettings
 	}
 }
 
-public class SpeetchToTextSettings
+public class SpeechToTextSettings
 {
-	public string? TempDirectory { get; set; }
-	public string? SpeechToTextHotKey { get; set; }
+        public string? TempDirectory { get; set; }
+        public string? SpeechToTextHotKey { get; set; }
 
-	// If this is not null, this hotkey will be sent to the system after a transcription operation completes. 
-	public string? SendKotKeyAfterTranscriptionOperation { get; set; }
+        // If this is not null, this hotkey will be sent to the system after a transcription operation completes.
+        public string? SendHotkeyAfterTranscriptionOperation { get; set; }
 
-	public SpeetchToTextServiceSettings[]? Services { get; set; }
-	public string? ActiveSpeetchToTextService { get; set; }
+        public SpeechToTextServiceSettings[]? Services { get; set; }
+        public string? ActiveSpeechToTextService { get; set; }
 }
 
-public class SpeetchToTextServiceSettings
+public class SpeechToTextServiceSettings
 {
-	public string? Name { get; set; }
+        public string? Name { get; set; }
 	public SpeechToTextProviders Provider { get; set; }
 	public string? ApiKey { get; set; }
 	public string? BaseDomain { get; set; }

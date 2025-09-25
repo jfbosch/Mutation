@@ -50,12 +50,12 @@ All hotkeys are global and fully customisable. Below is a comprehensive example 
     "ScreenshotOcrHotKey": "Ctrl+Shift+Q",
     "OcrLeftToRightTopToBottomHotKey": "Ctrl+Shift+L",
     "ScreenshotLeftToRightTopToBottomOcrHotKey": "Ctrl+Shift+K",
-    "SendHotKeyAfterOcrOperation": "Ctrl+Alt+C"
+    "SendHotkeyAfterOcrOperation": "Ctrl+Alt+C"
   },
 
-  "SpeetchToTextSettings": {
+  "SpeechToTextSettings": {
     "StartStopTranscriptionHotKey": "Ctrl+Shift+T",
-    "SendHotKeyAfterTranscriptionOperation": "Ctrl+Alt+V",
+    "SendHotkeyAfterTranscriptionOperation": "Ctrl+Alt+V",
     "Providers": [
       {
         "Name": "OpenAI gpt-4o-transcribe",
@@ -99,7 +99,7 @@ All hotkeys are global and fully customisable. Below is a comprehensive example 
 ### Provisioning Speech-to-Text Providers
 
 * Follow each provider’s portal to create an account and API key.
-* Paste the credentials into the relevant object under `SpeetchToTextSettings → Providers`.
+* Paste the credentials into the relevant object under `SpeechToTextSettings → Providers`.
 
 ## Contribute
 

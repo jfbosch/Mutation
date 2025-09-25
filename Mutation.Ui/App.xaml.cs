@@ -163,7 +163,7 @@ public partial class App : Application
 								  var result = await ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
 								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
 								  mainWindow.SetOcrText(result.Message);
-								  HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                                                              HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot + OCR Error", ex); }
 						  });
@@ -180,7 +180,7 @@ public partial class App : Application
 								  var result = await ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom);
 								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
 								  mainWindow.SetOcrText(result.Message);
-								  HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                                                              HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot + OCR (LRTB) Error", ex); }
 						  });
@@ -197,7 +197,7 @@ public partial class App : Application
 								  var result = await ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
 								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
 								  mainWindow.SetOcrText(result.Message);
-								  HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                                                              HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("OCR Clipboard Error", ex); }
 						  });
@@ -214,7 +214,7 @@ public partial class App : Application
 								  var result = await ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom);
 								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
 								  mainWindow.SetOcrText(result.Message);
-								  HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                                                              HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("OCR Clipboard (LRTB) Error", ex); }
 						  });
@@ -231,10 +231,10 @@ public partial class App : Application
 						  });
 			}
 
-			if (!string.IsNullOrWhiteSpace(settingsSvc.SpeetchToTextSettings?.SpeechToTextHotKey))
+			if (!string.IsNullOrWhiteSpace(settingsSvc.SpeechToTextSettings?.SpeechToTextHotKey))
 			{
 				hkManager.RegisterHotkey(
-						  Hotkey.Parse(settingsSvc.SpeetchToTextSettings.SpeechToTextHotKey!),
+						  Hotkey.Parse(settingsSvc.SpeechToTextSettings.SpeechToTextHotKey!),
 						  () =>
 						  {
 							  try { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).StartStopSpeechToTextAsync()); }
@@ -371,7 +371,7 @@ public partial class App : Application
 		builder.Services.AddSingleton<ISpeechToTextService[]>(sp =>
 		{
 			List<ISpeechToTextService> services = new();
-			var sttSettings = settings.SpeetchToTextSettings?.Services ?? Array.Empty<SpeetchToTextServiceSettings>();
+			var sttSettings = settings.SpeechToTextSettings?.Services ?? Array.Empty<SpeechToTextServiceSettings>();
 			foreach (var serviceSettings in sttSettings)
 			{
 				switch (serviceSettings.Provider)
@@ -383,14 +383,14 @@ public partial class App : Application
 						services.Add(CreateDeepgramSpeechToTextService(builder, serviceSettings));
 						break;
 					default:
-						throw new NotSupportedException($"The SpeetchToText service '{serviceSettings.Provider}' is not supported.");
+						throw new NotSupportedException($"The SpeechToText service '{serviceSettings.Provider}' is not supported.");
 				}
 			}
 			return services.ToArray();
 		});
 	}
 
-	private static ISpeechToTextService CreateWhisperSpeechToTextService(HostApplicationBuilder builder, SpeetchToTextServiceSettings serviceSettings, IServiceProvider sp)
+	private static ISpeechToTextService CreateWhisperSpeechToTextService(HostApplicationBuilder builder, SpeechToTextServiceSettings serviceSettings, IServiceProvider sp)
 	{
 		string baseDomain = serviceSettings.BaseDomain?.Trim() ?? string.Empty;
 
@@ -411,7 +411,7 @@ public partial class App : Application
 				  serviceSettings.TimeoutSeconds > 0 ? serviceSettings.TimeoutSeconds : 10);
 	}
 
-	private static ISpeechToTextService CreateDeepgramSpeechToTextService(HostApplicationBuilder builder, SpeetchToTextServiceSettings serviceSettings)
+	private static ISpeechToTextService CreateDeepgramSpeechToTextService(HostApplicationBuilder builder, SpeechToTextServiceSettings serviceSettings)
 	{
 		Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient = ClientFactory.CreateListenRESTClient(serviceSettings.ApiKey ?? string.Empty);
 

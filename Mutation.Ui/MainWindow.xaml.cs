@@ -102,7 +102,7 @@ public sealed partial class MainWindow : Window
 
 	private void RestorePersistedSpeechServiceSelection()
 	{
-		string? savedServiceName = _settings.SpeetchToTextSettings?.ActiveSpeetchToTextService;
+                string? savedServiceName = _settings.SpeechToTextSettings?.ActiveSpeechToTextService;
 		if (!string.IsNullOrWhiteSpace(savedServiceName))
 		{
 			var match = _speechServices.FirstOrDefault(s => s.ServiceName == savedServiceName);
@@ -146,7 +146,7 @@ public sealed partial class MainWindow : Window
         private void InitializeHotkeyVisuals()
         {
                 ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
-                ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeetchToTextSettings?.SpeechToTextHotKey, BtnSpeechToTextLabel.Text);
+                ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, BtnSpeechToTextLabel.Text);
                 ConfigureButtonHotkey(BtnScreenshot, BtnScreenshotHotkey, _settings.AzureComputerVisionSettings?.ScreenshotHotKey, "Copy a screenshot directly to the clipboard");
                 ConfigureButtonHotkey(BtnOcrClipboard, BtnOcrClipboardHotkey, _settings.AzureComputerVisionSettings?.OcrHotKey, "Run OCR on an image stored in the clipboard");
                 ConfigureButtonHotkey(BtnOcrClipboardLrtb, BtnOcrClipboardLrtbHotkey, _settings.AzureComputerVisionSettings?.OcrLeftToRightTopToBottomHotKey, "Run OCR on an image stored in the clipboard using left-to-right reading order");
@@ -174,8 +174,8 @@ public sealed partial class MainWindow : Window
 		catch { }
 		_uiStateManager.Save(this);
 
-		if (_activeSpeechService != null)
-			_settings.SpeetchToTextSettings!.ActiveSpeetchToTextService = _activeSpeechService.ServiceName;
+                if (_activeSpeechService != null)
+                        _settings.SpeechToTextSettings!.ActiveSpeechToTextService = _activeSpeechService.ServiceName;
 		_settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
 
 		_settingsManager.SaveSettingsToFile(_settings);
@@ -217,7 +217,7 @@ public sealed partial class MainWindow : Window
                 {
                         var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
 			SetOcrText(result.Message);
-			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                    HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 			if (result.Success)
 				ShowStatus("Screenshot & OCR", "Text captured from screenshot.", InfoBarSeverity.Success);
 			else
@@ -236,7 +236,7 @@ public sealed partial class MainWindow : Window
                 {
                         var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom);
                         SetOcrText(result.Message);
-                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
                         if (result.Success)
                                 ShowStatus("Screenshot & OCR (left-to-right)", "Text captured from screenshot using left-to-right reading order.", InfoBarSeverity.Success);
                         else
@@ -255,7 +255,7 @@ public sealed partial class MainWindow : Window
                 {
                         var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
 			SetOcrText(result.Message);
-			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                    HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 			if (result.Success)
 				ShowStatus("OCR", "Clipboard image converted to text.", InfoBarSeverity.Success);
 			else
@@ -287,7 +287,7 @@ public sealed partial class MainWindow : Window
                 {
                         var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom);
                         SetOcrText(result.Message);
-                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
                         if (result.Success)
                                 ShowStatus("OCR (left-to-right)", "Clipboard image converted using left-to-right reading order.", InfoBarSeverity.Success);
                         else
@@ -369,7 +369,7 @@ public sealed partial class MainWindow : Window
 					TxtSpeechToText.IsReadOnly = false;
 					_suppressAutoActions = false;
 					ShowStatus("Speech to Text", "Transcript ready and copied.", InfoBarSeverity.Success);
-					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
+                                    HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
 				}
 				catch (OperationCanceledException)
 				{
@@ -458,7 +458,7 @@ public sealed partial class MainWindow : Window
                 BtnSpeechToTextIcon.Glyph = glyph;
                 BtnSpeechToText.IsEnabled = isEnabled;
                 AutomationProperties.SetName(BtnSpeechToText, label);
-                ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeetchToTextSettings?.SpeechToTextHotKey, label);
+                ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
         }
 
         private void ConfigureButtonHotkey(Button button, TextBlock? hotkeyTextBlock, string? hotkey, string baseTooltip)
