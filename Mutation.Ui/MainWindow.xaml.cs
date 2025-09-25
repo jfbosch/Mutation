@@ -34,7 +34,6 @@ public sealed partial class MainWindow : Window
 	private readonly DispatcherTimer _statusDismissTimer;
 
         private const string MicOnGlyph = "\uE720";
-        private const string MicOffGlyph = "\uEC26";
         private const string RecordGlyph = "\uE768";
         private const string StopGlyph = "\uE71A";
         private const string ProcessingGlyph = "\uE8A0";
@@ -453,10 +452,12 @@ public sealed partial class MainWindow : Window
         {
                 bool muted = _audioDeviceManager.IsMuted;
                 BtnToggleMicLabel.Text = muted ? "Unmute microphone" : "Mute microphone";
-                BtnToggleMicIcon.Glyph = muted ? MicOffGlyph : MicOnGlyph;
+                BtnToggleMicIcon.Glyph = MicOnGlyph;
+                BtnToggleMicSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
                 AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
                 ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
-                MicStatusIcon.Glyph = muted ? MicOffGlyph : MicOnGlyph;
+                MicStatusIcon.Glyph = MicOnGlyph;
+                MicStatusIconSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
                 MicStatusIcon.Foreground = ResolveBrush(muted ? "TextFillColorSecondaryBrush" : "TextFillColorPrimaryBrush");
                 ToolTipService.SetToolTip(MicStatusIcon, muted ? "Microphone muted" : "Microphone live");
                 AutomationProperties.SetName(MicStatusIcon, muted ? "Microphone muted" : "Microphone live");
@@ -515,8 +516,7 @@ public sealed partial class MainWindow : Window
                         StatusInfoBar.Title = title;
 			StatusInfoBar.Message = message;
 			StatusInfoBar.Severity = severity;
-			StatusInfoBar.Visibility = Visibility.Visible;
-			StatusInfoBar.IsOpen = true;
+                        StatusInfoBar.IsOpen = true;
 			AutomationProperties.SetName(StatusInfoBar, $"{title} status");
 			AutomationProperties.SetHelpText(StatusInfoBar, message);
 			_statusDismissTimer.Stop();
@@ -532,15 +532,13 @@ public sealed partial class MainWindow : Window
 	private void StatusDismissTimer_Tick(object? sender, object e)
 	{
 		_statusDismissTimer.Stop();
-		StatusInfoBar.IsOpen = false;
-		StatusInfoBar.Visibility = Visibility.Collapsed;
+                StatusInfoBar.IsOpen = false;
 	}
 
 	private void StatusInfoBar_CloseButtonClick(InfoBar sender, object args)
 	{
 		_statusDismissTimer.Stop();
-		StatusInfoBar.IsOpen = false;
-		StatusInfoBar.Visibility = Visibility.Collapsed;
+                StatusInfoBar.IsOpen = false;
 	}
 
 
