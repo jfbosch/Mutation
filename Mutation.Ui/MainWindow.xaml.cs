@@ -463,7 +463,9 @@ public sealed partial class MainWindow : Window
                 if (Application.Current.Resources.TryGetValue(resourceKey, out var value) && value is Brush brush)
                         return brush;
 
-                return Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush ?? new SolidColorBrush(Windows.UI.Colors.Gray);
+		  // Fallback to a neutral gray if the requested resource isn't found. In WinUI 3 the Colors struct lives under Microsoft.UI.
+		  return Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush 
+			  ?? new SolidColorBrush(Microsoft.UI.Colors.Gray);
         }
 
         private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
