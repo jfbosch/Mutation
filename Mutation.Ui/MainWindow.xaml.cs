@@ -92,11 +92,13 @@ public sealed partial class MainWindow : Window
 
 		// After initializing and restoring the active microphone, play a sound
 		// representing the current state (mute/unmute) to reflect actual status.
-		if (_audioDeviceManager.Microphone != null)
-			BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
+                if (_audioDeviceManager.Microphone != null)
+                        BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
 
-		this.Closed += MainWindow_Closed;
-	}
+                InitializeHotkeyVisuals();
+
+                this.Closed += MainWindow_Closed;
+        }
 
 	private void RestorePersistedSpeechServiceSelection()
 	{
@@ -122,11 +124,11 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	private void RestorePersistedMicrophoneSelection(System.Collections.Generic.List<CoreAudio.MMDevice> micList)
-	{
-		string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
-		if (!string.IsNullOrWhiteSpace(savedMicFullName))
-		{
+        private void RestorePersistedMicrophoneSelection(System.Collections.Generic.List<CoreAudio.MMDevice> micList)
+        {
+                string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
+                if (!string.IsNullOrWhiteSpace(savedMicFullName))
+                {
 			var match = micList.FirstOrDefault(m => m.FriendlyName == savedMicFullName);
 			if (match != null)
 				CmbMicrophone.SelectedItem = match;
@@ -139,13 +141,25 @@ public sealed partial class MainWindow : Window
 			CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
 		else if (micList.Count > 0)
 			CmbMicrophone.SelectedIndex = 0;
-	}
+        }
 
-	private async void MainWindow_Closed(object sender, WindowEventArgs args)
-	{
-		// Prevent auto actions during shutdown
-		_suppressAutoActions = true;
-		try
+        private void InitializeHotkeyVisuals()
+        {
+                ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
+                ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeetchToTextSettings?.SpeechToTextHotKey, BtnSpeechToTextLabel.Text);
+                ConfigureButtonHotkey(BtnScreenshot, BtnScreenshotHotkey, _settings.AzureComputerVisionSettings?.ScreenshotHotKey, "Copy a screenshot directly to the clipboard");
+                ConfigureButtonHotkey(BtnOcrClipboard, BtnOcrClipboardHotkey, _settings.AzureComputerVisionSettings?.OcrHotKey, "Run OCR on an image stored in the clipboard");
+                ConfigureButtonHotkey(BtnOcrClipboardLrtb, BtnOcrClipboardLrtbHotkey, _settings.AzureComputerVisionSettings?.OcrLeftToRightTopToBottomHotKey, "Run OCR on an image stored in the clipboard using left-to-right reading order");
+                ConfigureButtonHotkey(BtnScreenshotOcr, BtnScreenshotOcrHotkey, _settings.AzureComputerVisionSettings?.ScreenshotOcrHotKey, "Capture a screenshot and extract text automatically");
+                ConfigureButtonHotkey(BtnScreenshotOcrLrtb, BtnScreenshotOcrLrtbHotkey, _settings.AzureComputerVisionSettings?.ScreenshotLeftToRightTopToBottomOcrHotKey, "Capture a screenshot and extract text using left-to-right reading order");
+                ConfigureButtonHotkey(BtnTextToSpeech, BtnTextToSpeechHotkey, _settings.TextToSpeechSettings?.TextToSpeechHotKey, "Play the clipboard text using text-to-speech");
+        }
+
+        private async void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+                // Prevent auto actions during shutdown
+                _suppressAutoActions = true;
+                try
 		{
 			// Ensure we are not recording/transcribing when closing
 			if (_speechManager.Recording)
@@ -197,11 +211,11 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
-	{
-		try
-		{
-			var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
+        private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
+        {
+                try
+                {
+                        var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
 			SetOcrText(result.Message);
 			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 			if (result.Success)
@@ -213,14 +227,33 @@ public sealed partial class MainWindow : Window
 		{
 			ShowStatus("Screenshot & OCR", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("Screenshot + OCR Error", ex);
-		}
-	}
+                }
+        }
 
-	private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
-	{
-		try
-		{
-			var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
+        private async void BtnScreenshotOcrLrtb_Click(object sender, RoutedEventArgs e)
+        {
+                try
+                {
+                        var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom);
+                        SetOcrText(result.Message);
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                        if (result.Success)
+                                ShowStatus("Screenshot & OCR (left-to-right)", "Text captured from screenshot using left-to-right reading order.", InfoBarSeverity.Success);
+                        else
+                                ShowStatus("Screenshot & OCR (left-to-right)", result.Message, InfoBarSeverity.Error);
+                }
+                catch (Exception ex)
+                {
+                        ShowStatus("Screenshot & OCR (left-to-right)", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Screenshot + OCR (LRTB) Error", ex);
+                }
+        }
+
+        private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
+        {
+                try
+                {
+                        var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
 			SetOcrText(result.Message);
 			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 			if (result.Success)
@@ -245,6 +278,25 @@ public sealed partial class MainWindow : Window
                 {
                         ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
                         await ShowErrorDialog("Speech to Text Error", ex);
+                }
+        }
+
+        private async void BtnOcrClipboardLrtb_Click(object sender, RoutedEventArgs e)
+        {
+                try
+                {
+                        var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom);
+                        SetOcrText(result.Message);
+                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                        if (result.Success)
+                                ShowStatus("OCR (left-to-right)", "Clipboard image converted using left-to-right reading order.", InfoBarSeverity.Success);
+                        else
+                                ShowStatus("OCR (left-to-right)", result.Message, InfoBarSeverity.Warning);
+                }
+                catch (Exception ex)
+                {
+                        ShowStatus("OCR (left-to-right)", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("OCR Clipboard (LRTB) Error", ex);
                 }
         }
 
@@ -391,31 +443,56 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	private void UpdateMicrophoneToggleVisuals()
-	{
-		bool muted = _audioDeviceManager.IsMuted;
-		BtnToggleMicLabel.Text = muted ? "Unmute microphone" : "Mute microphone";
-		BtnToggleMicIcon.Glyph = muted ? MicOffGlyph : MicOnGlyph;
-		AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
-		AutomationProperties.SetHelpText(BtnToggleMic, BtnToggleMicLabel.Text);
-		ToolTipService.SetToolTip(BtnToggleMic, BtnToggleMicLabel.Text);
-	}
+        private void UpdateMicrophoneToggleVisuals()
+        {
+                bool muted = _audioDeviceManager.IsMuted;
+                BtnToggleMicLabel.Text = muted ? "Unmute microphone" : "Mute microphone";
+                BtnToggleMicIcon.Glyph = muted ? MicOffGlyph : MicOnGlyph;
+                AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
+                ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
+        }
 
-	private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
-	{
-		BtnSpeechToTextLabel.Text = label;
-		BtnSpeechToTextIcon.Glyph = glyph;
-		BtnSpeechToText.IsEnabled = isEnabled;
-		AutomationProperties.SetName(BtnSpeechToText, label);
-		AutomationProperties.SetHelpText(BtnSpeechToText, label);
-		ToolTipService.SetToolTip(BtnSpeechToText, label);
-	}
+        private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
+        {
+                BtnSpeechToTextLabel.Text = label;
+                BtnSpeechToTextIcon.Glyph = glyph;
+                BtnSpeechToText.IsEnabled = isEnabled;
+                AutomationProperties.SetName(BtnSpeechToText, label);
+                ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeetchToTextSettings?.SpeechToTextHotKey, label);
+        }
 
-	private void ShowStatus(string title, string message, InfoBarSeverity severity)
-	{
-		void Update()
-		{
-			StatusInfoBar.Title = title;
+        private void ConfigureButtonHotkey(Button button, TextBlock? hotkeyTextBlock, string? hotkey, string baseTooltip)
+        {
+                string tooltip = ComposeTooltip(baseTooltip, hotkey);
+                ToolTipService.SetToolTip(button, tooltip);
+                AutomationProperties.SetHelpText(button, tooltip);
+                UpdateHotkeyText(hotkeyTextBlock, hotkey);
+        }
+
+        private static void UpdateHotkeyText(TextBlock? hotkeyTextBlock, string? hotkey)
+        {
+                if (hotkeyTextBlock == null)
+                        return;
+
+                if (string.IsNullOrWhiteSpace(hotkey))
+                {
+                        hotkeyTextBlock.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                        hotkeyTextBlock.Text = $"Hotkey: {hotkey}";
+                        hotkeyTextBlock.Visibility = Visibility.Visible;
+                }
+        }
+
+        private static string ComposeTooltip(string baseTooltip, string? hotkey) =>
+                string.IsNullOrWhiteSpace(hotkey) ? baseTooltip : $"{baseTooltip} (Hotkey: {hotkey})";
+
+        private void ShowStatus(string title, string message, InfoBarSeverity severity)
+        {
+                void Update()
+                {
+                        StatusInfoBar.Title = title;
 			StatusInfoBar.Message = message;
 			StatusInfoBar.Severity = severity;
 			StatusInfoBar.Visibility = Visibility.Visible;
