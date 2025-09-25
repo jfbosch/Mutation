@@ -1,5 +1,6 @@
-﻿using CognitiveSupport;
+using CognitiveSupport;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Mutation.Ui.Services;
 using System;
@@ -29,6 +30,13 @@ public sealed partial class MainWindow : Window
 	private ISpeechToTextService? _activeSpeechService;
 	private CancellationTokenSource _formatDebounceCts = new();
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
+	private readonly DispatcherTimer _statusDismissTimer;
+
+	private const string MicOnGlyph = "\uE720";
+	private const string MicOffGlyph = "\uE721";
+	private const string RecordGlyph = "\uE768";
+	private const string StopGlyph = "\uE71A";
+	private const string ProcessingGlyph = "\uE8A0";
 
 	public MainWindow(
 		ClipboardManager clipboard,
@@ -54,9 +62,15 @@ public sealed partial class MainWindow : Window
 		_speechManager = new SpeechToTextManager(settings);
 
 		InitializeComponent();
+
+		_statusDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+		_statusDismissTimer.Tick += StatusDismissTimer_Tick;
+		StatusInfoBar.CloseButtonClick += StatusInfoBar_CloseButtonClick;
+
 		_audioDeviceManager.EnsureDefaultMicrophoneSelected();
 
-		BtnToggleMic.Content = _audioDeviceManager.IsMuted ? "Unmute" : "Mute";
+		UpdateMicrophoneToggleVisuals();
+		UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
 		var micList = _audioDeviceManager.CaptureDevices.ToList();
 		CmbMicrophone.ItemsSource = micList;
 		CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
@@ -157,12 +171,15 @@ public sealed partial class MainWindow : Window
 	private void CopyText_Click(object sender, RoutedEventArgs e)
 	{
 		_clipboard.SetText(TxtClipboard.Text);
+		ShowStatus("Clipboard", "Text copied to the clipboard.", InfoBarSeverity.Success);
 	}
 
 	public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
 	{
 		_audioDeviceManager.ToggleMute();
-		BtnToggleMic.Content = _audioDeviceManager.IsMuted ? "Unmute" : "Mute";
+		UpdateMicrophoneToggleVisuals();
+		ShowStatus("Microphone", _audioDeviceManager.IsMuted ? "Microphone muted." : "Microphone is live.",
+			_audioDeviceManager.IsMuted ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
 		BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
 	}
 
@@ -171,9 +188,11 @@ public sealed partial class MainWindow : Window
 		try
 		{
 			await _ocrManager.TakeScreenshotToClipboardAsync();
+			ShowStatus("Screenshot", "Screenshot copied to the clipboard.", InfoBarSeverity.Success);
 		}
 		catch (Exception ex)
 		{
+			ShowStatus("Screenshot", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("Screenshot Error", ex);
 		}
 	}
@@ -185,9 +204,14 @@ public sealed partial class MainWindow : Window
 			var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
 			SetOcrText(result.Message);
 			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+			if (result.Success)
+				ShowStatus("Screenshot & OCR", "Text captured from screenshot.", InfoBarSeverity.Success);
+			else
+				ShowStatus("Screenshot & OCR", result.Message, InfoBarSeverity.Error);
 		}
 		catch (Exception ex)
 		{
+			ShowStatus("Screenshot & OCR", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("Screenshot + OCR Error", ex);
 		}
 	}
@@ -199,38 +223,35 @@ public sealed partial class MainWindow : Window
 			var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
 			SetOcrText(result.Message);
 			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendKotKeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+			if (result.Success)
+				ShowStatus("OCR", "Clipboard image converted to text.", InfoBarSeverity.Success);
+			else
+				ShowStatus("OCR", result.Message, InfoBarSeverity.Warning);
 		}
 		catch (Exception ex)
 		{
+			ShowStatus("OCR", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("OCR Clipboard Error", ex);
 		}
 	}
 
 	public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
 	{
-		try
-		{
-			await StartStopSpeechToTextAsync();
-		}
-		catch (Exception ex)
-		{
-			await ShowErrorDialog("Speech to Text Error", ex);
-		}
+		await StartStopSpeechToTextAsync();
 	}
 
 	public async Task StartStopSpeechToTextAsync()
 	{
 		try
 		{
-			// If a transcription is currently in-flight, cancel it and play failure/cancel sound.
 			if (_speechManager.Transcribing)
 			{
 				_speechManager.CancelTranscription();
-				// Restore UI to idle state
-				BtnSpeechToText.Content = "Record";
+				UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
 				BtnSpeechToText.IsEnabled = true;
 				TxtSpeechToText.IsReadOnly = false;
 				_suppressAutoActions = false;
+				ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
 				BeepPlayer.Play(BeepType.Failure);
 				return;
 			}
@@ -240,23 +261,24 @@ public sealed partial class MainWindow : Window
 				var dlg = new ContentDialog
 				{
 					Title = "Warning",
-					Content = new TextBlock { Text = "No speech-to-text service selected.", TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap },
+					Content = new TextBlock { Text = "No speech-to-text service selected.", TextWrapping = TextWrapping.Wrap },
 					CloseButtonText = "OK",
 					XamlRoot = this.Content.XamlRoot
 				};
-				Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dlg, "Warning");
-				Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
+				AutomationProperties.SetName(dlg, "Warning");
+				AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
+				ShowStatus("Speech to Text", "Select a speech-to-text service to begin.", InfoBarSeverity.Warning);
 				await dlg.ShowAsync();
 				return;
 			}
 
 			if (!_speechManager.Recording)
 			{
-				// Enter recording state without triggering TextChanged side-effects
 				_suppressAutoActions = true;
 				TxtSpeechToText.IsReadOnly = true;
 				TxtSpeechToText.Text = "Recording...";
-				BtnSpeechToText.Content = "Stop";
+				UpdateSpeechButtonVisuals("Stop recording", StopGlyph);
+				ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
 				BeepPlayer.Play(BeepType.Start);
 				await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
 				_suppressAutoActions = false;
@@ -264,46 +286,45 @@ public sealed partial class MainWindow : Window
 			else
 			{
 				BtnSpeechToText.IsEnabled = false;
-				// Show transcribing status without triggering TextChanged side-effects
 				_suppressAutoActions = true;
 				TxtSpeechToText.Text = "Transcribing...";
+				UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
+				ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
+
 				try
 				{
 					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-					// Compute formatted transcript immediately after transcription completes.
 					string formatted = _transcriptFormatter.ApplyRules(text, false);
 
-					// Keep auto-actions suppressed while updating UI and interacting with clipboard/target app
-					// to avoid triggering the debounced TextChanged handler.
-					// Show raw in the main transcript box and formatted in the formatted output box.
 					TxtSpeechToText.Text = text;
 					TxtFormatTranscript.Text = formatted;
 
-					BtnSpeechToText.Content = "Record";
+					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
 					BtnSpeechToText.IsEnabled = true;
 
-					// Use formatted text for clipboard and insertion into the active application.
 					_clipboard.SetText(formatted);
 					InsertIntoActiveApplication(formatted);
 
 					BeepPlayer.Play(BeepType.Success);
 					TxtSpeechToText.IsReadOnly = false;
 					_suppressAutoActions = false;
+					ShowStatus("Speech to Text", "Transcript ready and copied.", InfoBarSeverity.Success);
 					HotkeyManager.SendHotkeyAfterDelay(_settings.SpeetchToTextSettings?.SendKotKeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
 				}
 				catch (OperationCanceledException)
 				{
-					// Graceful cancel: ensure UI is reset; failure beep already played at cancel trigger.
-					BtnSpeechToText.Content = "Record";
+					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
 					BtnSpeechToText.IsEnabled = true;
 					TxtSpeechToText.IsReadOnly = false;
 					_suppressAutoActions = false;
+					ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
 					return;
 				}
 			}
 		}
 		catch (Exception ex)
 		{
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("Speech to Text Error", ex);
 		}
 	}
@@ -317,8 +338,8 @@ public sealed partial class MainWindow : Window
 			CloseButtonText = "OK",
 			XamlRoot = this.Content.XamlRoot // important in WinUI 3
 		};
-		Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
-		Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
+		AutomationProperties.SetName(dialog, title);
+		AutomationProperties.SetHelpText(dialog, message);
 
 		await dialog.ShowAsync();
 	}
@@ -327,6 +348,7 @@ public sealed partial class MainWindow : Window
 	{
 		string text = _clipboard.GetText();
 		_textToSpeech.SpeakText(text);
+		ShowStatus("Text to Speech", "Speaking clipboard text.", InfoBarSeverity.Informational);
 	}
 
 	public void BtnFormatTranscript_Click(object? sender, RoutedEventArgs? e)
@@ -337,6 +359,7 @@ public sealed partial class MainWindow : Window
 		_clipboard.SetText(formatted);
 		InsertIntoActiveApplication(formatted);
 		BeepPlayer.Play(BeepType.Success);
+		ShowStatus("Formatting", "Transcript formatted and copied.", InfoBarSeverity.Success);
 	}
 
 	public async void BtnFormatLlm_Click(object? sender, RoutedEventArgs? e)
@@ -351,11 +374,68 @@ public sealed partial class MainWindow : Window
 			_clipboard.SetText(formatted);
 			InsertIntoActiveApplication(formatted);
 			BeepPlayer.Play(BeepType.Success);
+			ShowStatus("Formatting", "Transcript refined with the language model.", InfoBarSeverity.Success);
 		}
 		catch (Exception ex)
 		{
+			ShowStatus("Formatting", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("Format with LLM Error", ex);
 		}
+	}
+
+	private void UpdateMicrophoneToggleVisuals()
+	{
+		bool muted = _audioDeviceManager.IsMuted;
+		BtnToggleMicLabel.Text = muted ? "Unmute microphone" : "Mute microphone";
+		BtnToggleMicIcon.Glyph = muted ? MicOffGlyph : MicOnGlyph;
+		AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
+		AutomationProperties.SetHelpText(BtnToggleMic, BtnToggleMicLabel.Text);
+		ToolTipService.SetToolTip(BtnToggleMic, BtnToggleMicLabel.Text);
+	}
+
+	private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
+	{
+		BtnSpeechToTextLabel.Text = label;
+		BtnSpeechToTextIcon.Glyph = glyph;
+		BtnSpeechToText.IsEnabled = isEnabled;
+		AutomationProperties.SetName(BtnSpeechToText, label);
+		AutomationProperties.SetHelpText(BtnSpeechToText, label);
+		ToolTipService.SetToolTip(BtnSpeechToText, label);
+	}
+
+	private void ShowStatus(string title, string message, InfoBarSeverity severity)
+	{
+		void Update()
+		{
+			StatusInfoBar.Title = title;
+			StatusInfoBar.Message = message;
+			StatusInfoBar.Severity = severity;
+			StatusInfoBar.Visibility = Visibility.Visible;
+			StatusInfoBar.IsOpen = true;
+			AutomationProperties.SetName(StatusInfoBar, $"{title} status");
+			AutomationProperties.SetHelpText(StatusInfoBar, message);
+			_statusDismissTimer.Stop();
+			_statusDismissTimer.Start();
+		}
+
+		if (DispatcherQueue.HasThreadAccess)
+			Update();
+		else
+			DispatcherQueue.TryEnqueue(Update);
+	}
+
+	private void StatusDismissTimer_Tick(object? sender, object e)
+	{
+		_statusDismissTimer.Stop();
+		StatusInfoBar.IsOpen = false;
+		StatusInfoBar.Visibility = Visibility.Collapsed;
+	}
+
+	private void StatusInfoBar_CloseButtonClick(InfoBar sender, object args)
+	{
+		_statusDismissTimer.Stop();
+		StatusInfoBar.IsOpen = false;
+		StatusInfoBar.Visibility = Visibility.Collapsed;
 	}
 
 
@@ -371,8 +451,8 @@ public sealed partial class MainWindow : Window
 			CloseButtonText = "OK",
 			XamlRoot = (this.Content as FrameworkElement)?.XamlRoot
 		};
-		Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(dialog, title);
-		Microsoft.UI.Xaml.Automation.AutomationProperties.SetHelpText(dialog, message);
+		AutomationProperties.SetName(dialog, title);
+		AutomationProperties.SetHelpText(dialog, message);
 		await dialog.ShowAsync();
 	}
 
