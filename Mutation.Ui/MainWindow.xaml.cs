@@ -2,6 +2,7 @@ using CognitiveSupport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
 using System;
 using System.Linq;
@@ -87,8 +88,9 @@ public sealed partial class MainWindow : Window
 		var tooltipManager = new TooltipManager(_settings);
 		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
 
-		CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
-		CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
+                CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
+                CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
+                UpdateThirdPartyExplanation(DictationInsertOption.Paste);
 
 		// After initializing and restoring the active microphone, play a sound
 		// representing the current state (mute/unmute) to reflect actual status.
@@ -450,6 +452,18 @@ public sealed partial class MainWindow : Window
                 BtnToggleMicIcon.Glyph = muted ? MicOffGlyph : MicOnGlyph;
                 AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
                 ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
+                MicStatusIcon.Glyph = muted ? MicOffGlyph : MicOnGlyph;
+                MicStatusIcon.Foreground = ResolveBrush(muted ? "TextFillColorSecondaryBrush" : "TextFillColorPrimaryBrush");
+                ToolTipService.SetToolTip(MicStatusIcon, muted ? "Microphone muted" : "Microphone live");
+                AutomationProperties.SetName(MicStatusIcon, muted ? "Microphone muted" : "Microphone live");
+        }
+
+        private static Brush ResolveBrush(string resourceKey)
+        {
+                if (Application.Current.Resources.TryGetValue(resourceKey, out var value) && value is Brush brush)
+                        return brush;
+
+                return Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush ?? new SolidColorBrush(Windows.UI.Colors.Gray);
         }
 
         private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
@@ -560,11 +574,27 @@ public sealed partial class MainWindow : Window
 			_activeSpeechService = svc;
 	}
 
-	private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
-	{
-		if (CmbInsertOption.SelectedItem is DictationInsertOption opt)
-			_insertOption = opt;
-	}
+        private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+                if (CmbInsertOption.SelectedItem is DictationInsertOption opt)
+                {
+                        _insertOption = opt;
+                        UpdateThirdPartyExplanation(opt);
+                }
+        }
+
+        private void UpdateThirdPartyExplanation(DictationInsertOption option)
+        {
+                string explanation = option switch
+                {
+                        DictationInsertOption.DoNotInsert => "Keep the transcript inside Mutation without sending it anywhere.",
+                        DictationInsertOption.SendKeys => "Types the transcript into the active app as if you entered it yourself.",
+                        DictationInsertOption.Paste => "Copies the transcript and pastes it into the active application.",
+                        _ => string.Empty
+                };
+
+                ThirdPartyExplanationText.Text = explanation;
+        }
 
 	private void InsertIntoActiveApplication(string text)
 	{

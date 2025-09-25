@@ -24,14 +24,21 @@
             <TextBlock Text="Capture ideas, format transcripts, and automate workflows from one polished surface." Style="{StaticResource SubtitleTextStyle}" />
         </StackPanel>
 
-        <ScrollViewer
-            Grid.Row="1"
-            Padding="32,0,32,32"
-            HorizontalAlignment="Center"
-            HorizontalScrollBarVisibility="Disabled"
-            VerticalScrollBarVisibility="Auto"
-            VerticalScrollMode="Auto">
-            <StackPanel x:Name="ContentStack" Spacing="20">
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="6*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer
+                Grid.Column="1"
+                Padding="32,0,32,32"
+                HorizontalAlignment="Stretch"
+                HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto"
+                VerticalScrollMode="Auto">
+                <StackPanel x:Name="ContentStack" Spacing="20">
                 <InfoBar
                     x:Name="StatusInfoBar"
                     Title="Status"
@@ -41,12 +48,13 @@
                     AutomationProperties.LiveSetting="Polite"
                     AutomationProperties.HelpText="Latest status messages for Mutation workspace" />
 
-                <Grid x:Name="ContentGrid" ColumnSpacing="18" RowSpacing="18" MaxWidth="1040">
+                <Grid x:Name="ContentGrid" ColumnSpacing="18" RowSpacing="18">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition x:Name="PrimaryColumn" Width="*" />
                         <ColumnDefinition x:Name="SecondaryColumn" Width="*" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -61,7 +69,7 @@
                     </Grid.Transitions>
 
                     <!-- Microphone Management -->
-                    <Border x:Name="MicrophoneCard" Style="{StaticResource CardStyle}" Grid.Row="0" Grid.ColumnSpan="2">
+                    <Border x:Name="MicrophoneCard" Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="0">
                         <StackPanel Spacing="16">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Microphone" Style="{StaticResource SectionHeaderTextStyle}" />
@@ -76,13 +84,26 @@
 
                                 <StackPanel Grid.Column="0" Spacing="6">
                                     <TextBlock x:Name="LblMicrophone" Text="Microphone device" Style="{StaticResource CaptionTextStyle}" />
-                                    <ComboBox
-                                        x:Name="CmbMicrophone"
-                                        PlaceholderText="Select a microphone"
-                                        AutomationProperties.LabeledBy="{Binding ElementName=LblMicrophone}"
-                                        AutomationProperties.Name="Microphone selection"
-                                        ToolTipService.ToolTip="Choose the input microphone"
-                                        SelectionChanged="CmbMicrophone_SelectionChanged" />
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            x:Name="MicStatusIcon"
+                                            Glyph="&#xE720;"
+                                            FontFamily="Segoe Fluent Icons"
+                                            VerticalAlignment="Center" />
+                                        <ComboBox
+                                            x:Name="CmbMicrophone"
+                                            Grid.Column="1"
+                                            PlaceholderText="Select a microphone"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.LabeledBy="{Binding ElementName=LblMicrophone}"
+                                            AutomationProperties.Name="Microphone selection"
+                                            ToolTipService.ToolTip="Choose the input microphone"
+                                            SelectionChanged="CmbMicrophone_SelectionChanged" />
+                                    </Grid>
                                 </StackPanel>
 
                                 <Button
@@ -114,7 +135,7 @@
                     </Border>
 
                     <!-- Speech to Text -->
-                    <Border x:Name="SpeechCard" Style="{StaticResource CardStyle}" Grid.Row="1" Grid.ColumnSpan="2">
+                    <Border x:Name="SpeechCard" Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="1">
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Speech to Text" Style="{StaticResource SectionHeaderTextStyle}" />
@@ -163,7 +184,13 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
+                        </StackPanel>
+                    </Border>
 
+                    <!-- Speech Transcript -->
+                    <Border x:Name="SpeechTranscriptCard" Style="{StaticResource CardStyle}" Grid.Row="1" Grid.ColumnSpan="2">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Transcript" Style="{StaticResource CaptionTextStyle}" />
                             <TextBox
                                 x:Name="TxtSpeechToText"
                                 MinHeight="140"
@@ -198,6 +225,11 @@
                                         AutomationProperties.Name="Third-party interaction mode"
                                         ToolTipService.ToolTip="Choose how formatted text is inserted"
                                         SelectionChanged="CmbInsertOption_SelectionChanged" />
+                                    <TextBlock
+                                        x:Name="ThirdPartyExplanationText"
+                                        TextWrapping="Wrap"
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Spacing="6">
@@ -437,13 +469,18 @@
                             <VisualState.Setters>
                                 <Setter Target="SecondaryColumn.Width" Value="0*" />
                                 <Setter Target="MicrophoneCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="SpeechCard.(Grid.Column)" Value="0" />
+                                <Setter Target="SpeechCard.(Grid.Row)" Value="1" />
                                 <Setter Target="SpeechCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="SpeechTranscriptCard.(Grid.Row)" Value="2" />
+                                <Setter Target="FormattingCard.(Grid.Row)" Value="3" />
                                 <Setter Target="FormattingCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="CaptureCard.(Grid.Column)" Value="0" />
+                                <Setter Target="CaptureCard.(Grid.Row)" Value="4" />
                                 <Setter Target="CaptureCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="ClipboardCard.(Grid.Column)" Value="0" />
+                                <Setter Target="ClipboardCard.(Grid.Row)" Value="5" />
                                 <Setter Target="ClipboardCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="ClipboardCard.(Grid.Row)" Value="4" />
                                 <Setter Target="FormattingActionsPanel.Orientation" Value="Vertical" />
                                 <Setter Target="ClipboardActionsPanel.Orientation" Value="Vertical" />
                             </VisualState.Setters>
@@ -454,11 +491,16 @@
                             </VisualState.StateTriggers>
                             <VisualState.Setters>
                                 <Setter Target="SecondaryColumn.Width" Value="*" />
-                                <Setter Target="MicrophoneCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="SpeechCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="MicrophoneCard.(Grid.ColumnSpan)" Value="1" />
+                                <Setter Target="SpeechCard.(Grid.Column)" Value="1" />
+                                <Setter Target="SpeechCard.(Grid.Row)" Value="0" />
+                                <Setter Target="SpeechCard.(Grid.ColumnSpan)" Value="1" />
+                                <Setter Target="SpeechTranscriptCard.(Grid.Row)" Value="1" />
+                                <Setter Target="FormattingCard.(Grid.Row)" Value="2" />
                                 <Setter Target="FormattingCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="CaptureCard.(Grid.Column)" Value="0" />
                                 <Setter Target="CaptureCard.(Grid.ColumnSpan)" Value="1" />
+                                <Setter Target="CaptureCard.(Grid.Row)" Value="3" />
                                 <Setter Target="ClipboardCard.(Grid.Column)" Value="1" />
                                 <Setter Target="ClipboardCard.(Grid.ColumnSpan)" Value="1" />
                                 <Setter Target="ClipboardCard.(Grid.Row)" Value="3" />
@@ -468,7 +510,8 @@
                         </VisualState>
                     </VisualStateGroup>
                 </VisualStateManager.VisualStateGroups>
-            </StackPanel>
-        </ScrollViewer>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Window>
