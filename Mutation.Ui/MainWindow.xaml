@@ -355,9 +355,9 @@
                                         <FontIcon
                                             Glyph="&#xE70F;"
                                             FontFamily="Segoe Fluent Icons"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top" />
-                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="Screenshot to clipboard" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotHotkey"
@@ -383,9 +383,9 @@
                                         <FontIcon
                                             Glyph="&#xE8F1;"
                                             FontFamily="Segoe Fluent Icons"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top" />
-                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="OCR clipboard" />
                                             <TextBlock
                                                 x:Name="BtnOcrClipboardHotkey"
@@ -411,9 +411,9 @@
                                         <FontIcon
                                             Glyph="&#xE8F1;"
                                             FontFamily="Segoe Fluent Icons"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top" />
-                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="OCR clipboard (L→R)" />
                                             <TextBlock
                                                 x:Name="BtnOcrClipboardLrtbHotkey"
@@ -439,9 +439,9 @@
                                         <FontIcon
                                             Glyph="&#xE8D2;"
                                             FontFamily="Segoe Fluent Icons"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top" />
-                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="Screenshot &amp; OCR" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotOcrHotkey"
@@ -467,9 +467,9 @@
                                         <FontIcon
                                             Glyph="&#xE8D2;"
                                             FontFamily="Segoe Fluent Icons"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Top" />
-                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Top">
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="Screenshot &amp; OCR (L→R)" />
                                             <TextBlock
                                                 x:Name="BtnScreenshotOcrLrtbHotkey"
