@@ -5,6 +5,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
 using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,12 +23,13 @@ public sealed partial class MainWindow : Window
 	private readonly OcrManager _ocrManager;
 	private readonly ISpeechToTextService[] _speechServices;
 	private readonly SpeechToTextManager _speechManager;
-	private readonly TranscriptFormatter _transcriptFormatter;
-	private readonly ITextToSpeechService _textToSpeech;
-	private readonly Settings _settings;
+        private readonly TranscriptFormatter _transcriptFormatter;
+        private readonly ITextToSpeechService _textToSpeech;
+        private readonly Settings _settings;
+        private HotkeyManager? _hotkeyManager;
 
-	// Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
-	private bool _suppressAutoActions = false;
+        // Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
+        private bool _suppressAutoActions = false;
 
 	private ISpeechToTextService? _activeSpeechService;
 	private CancellationTokenSource _formatDebounceCts = new();
@@ -41,6 +44,8 @@ public sealed partial class MainWindow : Window
         private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
         private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
         private const string PasteExplanation = "Copies the transcript and pastes it into the active application.";
+
+        public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
 
 	public MainWindow(
 		ClipboardManager clipboard,
@@ -101,8 +106,15 @@ public sealed partial class MainWindow : Window
                         BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
 
                 InitializeHotkeyVisuals();
+                InitializeHotkeyRouter();
 
                 this.Closed += MainWindow_Closed;
+        }
+
+        public void AttachHotkeyManager(HotkeyManager hotkeyManager)
+        {
+                _hotkeyManager = hotkeyManager;
+                RefreshHotkeyRouterRegistrations();
         }
 
 	private void RestorePersistedSpeechServiceSelection()
@@ -160,6 +172,22 @@ public sealed partial class MainWindow : Window
                 ConfigureButtonHotkey(BtnTextToSpeech, BtnTextToSpeechHotkey, _settings.TextToSpeechSettings?.TextToSpeechHotKey, "Play the clipboard text using text-to-speech");
         }
 
+        private void InitializeHotkeyRouter()
+        {
+                _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
+
+                HotkeyRouterEntries.Clear();
+                foreach (var map in _settings.HotKeyRouterSettings.Mappings)
+                {
+                        HotkeyRouterEntries.Add(new HotkeyRouterEntry(map, RefreshHotkeyRouterRegistrations));
+                }
+        }
+
+        private void RefreshHotkeyRouterRegistrations()
+        {
+                _hotkeyManager?.RefreshRouterHotkeys();
+        }
+
         private async void MainWindow_Closed(object sender, WindowEventArgs args)
         {
                 // Prevent auto actions during shutdown
@@ -187,11 +215,36 @@ public sealed partial class MainWindow : Window
 		BeepPlayer.DisposePlayers();
 	}
 
-	private void CopyText_Click(object sender, RoutedEventArgs e)
-	{
-		_clipboard.SetText(TxtClipboard.Text);
-		ShowStatus("Clipboard", "Text copied to the clipboard.", InfoBarSeverity.Success);
-	}
+        private void CopyText_Click(object sender, RoutedEventArgs e)
+        {
+                _clipboard.SetText(TxtClipboard.Text);
+                ShowStatus("Clipboard", "Text copied to the clipboard.", InfoBarSeverity.Success);
+        }
+
+        private void BtnAddHotkeyRoute_Click(object sender, RoutedEventArgs e)
+        {
+                _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
+
+                var map = new HotKeyRouterSettings.HotKeyRouterMap(string.Empty, string.Empty);
+                _settings.HotKeyRouterSettings.Mappings.Add(map);
+
+                var entry = new HotkeyRouterEntry(map, RefreshHotkeyRouterRegistrations);
+                HotkeyRouterEntries.Add(entry);
+
+                RefreshHotkeyRouterRegistrations();
+        }
+
+        private void HotkeyRouterDelete_Click(object sender, RoutedEventArgs e)
+        {
+                if (((FrameworkElement)sender).Tag is not HotkeyRouterEntry entry)
+                        return;
+
+                if (_settings.HotKeyRouterSettings is not null)
+                        _settings.HotKeyRouterSettings.Mappings.Remove(entry.Map);
+
+                HotkeyRouterEntries.Remove(entry);
+                RefreshHotkeyRouterRegistrations();
+        }
 
 	public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
 	{
@@ -642,9 +695,59 @@ public sealed partial class MainWindow : Window
 		catch (TaskCanceledException) { }
 	}
 
-	internal void SetOcrText(string message)
-	{
-		TxtOcr.Text = message;
-	}
+        internal void SetOcrText(string message)
+        {
+                TxtOcr.Text = message;
+        }
+
+        public sealed class HotkeyRouterEntry : INotifyPropertyChanged
+        {
+                private readonly Action _onChanged;
+
+                internal HotKeyRouterSettings.HotKeyRouterMap Map { get; }
+
+                public HotkeyRouterEntry(HotKeyRouterSettings.HotKeyRouterMap map, Action onChanged)
+                {
+                        Map = map ?? throw new ArgumentNullException(nameof(map));
+                        _onChanged = onChanged ?? throw new ArgumentNullException(nameof(onChanged));
+                }
+
+                public string FromHotkey
+                {
+                        get => Map.FromHotKey ?? string.Empty;
+                        set => UpdateHotkey(value, true);
+                }
+
+                public string ToHotkey
+                {
+                        get => Map.ToHotKey ?? string.Empty;
+                        set => UpdateHotkey(value, false);
+                }
+
+                public event PropertyChangedEventHandler? PropertyChanged;
+
+                private void UpdateHotkey(string? value, bool isFrom)
+                {
+                        string normalized = Normalize(value);
+                        string current = Normalize(isFrom ? Map.FromHotKey : Map.ToHotKey);
+                        if (string.Equals(normalized, current, StringComparison.Ordinal))
+                                return;
+
+                        string? storedValue = string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+                        if (isFrom)
+                                Map.FromHotKey = storedValue;
+                        else
+                                Map.ToHotKey = storedValue;
+
+                        OnPropertyChanged(isFrom ? nameof(FromHotkey) : nameof(ToHotkey));
+                        _onChanged();
+                }
+
+                private static string Normalize(string? value) =>
+                        string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToUpperInvariant();
+
+                private void OnPropertyChanged(string propertyName) =>
+                        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
 
 }

@@ -102,17 +102,32 @@ public class HotkeyManager : IDisposable
 		return id;
 	}
 
-	public void RegisterRouterHotkeys()
-	{
-		foreach (var map in _settings.HotKeyRouterSettings.Mappings)
-		{
-			if (string.IsNullOrWhiteSpace(map.FromHotKey) || string.IsNullOrWhiteSpace(map.ToHotKey))
-				continue;
-			int id = RegisterHotkey(Hotkey.Parse(map.FromHotKey!), () => SendHotkeyAfterDelay(map.ToHotKey!, Constants.FailureSendHotkeyDelay));
-			Log($"Router registered: From='{map.FromHotKey}' -> To='{map.ToHotKey}', id={id}");
-			_routerIds.Add(id);
-		}
-	}
+        public void RegisterRouterHotkeys()
+        {
+                if (_settings.HotKeyRouterSettings is null)
+                        return;
+
+                foreach (var map in _settings.HotKeyRouterSettings.Mappings)
+                {
+                        if (string.IsNullOrWhiteSpace(map.FromHotKey) || string.IsNullOrWhiteSpace(map.ToHotKey))
+                                continue;
+                        int id = RegisterHotkey(Hotkey.Parse(map.FromHotKey!), () => SendHotkeyAfterDelay(map.ToHotKey!, Constants.FailureSendHotkeyDelay));
+                        Log($"Router registered: From='{map.FromHotKey}' -> To='{map.ToHotKey}', id={id}");
+                        _routerIds.Add(id);
+                }
+        }
+
+        public void RefreshRouterHotkeys()
+        {
+                foreach (var id in _routerIds)
+                {
+                        UnregisterHotKey(_hwnd, id);
+                        _callbacks.Remove(id);
+                }
+
+                _routerIds.Clear();
+                RegisterRouterHotkeys();
+        }
 
 	public void UnregisterAll()
 	{
