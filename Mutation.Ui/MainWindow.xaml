@@ -343,6 +343,8 @@
                                 <Button
                                     x:Name="BtnScreenshot"
                                     Style="{StaticResource OutlinedButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
                                     Click="BtnScreenshot_Click"
                                     AccessKey="S"
                                     AutomationProperties.Name="Screenshot to clipboard"
@@ -371,6 +373,8 @@
                                 <Button
                                     x:Name="BtnOcrClipboard"
                                     Style="{StaticResource OutlinedButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
                                     Click="BtnOcrClipboard_Click"
                                     AccessKey="C"
                                     AutomationProperties.Name="OCR clipboard"
@@ -399,6 +403,8 @@
                                 <Button
                                     x:Name="BtnOcrClipboardLrtb"
                                     Style="{StaticResource OutlinedButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
                                     Click="BtnOcrClipboardLrtb_Click"
                                     AccessKey="D"
                                     AutomationProperties.Name="OCR clipboard left to right"
@@ -427,6 +433,8 @@
                                 <Button
                                     x:Name="BtnScreenshotOcr"
                                     Style="{StaticResource OutlinedButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
                                     Click="BtnScreenshotOcr_Click"
                                     AccessKey="O"
                                     AutomationProperties.Name="Screenshot and OCR"
@@ -455,6 +463,8 @@
                                 <Button
                                     x:Name="BtnScreenshotOcrLrtb"
                                     Style="{StaticResource OutlinedButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
                                     Click="BtnScreenshotOcrLrtb_Click"
                                     AccessKey="B"
                                     AutomationProperties.Name="Screenshot and OCR left to right"
