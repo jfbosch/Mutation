@@ -14,6 +14,11 @@ public class HotkeyManager : IDisposable
 {
 	private readonly IntPtr _hwnd;
 	private readonly Dictionary<int, Action> _callbacks = new();
+	// Track a normalized representation of each registered hotkey so we can avoid
+	// attempting duplicate registrations (which Windows will report as a failure
+	// even though one instance is already active). This prevents false positives
+	// in the FailedRegistrations list when router hotkeys are refreshed.
+	private readonly HashSet<string> _registeredHotkeys = new(StringComparer.Ordinal);
 	private readonly List<int> _routerIds = new();
 	private readonly Settings _settings;
 	private static SynchronizationContext? s_uiCtx;
@@ -85,19 +90,38 @@ public class HotkeyManager : IDisposable
 
 	public int RegisterHotkey(Hotkey hotkey, Action callback)
 	{
+		string norm = NormalizeHotkey(hotkey);
+		// If we've already registered an identical chord, treat as success and skip.
+		if (_registeredHotkeys.Contains(norm))
+		{
+			Log($"Duplicate hotkey skipped: {norm}");
+			return -1; // caller won't use id directly except storing; -1 indicates skipped duplicate
+		}
+
 		int id = Interlocked.Increment(ref _id);
 		uint mods = (hotkey.Alt ? MOD_ALT : 0) |
-												  (hotkey.Control ? MOD_CONTROL : 0) |
-												  (hotkey.Shift ? MOD_SHIFT : 0) |
-												  (hotkey.Win ? MOD_WIN : 0);
+											  (hotkey.Control ? MOD_CONTROL : 0) |
+											  (hotkey.Shift ? MOD_SHIFT : 0) |
+											  (hotkey.Win ? MOD_WIN : 0);
 		bool success = RegisterHotKey(_hwnd, id, mods, (uint)hotkey.Key);
 		if (success)
 		{
 			_callbacks[id] = callback;
+			_registeredHotkeys.Add(norm);
+			Log($"Hotkey registered: {norm} (id={id})");
 		}
 		else
 		{
-			FailedRegistrations.Add(hotkey.ToString());
+			// If OS reports failure but we already have it registered, suppress failure message.
+			if (_registeredHotkeys.Contains(norm))
+			{
+				Log($"RegisterHotKey reported failure but hotkey already active (suppressing): {norm}");
+			}
+			else
+			{
+				FailedRegistrations.Add(hotkey.ToString());
+				Log($"Hotkey registration FAILED: {norm}");
+			}
 		}
 		return id;
 	}
@@ -135,6 +159,7 @@ public class HotkeyManager : IDisposable
 			UnregisterHotKey(_hwnd, kvp.Key);
 		_callbacks.Clear();
 		_routerIds.Clear();
+		_registeredHotkeys.Clear();
 	}
 
 	private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
@@ -423,6 +448,19 @@ public class HotkeyManager : IDisposable
 			File.AppendAllText(LogFile, line);
 		}
 		catch { }
+	}
+
+	private static string NormalizeHotkey(Hotkey hk)
+	{
+		// Construct a deterministic modifier order & uppercase key for set membership
+		Span<char> buffer = stackalloc char[64];
+		var sb = new System.Text.StringBuilder(32);
+		if (hk.Control) sb.Append("CTRL+");
+		if (hk.Shift) sb.Append("SHIFT+");
+		if (hk.Alt) sb.Append("ALT+");
+		if (hk.Win) sb.Append("WIN+");
+		sb.Append(hk.Key.ToString().ToUpperInvariant());
+		return sb.ToString();
 	}
 
 	public void Dispose()
