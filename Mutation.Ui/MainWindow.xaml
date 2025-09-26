@@ -589,7 +589,7 @@
                                     BorderThickness="0"
                                     IsTabStop="False">
                                     <ListView.ItemTemplate>
-                                        <DataTemplate x:DataType="local:MainWindow+HotkeyRouterEntry">
+                                        <DataTemplate x:DataType="local:HotkeyRouterEntry">
                                             <Grid ColumnSpacing="12" Padding="0,4">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="2*" />
