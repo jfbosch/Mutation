@@ -136,11 +136,13 @@ public partial class App : Application
 			ocrMgr.InitializeWindow(_window);
 
                         var hkManager = _host.Services.GetRequiredService<HotkeyManager>();
-			var settingsSvc = _host.Services.GetRequiredService<Settings>();
+                        if (_window is MainWindow main)
+                                main.AttachHotkeyManager(hkManager);
+                        var settingsSvc = _host.Services.GetRequiredService<Settings>();
 
-			if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotHotKey))
-			{
-				hkManager.RegisterHotkey(
+                        if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotHotKey))
+                        {
+                                hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotHotKey!),
 						  async () =>
 						  {
@@ -253,7 +255,7 @@ public partial class App : Application
 						  });
 			}
 
-			hkManager.RegisterRouterHotkeys();
+                        _ = hkManager.RegisterRouterHotkeys();
 
 			if (hkManager.FailedRegistrations.Count > 0)
 			{
