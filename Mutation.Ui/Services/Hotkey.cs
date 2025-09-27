@@ -44,11 +44,11 @@ public class Hotkey
 		if (string.IsNullOrWhiteSpace(text))
 			throw new ArgumentException("Invalid hotkey", nameof(text));
 
-		var parts = text.Split(new[] { '+', '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-		var hk = new Hotkey();
-		foreach (var p in parts)
-		{
-			var token = p.Trim().ToUpperInvariant();
+                var parts = text.Split(new[] { '+', '-', ' ', ',', '/', '\\', '|', ';', ':' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var hk = new Hotkey();
+                foreach (var p in parts)
+                {
+                        var token = p.Trim().ToUpperInvariant();
 			switch (token)
 			{
 				case "CTRL":
@@ -63,16 +63,20 @@ public class Hotkey
 				case "WINDOWS":
 				case "START":
 					hk.Win = true; break;
-				default:
-					if (Enum.TryParse<VirtualKey>(token, true, out var vk))
-						hk.Key = vk;
-					else if (Enum.TryParse<VirtualKey>("Number" + token, true, out vk))
-						hk.Key = vk;
-					else
-						throw new NotSupportedException($"Unsupported key '{token}'");
-					break;
-			}
-		}
-		return hk;
-	}
+                                default:
+                                        if (Enum.TryParse<VirtualKey>(token, true, out var vk))
+                                                hk.Key = vk;
+                                        else if (Enum.TryParse<VirtualKey>("Number" + token, true, out vk))
+                                                hk.Key = vk;
+                                        else
+                                                throw new NotSupportedException($"Unsupported key '{token}'");
+                                        break;
+                        }
+                }
+
+                if (hk.Key == VirtualKey.None)
+                        throw new ArgumentException("Hotkey must include a non-modifier key.", nameof(text));
+
+                return hk;
+        }
 }
