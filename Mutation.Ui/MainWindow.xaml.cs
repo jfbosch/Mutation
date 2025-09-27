@@ -48,6 +48,7 @@ public sealed partial class MainWindow : Window
         private const string PasteExplanation = "Copies the transcript and pastes it into the active application.";
 
         public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
+        private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
 
 	public MainWindow(
 		ClipboardManager clipboard,
@@ -190,6 +191,12 @@ public sealed partial class MainWindow : Window
                         HotkeyRouterEntries.Add(entry);
                 }
 
+                var initialPairs = HotkeyRouterEntries
+                        .Where(e => e.IsValid && e.NormalizedFromHotkey is not null && e.NormalizedToHotkey is not null)
+                        .Select(e => (From: e.NormalizedFromHotkey!, To: e.NormalizedToHotkey!))
+                        .ToList();
+                UpdateHotkeyRouterSnapshot(initialPairs);
+
                 RecalculateHotkeyRouterDuplicates();
                 RefreshHotkeyRouterRegistrations();
 
@@ -201,15 +208,18 @@ public sealed partial class MainWindow : Window
                 _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
                 RecalculateHotkeyRouterDuplicates();
-                bool mappingsChanged = SyncHotkeyRouterSettings();
+                var normalizedPairs = SyncHotkeyRouterSettings();
 
                 if (_hotkeyManager is null)
                 {
                         foreach (var entry in HotkeyRouterEntries)
                                 entry.SetBindingResult(HotkeyBindingState.Inactive, null);
 
-                        if (_hotkeyRouterInitialized && mappingsChanged)
+                        if (ShouldPersistHotkeyRouterMappings(normalizedPairs))
+                        {
                                 _settingsManager.SaveSettingsToFile(_settings);
+                                UpdateHotkeyRouterSnapshot(normalizedPairs);
+                        }
                         return;
                 }
 
@@ -229,8 +239,11 @@ public sealed partial class MainWindow : Window
                         }
                 }
 
-                if (_hotkeyRouterInitialized && mappingsChanged)
+                if (ShouldPersistHotkeyRouterMappings(normalizedPairs))
+                {
                         _settingsManager.SaveSettingsToFile(_settings);
+                        UpdateHotkeyRouterSnapshot(normalizedPairs);
+                }
         }
 
         private async void MainWindow_Closed(object sender, WindowEventArgs args)
@@ -256,8 +269,9 @@ public sealed partial class MainWindow : Window
                         _settings.SpeechToTextSettings!.ActiveSpeechToTextService = _activeSpeechService.ServiceName;
                 _settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
 
-                SyncHotkeyRouterSettings();
+                var normalizedPairs = SyncHotkeyRouterSettings();
                 _settingsManager.SaveSettingsToFile(_settings);
+                UpdateHotkeyRouterSnapshot(normalizedPairs);
                 BeepPlayer.DisposePlayers();
         }
 
@@ -344,10 +358,9 @@ public sealed partial class MainWindow : Window
                         entry.SetDuplicate(duplicateSet.Contains(entry));
         }
 
-        private bool SyncHotkeyRouterSettings()
+        private List<(string From, string To)> SyncHotkeyRouterSettings()
         {
-                if (_settings.HotKeyRouterSettings is null)
-                        return false;
+                _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
                 foreach (var entry in HotkeyRouterEntries)
                 {
@@ -373,8 +386,8 @@ public sealed partial class MainWindow : Window
                                 var existingFrom = existing[i].FromHotKey ?? string.Empty;
                                 var existingTo = existing[i].ToHotKey ?? string.Empty;
 
-                                if (!string.Equals(existingFrom, normalizedPairs[i].From, StringComparison.OrdinalIgnoreCase) ||
-                                    !string.Equals(existingTo, normalizedPairs[i].To, StringComparison.OrdinalIgnoreCase))
+                                if (!string.Equals(existingFrom, normalizedPairs[i].From, StringComparison.Ordinal) ||
+                                    !string.Equals(existingTo, normalizedPairs[i].To, StringComparison.Ordinal))
                                 {
                                         changed = true;
                                         break;
@@ -382,19 +395,48 @@ public sealed partial class MainWindow : Window
                         }
                 }
 
-                if (!changed)
+                if (changed)
+                {
+                        var updatedMaps = normalizedPairs
+                                .Select(pair => new HotKeyRouterSettings.HotKeyRouterMap(pair.From, pair.To))
+                                .ToList();
+
+                        _settings.HotKeyRouterSettings.Mappings = updatedMaps;
+
+                        for (int i = 0; i < validEntries.Count; i++)
+                                validEntries[i].ReplaceBackingMap(updatedMaps[i]);
+                }
+
+                return normalizedPairs;
+        }
+
+        private bool ShouldPersistHotkeyRouterMappings(List<(string From, string To)> normalizedPairs)
+        {
+                if (!_hotkeyRouterInitialized)
                         return false;
 
-                var updatedMaps = normalizedPairs
-                        .Select(pair => new HotKeyRouterSettings.HotKeyRouterMap(pair.From, pair.To))
-                        .ToList();
+                if (_hotkeyRouterPersistedSnapshot.Count != normalizedPairs.Count)
+                        return true;
 
-                _settings.HotKeyRouterSettings.Mappings = updatedMaps;
+                for (int i = 0; i < normalizedPairs.Count; i++)
+                {
+                        var previous = _hotkeyRouterPersistedSnapshot[i];
+                        var current = normalizedPairs[i];
 
-                for (int i = 0; i < validEntries.Count; i++)
-                        validEntries[i].ReplaceBackingMap(updatedMaps[i]);
+                        if (!string.Equals(previous.From, current.From, StringComparison.Ordinal) ||
+                            !string.Equals(previous.To, current.To, StringComparison.Ordinal))
+                        {
+                                return true;
+                        }
+                }
 
-                return true;
+                return false;
+        }
+
+        private void UpdateHotkeyRouterSnapshot(IEnumerable<(string From, string To)> normalizedPairs)
+        {
+                _hotkeyRouterPersistedSnapshot.Clear();
+                _hotkeyRouterPersistedSnapshot.AddRange(normalizedPairs);
         }
 
 	public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
