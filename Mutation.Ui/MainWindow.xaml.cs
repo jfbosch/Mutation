@@ -35,7 +35,8 @@ public sealed partial class MainWindow : Window
 	private ISpeechToTextService? _activeSpeechService;
 	private CancellationTokenSource _formatDebounceCts = new();
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
-	private readonly DispatcherTimer _statusDismissTimer;
+        private readonly DispatcherTimer _statusDismissTimer;
+        private bool _hotkeyRouterInitialized;
 
         private const string MicOnGlyph = "\uE720";
         private const string RecordGlyph = "\uE768";
@@ -175,6 +176,8 @@ public sealed partial class MainWindow : Window
 
         private void InitializeHotkeyRouter()
         {
+                _hotkeyRouterInitialized = false;
+
                 _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
                 foreach (var entry in HotkeyRouterEntries)
@@ -189,6 +192,8 @@ public sealed partial class MainWindow : Window
 
                 RecalculateHotkeyRouterDuplicates();
                 RefreshHotkeyRouterRegistrations();
+
+                _hotkeyRouterInitialized = true;
         }
 
         private void RefreshHotkeyRouterRegistrations()
@@ -196,12 +201,15 @@ public sealed partial class MainWindow : Window
                 _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
                 RecalculateHotkeyRouterDuplicates();
-                SyncHotkeyRouterSettings();
+                bool mappingsChanged = SyncHotkeyRouterSettings();
 
                 if (_hotkeyManager is null)
                 {
                         foreach (var entry in HotkeyRouterEntries)
                                 entry.SetBindingResult(HotkeyBindingState.Inactive, null);
+
+                        if (_hotkeyRouterInitialized && mappingsChanged)
+                                _settingsManager.SaveSettingsToFile(_settings);
                         return;
                 }
 
@@ -220,6 +228,9 @@ public sealed partial class MainWindow : Window
                                 entry.SetBindingResult(HotkeyBindingState.Inactive, null);
                         }
                 }
+
+                if (_hotkeyRouterInitialized && mappingsChanged)
+                        _settingsManager.SaveSettingsToFile(_settings);
         }
 
         private async void MainWindow_Closed(object sender, WindowEventArgs args)
@@ -333,10 +344,10 @@ public sealed partial class MainWindow : Window
                         entry.SetDuplicate(duplicateSet.Contains(entry));
         }
 
-        private void SyncHotkeyRouterSettings()
+        private bool SyncHotkeyRouterSettings()
         {
                 if (_settings.HotKeyRouterSettings is null)
-                        return;
+                        return false;
 
                 foreach (var entry in HotkeyRouterEntries)
                 {
@@ -348,7 +359,42 @@ public sealed partial class MainWindow : Window
                         .Where(e => e.IsValid && e.NormalizedFromHotkey is not null && e.NormalizedToHotkey is not null)
                         .ToList();
 
-                _settings.HotKeyRouterSettings.Mappings = validEntries.Select(e => e.Map).ToList();
+                var normalizedPairs = validEntries
+                        .Select(e => (From: e.NormalizedFromHotkey!, To: e.NormalizedToHotkey!))
+                        .ToList();
+
+                var existing = _settings.HotKeyRouterSettings.Mappings;
+
+                bool changed = existing.Count != normalizedPairs.Count;
+                if (!changed)
+                {
+                        for (int i = 0; i < existing.Count; i++)
+                        {
+                                var existingFrom = existing[i].FromHotKey ?? string.Empty;
+                                var existingTo = existing[i].ToHotKey ?? string.Empty;
+
+                                if (!string.Equals(existingFrom, normalizedPairs[i].From, StringComparison.OrdinalIgnoreCase) ||
+                                    !string.Equals(existingTo, normalizedPairs[i].To, StringComparison.OrdinalIgnoreCase))
+                                {
+                                        changed = true;
+                                        break;
+                                }
+                        }
+                }
+
+                if (!changed)
+                        return false;
+
+                var updatedMaps = normalizedPairs
+                        .Select(pair => new HotKeyRouterSettings.HotKeyRouterMap(pair.From, pair.To))
+                        .ToList();
+
+                _settings.HotKeyRouterSettings.Mappings = updatedMaps;
+
+                for (int i = 0; i < validEntries.Count; i++)
+                        validEntries[i].ReplaceBackingMap(updatedMaps[i]);
+
+                return true;
         }
 
 	public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)

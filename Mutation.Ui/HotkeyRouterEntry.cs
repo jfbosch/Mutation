@@ -40,11 +40,24 @@ public sealed class HotkeyRouterEntry : INotifyPropertyChanged
         private string? _bindingError;
         private string? _combinedError;
 
-        internal HotKeyRouterSettings.HotKeyRouterMap Map { get; }
+        private HotKeyRouterSettings.HotKeyRouterMap _map;
+
+        internal HotKeyRouterSettings.HotKeyRouterMap Map => _map;
 
         public HotkeyRouterEntry(HotKeyRouterSettings.HotKeyRouterMap map)
         {
-                Map = map ?? throw new ArgumentNullException(nameof(map));
+                _map = map ?? throw new ArgumentNullException(nameof(map));
+
+                _fromHotkeyText = map.FromHotKey ?? string.Empty;
+                _toHotkeyText = map.ToHotKey ?? string.Empty;
+
+                EvaluateFrom(commit: true);
+                EvaluateTo(commit: true);
+        }
+
+        internal void ReplaceBackingMap(HotKeyRouterSettings.HotKeyRouterMap map)
+        {
+                _map = map ?? throw new ArgumentNullException(nameof(map));
 
                 _fromHotkeyText = map.FromHotKey ?? string.Empty;
                 _toHotkeyText = map.ToHotKey ?? string.Empty;
@@ -186,11 +199,11 @@ public sealed class HotkeyRouterEntry : INotifyPropertyChanged
                 if (commit)
                 {
                         ApplyFormattedValue(ref _fromHotkeyText, _formattedFrom, nameof(FromHotkey));
-                        Map.FromHotKey = _isFromValid ? _formattedFrom : null;
+                        _map.FromHotKey = _isFromValid ? _formattedFrom : null;
                 }
                 else if (!_isFromValid)
                 {
-                        Map.FromHotKey = null;
+                        _map.FromHotKey = null;
                 }
 
                 OnPropertyChanged(nameof(IsFromValid));
@@ -208,11 +221,11 @@ public sealed class HotkeyRouterEntry : INotifyPropertyChanged
                 if (commit)
                 {
                         ApplyFormattedValue(ref _toHotkeyText, _formattedTo, nameof(ToHotkey));
-                        Map.ToHotKey = _isToValid ? _formattedTo : null;
+                        _map.ToHotKey = _isToValid ? _formattedTo : null;
                 }
                 else if (!_isToValid)
                 {
-                        Map.ToHotKey = null;
+                        _map.ToHotKey = null;
                 }
 
                 OnPropertyChanged(nameof(IsToValid));
