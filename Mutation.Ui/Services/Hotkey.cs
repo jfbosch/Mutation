@@ -5,11 +5,13 @@ namespace Mutation.Ui.Services;
 
 public class Hotkey
 {
-	public bool Alt { get; set; }
-	public bool Control { get; set; }
-	public bool Shift { get; set; }
-	public bool Win { get; set; }
-	public VirtualKey Key { get; set; }
+        internal static readonly char[] TokenSeparators = new[] { '+', '-', ' ', ',', '/', '\\', '|', ';', ':' };
+
+        public bool Alt { get; set; }
+        public bool Control { get; set; }
+        public bool Shift { get; set; }
+        public bool Win { get; set; }
+        public VirtualKey Key { get; set; }
 
 	public Hotkey Clone()
 	{
@@ -44,7 +46,7 @@ public class Hotkey
 		if (string.IsNullOrWhiteSpace(text))
 			throw new ArgumentException("Invalid hotkey", nameof(text));
 
-                var parts = text.Split(new[] { '+', '-', ' ', ',', '/', '\\', '|', ';', ':' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var parts = text.Split(TokenSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 var hk = new Hotkey();
                 foreach (var p in parts)
                 {
