@@ -5,7 +5,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -175,16 +177,49 @@ public sealed partial class MainWindow : Window
         {
                 _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
+                foreach (var entry in HotkeyRouterEntries)
+                        DetachHotkeyRouterEntry(entry);
                 HotkeyRouterEntries.Clear();
                 foreach (var map in _settings.HotKeyRouterSettings.Mappings)
                 {
-                        HotkeyRouterEntries.Add(new HotkeyRouterEntry(map, RefreshHotkeyRouterRegistrations));
+                        var entry = new HotkeyRouterEntry(map);
+                        AttachHotkeyRouterEntry(entry);
+                        HotkeyRouterEntries.Add(entry);
                 }
+
+                RecalculateHotkeyRouterDuplicates();
+                RefreshHotkeyRouterRegistrations();
         }
 
         private void RefreshHotkeyRouterRegistrations()
         {
-                _hotkeyManager?.RefreshRouterHotkeys();
+                _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
+
+                RecalculateHotkeyRouterDuplicates();
+                SyncHotkeyRouterSettings();
+
+                if (_hotkeyManager is null)
+                {
+                        foreach (var entry in HotkeyRouterEntries)
+                                entry.SetBindingResult(HotkeyBindingState.Inactive, null);
+                        return;
+                }
+
+                var mappings = _settings.HotKeyRouterSettings.Mappings;
+                var results = _hotkeyManager.RefreshRouterHotkeys(mappings);
+                var resultLookup = results.ToDictionary(r => r.Map);
+
+                foreach (var entry in HotkeyRouterEntries)
+                {
+                        if (resultLookup.TryGetValue(entry.Map, out var result))
+                        {
+                                entry.SetBindingResult(result.Success ? HotkeyBindingState.Bound : HotkeyBindingState.Failed, result.ErrorMessage);
+                        }
+                        else
+                        {
+                                entry.SetBindingResult(HotkeyBindingState.Inactive, null);
+                        }
+                }
         }
 
         private async void MainWindow_Closed(object sender, WindowEventArgs args)
@@ -208,11 +243,12 @@ public sealed partial class MainWindow : Window
 
                 if (_activeSpeechService != null)
                         _settings.SpeechToTextSettings!.ActiveSpeechToTextService = _activeSpeechService.ServiceName;
-		_settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
+                _settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
 
-		_settingsManager.SaveSettingsToFile(_settings);
-		BeepPlayer.DisposePlayers();
-	}
+                SyncHotkeyRouterSettings();
+                _settingsManager.SaveSettingsToFile(_settings);
+                BeepPlayer.DisposePlayers();
+        }
 
         private void CopyText_Click(object sender, RoutedEventArgs e)
         {
@@ -225,9 +261,9 @@ public sealed partial class MainWindow : Window
                 _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
                 var map = new HotKeyRouterSettings.HotKeyRouterMap(string.Empty, string.Empty);
-                _settings.HotKeyRouterSettings.Mappings.Add(map);
 
-                var entry = new HotkeyRouterEntry(map, RefreshHotkeyRouterRegistrations);
+                var entry = new HotkeyRouterEntry(map);
+                AttachHotkeyRouterEntry(entry);
                 HotkeyRouterEntries.Add(entry);
 
                 RefreshHotkeyRouterRegistrations();
@@ -241,8 +277,78 @@ public sealed partial class MainWindow : Window
                 if (_settings.HotKeyRouterSettings is not null)
                         _settings.HotKeyRouterSettings.Mappings.Remove(entry.Map);
 
+                DetachHotkeyRouterEntry(entry);
                 HotkeyRouterEntries.Remove(entry);
                 RefreshHotkeyRouterRegistrations();
+        }
+
+        private void HotkeyRouterFrom_LostFocus(object sender, RoutedEventArgs e)
+        {
+                if (sender is FrameworkElement { DataContext: HotkeyRouterEntry entry })
+                {
+                        entry.CommitFromHotkey();
+                        RefreshHotkeyRouterRegistrations();
+                }
+        }
+
+        private void HotkeyRouterTo_LostFocus(object sender, RoutedEventArgs e)
+        {
+                if (sender is FrameworkElement { DataContext: HotkeyRouterEntry entry })
+                {
+                        entry.CommitToHotkey();
+                        RefreshHotkeyRouterRegistrations();
+                }
+        }
+
+        private void HotkeyRouterEntry_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+                if (sender is not HotkeyRouterEntry)
+                        return;
+
+                if (e.PropertyName == nameof(HotkeyRouterEntry.FromHotkey) || e.PropertyName == nameof(HotkeyRouterEntry.IsFromValid))
+                        RecalculateHotkeyRouterDuplicates();
+        }
+
+        private void AttachHotkeyRouterEntry(HotkeyRouterEntry entry)
+        {
+                entry.PropertyChanged += HotkeyRouterEntry_PropertyChanged;
+        }
+
+        private void DetachHotkeyRouterEntry(HotkeyRouterEntry entry)
+        {
+                entry.PropertyChanged -= HotkeyRouterEntry_PropertyChanged;
+        }
+
+        private void RecalculateHotkeyRouterDuplicates()
+        {
+                var duplicates = HotkeyRouterEntries
+                        .Where(e => e.IsFromValid && e.NormalizedFromHotkey is not null)
+                        .GroupBy(e => e.NormalizedFromHotkey!, StringComparer.OrdinalIgnoreCase)
+                        .Where(g => g.Count() > 1)
+                        .SelectMany(g => g);
+
+                var duplicateSet = new HashSet<HotkeyRouterEntry>(duplicates);
+
+                foreach (var entry in HotkeyRouterEntries)
+                        entry.SetDuplicate(duplicateSet.Contains(entry));
+        }
+
+        private void SyncHotkeyRouterSettings()
+        {
+                if (_settings.HotKeyRouterSettings is null)
+                        return;
+
+                foreach (var entry in HotkeyRouterEntries)
+                {
+                        entry.CommitFromHotkey();
+                        entry.CommitToHotkey();
+                }
+
+                var validEntries = HotkeyRouterEntries
+                        .Where(e => e.IsValid && e.NormalizedFromHotkey is not null && e.NormalizedToHotkey is not null)
+                        .ToList();
+
+                _settings.HotKeyRouterSettings.Mappings = validEntries.Select(e => e.Map).ToList();
         }
 
 	public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
@@ -613,16 +719,17 @@ public sealed partial class MainWindow : Window
 
 	private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
-		if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
-		{
-			_audioDeviceManager.SelectMicrophone(device);
-			if (_settings.AudioSettings != null)
-			{
-				_settings.AudioSettings.ActiveCaptureDeviceFullName = device.FriendlyName;
-				_settingsManager.SaveSettingsToFile(_settings);
-			}
-		}
-	}
+                if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
+                {
+                        _audioDeviceManager.SelectMicrophone(device);
+                        if (_settings.AudioSettings != null)
+                        {
+                                _settings.AudioSettings.ActiveCaptureDeviceFullName = device.FriendlyName;
+                                SyncHotkeyRouterSettings();
+                                _settingsManager.SaveSettingsToFile(_settings);
+                        }
+                }
+        }
 
 	private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
