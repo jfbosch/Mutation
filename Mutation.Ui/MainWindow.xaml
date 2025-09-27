@@ -30,6 +30,18 @@
                 <TextBlock Text="Mutation Workspace" Style="{StaticResource TitleTextStyle}" AutomationProperties.Name="Application Title" />
                 <TextBlock Text="Capture ideas, format transcripts, and automate workflows from one polished surface." Style="{StaticResource SubtitleTextStyle}" />
             </StackPanel>
+
+            <InfoBar
+                x:Name="StatusInfoBar"
+                Grid.Column="2"
+                Margin="0,24,32,12"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Title="Status"
+                IsOpen="False"
+                AutomationProperties.Name="Status notifications"
+                AutomationProperties.LiveSetting="Polite"
+                AutomationProperties.HelpText="Latest status messages for Mutation workspace" />
         </Grid>
 
         <Grid Grid.Row="1">
@@ -47,17 +59,7 @@
                 VerticalScrollBarVisibility="Auto"
                 VerticalScrollMode="Auto">
                 <StackPanel x:Name="ContentStack" Spacing="20">
-                <Grid x:Name="StatusRegion" MinHeight="72">
-                    <InfoBar
-                        x:Name="StatusInfoBar"
-                        Title="Status"
-                        IsOpen="False"
-                        AutomationProperties.Name="Status notifications"
-                        AutomationProperties.LiveSetting="Polite"
-                        AutomationProperties.HelpText="Latest status messages for Mutation workspace" />
-                </Grid>
-
-                <Grid x:Name="ContentGrid" ColumnSpacing="18" RowSpacing="18">
+                    <Grid x:Name="ContentGrid" ColumnSpacing="18" RowSpacing="18">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition x:Name="PrimaryColumn" Width="*" />
                         <ColumnDefinition x:Name="SecondaryColumn" Width="*" />
