@@ -198,8 +198,8 @@ public sealed partial class MainWindow : Window
                 UpdateHotkeyRouterSnapshot(initialPairs);
 
                 RecalculateHotkeyRouterDuplicates();
-                RefreshHotkeyRouterRegistrations();
-
+                // Defer registration & persistence until HotkeyManager is attached to avoid
+                // any chance of wiping persisted mappings during initial construction.
                 _hotkeyRouterInitialized = true;
         }
 
@@ -371,6 +371,16 @@ public sealed partial class MainWindow : Window
                 var validEntries = HotkeyRouterEntries
                         .Where(e => e.IsValid && e.NormalizedFromHotkey is not null && e.NormalizedToHotkey is not null)
                         .ToList();
+
+                // If no entries are currently valid but existing settings contain mappings, preserve them.
+                // This avoids wiping user settings due to a transient validation state during startup.
+                if (validEntries.Count == 0 && _settings.HotKeyRouterSettings.Mappings.Count > 0)
+                {
+                        return _settings.HotKeyRouterSettings.Mappings
+                                .Where(m => !string.IsNullOrWhiteSpace(m.FromHotKey) && !string.IsNullOrWhiteSpace(m.ToHotKey))
+                                .Select(m => (From: m.FromHotKey!, To: m.ToHotKey!))
+                                .ToList();
+                }
 
                 var normalizedPairs = validEntries
                         .Select(e => (From: e.NormalizedFromHotkey!, To: e.NormalizedToHotkey!))

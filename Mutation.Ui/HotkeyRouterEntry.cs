@@ -1,4 +1,4 @@
-using CognitiveSupport;
+﻿using CognitiveSupport;
 using Mutation.Ui.Services;
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
+using Microsoft.UI;
 
 namespace Mutation.Ui;
 
@@ -199,7 +200,10 @@ public sealed class HotkeyRouterEntry : INotifyPropertyChanged
                 if (commit)
                 {
                         ApplyFormattedValue(ref _fromHotkeyText, _formattedFrom, nameof(FromHotkey));
-                        _map.FromHotKey = _isFromValid ? _formattedFrom : null;
+                                // Only update underlying map if valid; do NOT clear an existing persisted value here
+                                // to avoid wiping settings when a parse hiccup occurs (e.g., at startup before full init).
+                                if (_isFromValid)
+                                        _map.FromHotKey = _formattedFrom;
                 }
                 else if (!_isFromValid)
                 {
@@ -221,7 +225,9 @@ public sealed class HotkeyRouterEntry : INotifyPropertyChanged
                 if (commit)
                 {
                         ApplyFormattedValue(ref _toHotkeyText, _formattedTo, nameof(ToHotkey));
-                        _map.ToHotKey = _isToValid ? _formattedTo : null;
+                                // Only update underlying map if valid; avoid clearing persisted value on transient invalid state.
+                                if (_isToValid)
+                                        _map.ToHotKey = _formattedTo;
                 }
                 else if (!_isToValid)
                 {

@@ -24,13 +24,15 @@ public class HotkeyManager : IDisposable
         private readonly List<int> _routerIds = new();
         private readonly Dictionary<int, string> _routerNormalizedHotkeys = new();
         private readonly List<string> _routerFailedRegistrations = new();
+	private readonly List<string> _coreFailedRegistrations = new();
 	private readonly Settings _settings;
 	private static SynchronizationContext? s_uiCtx;
 	private int _id;
 	private IntPtr _prevWndProc;
         private WndProcDelegate? _newWndProc;
 
-        public List<string> FailedRegistrations { get; } = new();
+		public List<string> FailedRegistrations { get; } = new(); // aggregate (router + core)
+		public IReadOnlyList<string> CoreFailedRegistrations => _coreFailedRegistrations; // only core (non-router) failures
 
         public sealed record HotkeyRegistrationResult(HotKeyRouterSettings.HotKeyRouterMap Map, string NormalizedHotkey, bool Success, int Id, string? ErrorMessage);
 
@@ -110,19 +112,25 @@ public class HotkeyManager : IDisposable
 		s_uiCtx ??= SynchronizationContext.Current;
 	}
 
-        public int RegisterHotkey(Hotkey hotkey, Action callback)
-        {
-                var attempt = RegisterHotkeyInternal(hotkey, callback);
-                return attempt.Id;
-        }
+	        public int RegisterHotkey(Hotkey hotkey, Action callback)
+	        {
+	                var attempt = RegisterHotkeyInternal(hotkey, callback, isRouter: false);
+	                return attempt.Id;
+	        }
 
-        private HotkeyRegistrationAttempt RegisterHotkeyInternal(Hotkey hotkey, Action callback)
+	        private HotkeyRegistrationAttempt RegisterHotkeyInternal(Hotkey hotkey, Action callback, bool isRouter)
         {
                 string norm = NormalizeHotkey(hotkey);
                 if (_registeredHotkeys.Contains(norm))
                 {
                         Log($"Duplicate hotkey detected: {norm}");
-                        FailedRegistrations.Add(hotkey.ToString());
+	                        if (isRouter)
+	                                _routerFailedRegistrations.Add(hotkey.ToString());
+	                        else
+	                        {
+	                                FailedRegistrations.Add(hotkey.ToString());
+	                                _coreFailedRegistrations.Add(hotkey.ToString());
+	                        }
                         return new HotkeyRegistrationAttempt(norm, -1, success: false, errorMessage: "The shortcut is already registered.");
                 }
 
@@ -131,7 +139,7 @@ public class HotkeyManager : IDisposable
                                                                                           (hotkey.Control ? MOD_CONTROL : 0) |
                                                                                           (hotkey.Shift ? MOD_SHIFT : 0) |
                                                                                           (hotkey.Win ? MOD_WIN : 0);
-                bool success = RegisterHotKey(_hwnd, id, mods, (uint)hotkey.Key);
+				bool success = RegisterHotKey(_hwnd, id, mods, (uint)hotkey.Key);
                 if (success)
                 {
                         _callbacks[id] = callback;
@@ -140,7 +148,7 @@ public class HotkeyManager : IDisposable
                         return new HotkeyRegistrationAttempt(norm, id, true, null);
                 }
 
-                if (_registeredHotkeys.Contains(norm))
+				if (_registeredHotkeys.Contains(norm))
                 {
                         Log($"RegisterHotKey reported failure but hotkey already active (suppressing): {norm}");
                         return new HotkeyRegistrationAttempt(norm, id, true, null);
@@ -158,7 +166,13 @@ public class HotkeyManager : IDisposable
                 }
                 message ??= "Failed to register the shortcut.";
 
-                FailedRegistrations.Add(hotkey.ToString());
+				if (isRouter)
+					_routerFailedRegistrations.Add(hotkey.ToString());
+				else
+				{
+					FailedRegistrations.Add(hotkey.ToString());
+					_coreFailedRegistrations.Add(hotkey.ToString());
+				}
                 Log($"Hotkey registration FAILED: {norm} (error={error})");
                 return new HotkeyRegistrationAttempt(norm, id, false, message);
         }
@@ -171,10 +185,10 @@ public class HotkeyManager : IDisposable
                 return RegisterRouterHotkeys(_settings.HotKeyRouterSettings.Mappings);
         }
 
-        public IReadOnlyList<HotkeyRegistrationResult> RegisterRouterHotkeys(IEnumerable<HotKeyRouterSettings.HotKeyRouterMap> mappings)
+	        public IReadOnlyList<HotkeyRegistrationResult> RegisterRouterHotkeys(IEnumerable<HotKeyRouterSettings.HotKeyRouterMap> mappings)
         {
                 foreach (var previous in _routerFailedRegistrations)
-                        FailedRegistrations.Remove(previous);
+				FailedRegistrations.Remove(previous); // keep core failures intact
                 _routerFailedRegistrations.Clear();
 
                 var results = new List<HotkeyRegistrationResult>();
@@ -187,10 +201,10 @@ public class HotkeyManager : IDisposable
                                 continue;
                         }
 
-                        try
-                        {
-                                var hotkey = Hotkey.Parse(map.FromHotKey!);
-                                var attempt = RegisterHotkeyInternal(hotkey, () => SendHotkeyAfterDelay(map.ToHotKey!, Constants.FailureSendHotkeyDelay));
+			                        try
+			                        {
+			                                var hotkey = Hotkey.Parse(map.FromHotKey!);
+			                                var attempt = RegisterHotkeyInternal(hotkey, () => SendHotkeyAfterDelay(map.ToHotKey!, Constants.FailureSendHotkeyDelay), isRouter: true);
                                 if (attempt.Success)
                                 {
                                         if (attempt.Id > 0)
