@@ -292,6 +292,9 @@ public sealed partial class MainWindow : Window
                 HotkeyRouterEntries.Add(entry);
 
                 RefreshHotkeyRouterRegistrations();
+
+                // Defer focusing until the ListView generates the container
+                TryFocusHotkeyRouterFromTextBox(entry);
         }
 
         private void HotkeyRouterDelete_Click(object sender, RoutedEventArgs e)
@@ -337,6 +340,46 @@ public sealed partial class MainWindow : Window
         private void AttachHotkeyRouterEntry(HotkeyRouterEntry entry)
         {
                 entry.PropertyChanged += HotkeyRouterEntry_PropertyChanged;
+        }
+
+        private void TryFocusHotkeyRouterFromTextBox(HotkeyRouterEntry entry)
+        {
+                // Run async attempts on dispatcher without blocking UI thread
+                DispatcherQueue.TryEnqueue(async () =>
+                {
+                        for (int i = 0; i < 8; i++)
+                        {
+                                var container = HotkeyRouterList.ContainerFromItem(entry) as ListViewItem;
+                                if (container?.ContentTemplateRoot is FrameworkElement root)
+                                {
+                                        // First TextBox inside the template corresponds to the 'From' hotkey
+                                        var fromTextBox = FindDescendant<TextBox>(root);
+                                        if (fromTextBox != null)
+                                        {
+                                                fromTextBox.Focus(FocusState.Programmatic);
+                                                // Select existing text (if any) to allow immediate typing
+                                                fromTextBox.SelectAll();
+                                                return;
+                                        }
+                                }
+                                await Task.Delay(40);
+                        }
+                });
+        }
+
+        private static T? FindDescendant<T>(DependencyObject root) where T : class
+        {
+                int count = VisualTreeHelper.GetChildrenCount(root);
+                for (int i = 0; i < count; i++)
+                {
+                        var child = VisualTreeHelper.GetChild(root, i);
+                        if (child is T typed)
+                                return typed;
+                        var result = FindDescendant<T>(child);
+                        if (result != null)
+                                return result;
+                }
+                return null;
         }
 
         private void DetachHotkeyRouterEntry(HotkeyRouterEntry entry)
