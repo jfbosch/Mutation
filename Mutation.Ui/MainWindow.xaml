@@ -571,13 +571,15 @@
                             <StackPanel Spacing="12">
                                 <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="2*" />
                                         <ColumnDefinition Width="2*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="From" FontWeight="SemiBold" />
-                                    <TextBlock Grid.Column="1" Text="To" FontWeight="SemiBold" />
-                                    <TextBlock Grid.Column="2" Text="Actions" FontWeight="SemiBold" />
+                                    <TextBlock />
+                                    <TextBlock Grid.Column="1" Text="From" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="2" Text="To" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="3" Text="Actions" FontWeight="SemiBold" />
                                 </Grid>
 
                                 <ListView
@@ -592,26 +594,51 @@
                                         <DataTemplate x:DataType="local:HotkeyRouterEntry">
                                             <Grid ColumnSpacing="12" Padding="0,4">
                                                 <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="2*" />
                                                     <ColumnDefinition Width="2*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <TextBox
-                                                    Text="{x:Bind FromHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                    PlaceholderText="CTRL+ALT+H"
-                                                    HorizontalAlignment="Stretch"
-                                                    ToolTipService.ToolTip="Shortcut to listen for" />
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="4">
+                                                    <FontIcon
+                                                        Glyph="{x:Bind BindingStatusGlyph, Mode=OneWay}"
+                                                        Foreground="{x:Bind BindingStatusBrush, Mode=OneWay}"
+                                                        ToolTipService.ToolTip="{x:Bind BindingStatusTooltip, Mode=OneWay}" />
+                                                </StackPanel>
 
-                                                <TextBox
-                                                    Grid.Column="1"
-                                                    Text="{x:Bind ToHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                    PlaceholderText="CTRL+SHIFT+H"
-                                                    HorizontalAlignment="Stretch"
-                                                    ToolTipService.ToolTip="Shortcut to send when triggered" />
+                                                <Grid Grid.Column="1">
+                                                    <Border Background="{x:Bind FromBackgroundBrush, Mode=OneWay}" CornerRadius="4">
+                                                        <TextBox
+                                                            Text="{x:Bind FromHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            PlaceholderText="CTRL+ALT+H"
+                                                            Background="Transparent"
+                                                            HorizontalAlignment="Stretch"
+                                                            ToolTipService.ToolTip="Shortcut to listen for"
+                                                            LostFocus="HotkeyRouterFrom_LostFocus" />
+                                                    </Border>
+                                                    <FontIcon
+                                                        Glyph="&#xE783;"
+                                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Center"
+                                                        Margin="0,0,8,0"
+                                                        Visibility="{x:Bind BindingErrorVisibility, Mode=OneWay}"
+                                                        ToolTipService.ToolTip="{x:Bind BindingErrorMessage, Mode=OneWay}" />
+                                                </Grid>
+
+                                                <Border Grid.Column="2" Background="{x:Bind ToBackgroundBrush, Mode=OneWay}" CornerRadius="4">
+                                                    <TextBox
+                                                        Text="{x:Bind ToHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                        PlaceholderText="CTRL+SHIFT+H"
+                                                        Background="Transparent"
+                                                        HorizontalAlignment="Stretch"
+                                                        ToolTipService.ToolTip="Shortcut to send when triggered"
+                                                        LostFocus="HotkeyRouterTo_LostFocus" />
+                                                </Border>
 
                                                 <Button
-                                                    Grid.Column="2"
+                                                    Grid.Column="3"
                                                     Style="{StaticResource SubtleButtonStyle}"
                                                     Content="Delete"
                                                     Click="HotkeyRouterDelete_Click"

@@ -28,19 +28,21 @@ internal class SettingsManager : ISettingsManager
 		SettingsFilePath = settingsFilePath;
 	}
 
-	private void CreateSettingsFileOfNotExists(string fullPath)
+	private bool CreateSettingsFileIfNotExists(string fullPath)
 	{
 		if (!File.Exists(fullPath))
 		{
 			var settings = new Settings();
-			EnsureSettings(settings);
-
+			// Brand new file: allow defaults (including sample router mapping)
+			EnsureSettings(settings, isNewFile: true);
 			SaveSettingsToFile(settings);
-			Process.Start("notepad.exe", SettingsFilePath);
+			try { Process.Start("notepad.exe", SettingsFilePath); } catch { }
+			return true;
 		}
+		return false;
 	}
 
-	private bool EnsureSettings(Settings settings)
+	private bool EnsureSettings(Settings settings, bool isNewFile)
 	{
 		const string PlaceholderValue = "<placeholder>";
 		const string PlaceholderUrl = "https://placeholder.com";
@@ -498,13 +500,17 @@ End of summary.
 			somethingWasMissing = true;
 		}
 
-		if (settings.HotKeyRouterSettings is null || !settings.HotKeyRouterSettings.Mappings.Any())
+		// Only inject a sample router mapping on FIRST creation of the settings file.
+		// Previously we also injected when the list was empty, which could overwrite ("wipe")
+		// user-defined mappings if deserialization produced an empty list for any reason.
+		if (settings.HotKeyRouterSettings is null)
 		{
 			settings.HotKeyRouterSettings = new();
-			settings.HotKeyRouterSettings.Mappings.Add
-			(
-				new HotKeyRouterSettings.HotKeyRouterMap("CONTROL+SHIFT+ALT+8", "CONTROL+SHIFT+ALT+9")
-			);
+		}
+		if (isNewFile && !settings.HotKeyRouterSettings.Mappings.Any())
+		{
+			settings.HotKeyRouterSettings.Mappings.Add(
+				new HotKeyRouterSettings.HotKeyRouterMap("CONTROL+SHIFT+ALT+8", "CONTROL+SHIFT+ALT+9"));
 		}
 
 		return somethingWasMissing;
@@ -604,20 +610,20 @@ End of summary.
 		File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
 	}
 
-	public Settings LoadAndEnsureSettings()
-	{
-		CreateSettingsFileOfNotExists(SettingsFileFullPath);
+    public Settings LoadAndEnsureSettings()
+    {
+        bool newFile = CreateSettingsFileIfNotExists(SettingsFileFullPath);
 
-		UpgradeSettings();
+        UpgradeSettings();
 
-		string json = File.ReadAllText(SettingsFileFullPath);
-		Settings settings = JsonConvert.DeserializeObject<Settings>(json, _jsonSerializerSettings);
+        string json = File.ReadAllText(SettingsFileFullPath);
+        Settings settings = JsonConvert.DeserializeObject<Settings>(json, _jsonSerializerSettings) ?? new Settings();
 
-		if (EnsureSettings(settings))
-		{
-			SaveSettingsToFile(settings);
-		}
+        if (EnsureSettings(settings, isNewFile: newFile))
+        {
+            SaveSettingsToFile(settings);
+        }
 
-		return settings;
-	}
+        return settings;
+    }
 }

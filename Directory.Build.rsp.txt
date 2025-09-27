@@ -1,0 +1,3 @@
+### Why `Directory.Build.rsp` exists
+
+This file contains the line `-tl:off`, which disables the new terminal logger introduced in .NET 9. On some non-interactive or headless build environments (such as Linux containers used by CI/CD or Codex Web), the terminal logger can crash with an `ArgumentOutOfRangeException` in `Microsoft.Build.Logging.TerminalLogger.WrapText`. Disabling it forces MSBuild to use the older console logger instead, which avoids the crash while leaving build and test output unaffected. This setting is a safety measure to make cross-platform builds of Windows-targeted projects reliable.

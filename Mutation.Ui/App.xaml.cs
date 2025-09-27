@@ -255,7 +255,7 @@ public partial class App : Application
 						  });
 			}
 
-			hkManager.RegisterRouterHotkeys();
+                        _ = hkManager.RegisterRouterHotkeys();
 
 			if (hkManager.FailedRegistrations.Count > 0)
 			{
