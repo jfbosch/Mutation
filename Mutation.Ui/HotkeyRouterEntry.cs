@@ -26,8 +26,6 @@ public sealed class HotkeyRouterEntry : INotifyPropertyChanged
         private static readonly Brush SuccessStatusBrush = ResolveThemeBrush("SystemFillColorSuccessBrush") ?? new SolidColorBrush(Color.FromArgb(0xFF, 0x0B, 0x8A, 0x00));
         private static readonly Brush FailureStatusBrush = ResolveThemeBrush("SystemFillColorCriticalBrush") ?? new SolidColorBrush(Color.FromArgb(0xFF, 0xD1, 0x42, 0x42));
 
-        private readonly char[] _separators = new[] { '+', '-', ',', '/', '\\', '|' , ';', ':' , ' ' };
-
         private string _fromHotkeyText = string.Empty;
         private string _toHotkeyText = string.Empty;
         private string? _formattedFrom;
@@ -272,7 +270,7 @@ public sealed class HotkeyRouterEntry : INotifyPropertyChanged
                         return string.Empty;
 
                 IEnumerable<string> parts = value
-                        .Split(_separators, StringSplitOptions.RemoveEmptyEntries)
+                        .Split(Hotkey.TokenSeparators, StringSplitOptions.RemoveEmptyEntries)
                         .Select(part => part.Trim())
                         .Where(part => !string.IsNullOrWhiteSpace(part))
                         .Select(part => part.ToUpperInvariant());

@@ -866,7 +866,6 @@ public sealed partial class MainWindow : Window
                         if (_settings.AudioSettings != null)
                         {
                                 _settings.AudioSettings.ActiveCaptureDeviceFullName = device.FriendlyName;
-                                SyncHotkeyRouterSettings();
                                 _settingsManager.SaveSettingsToFile(_settings);
                         }
                 }
