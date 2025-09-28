@@ -713,8 +713,7 @@
             Grid.Row="0"
             Grid.RowSpan="2"
             HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch"
-            Panel.ZIndex="1">
+            VerticalAlignment="Stretch">
             <InfoBar
                 x:Name="StatusInfoBar"
                 Title="Status"
