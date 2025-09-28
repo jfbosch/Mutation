@@ -47,36 +47,26 @@
                 VerticalScrollBarVisibility="Auto"
                 VerticalScrollMode="Auto">
                 <StackPanel x:Name="ContentStack" Spacing="20">
-                <Grid x:Name="StatusRegion" MinHeight="72">
-                    <InfoBar
-                        x:Name="StatusInfoBar"
-                        Title="Status"
-                        IsOpen="False"
-                        AutomationProperties.Name="Status notifications"
-                        AutomationProperties.LiveSetting="Polite"
-                        AutomationProperties.HelpText="Latest status messages for Mutation workspace" />
-                </Grid>
+                    <Grid x:Name="ContentGrid" ColumnSpacing="18" RowSpacing="18">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition x:Name="PrimaryColumn" Width="*" />
+                            <ColumnDefinition x:Name="SecondaryColumn" Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
 
-                <Grid x:Name="ContentGrid" ColumnSpacing="18" RowSpacing="18">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="PrimaryColumn" Width="*" />
-                        <ColumnDefinition x:Name="SecondaryColumn" Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <Grid.Transitions>
-                        <TransitionCollection>
-                            <EntranceThemeTransition FromHorizontalOffset="48" />
-                        </TransitionCollection>
-                    </Grid.Transitions>
+                        <Grid.Transitions>
+                            <TransitionCollection>
+                                <EntranceThemeTransition FromHorizontalOffset="48" />
+                            </TransitionCollection>
+                        </Grid.Transitions>
 
                     <!-- Microphone Management -->
                     <Border x:Name="MicrophoneCard" Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="0">
@@ -717,6 +707,23 @@
                 </VisualStateManager.VisualStateGroups>
                 </StackPanel>
             </ScrollViewer>
+        </Grid>
+
+        <Grid
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+            <InfoBar
+                x:Name="StatusInfoBar"
+                Title="Status"
+                IsOpen="False"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,24,32,0"
+                AutomationProperties.Name="Status notifications"
+                AutomationProperties.LiveSetting="Polite"
+                AutomationProperties.HelpText="Latest status messages for Mutation workspace" />
         </Grid>
     </Grid>
 </Window>
