@@ -42,7 +42,7 @@ public sealed partial class MainWindow : Window
         private const string RecordGlyph = "\uE768";
         private const string StopGlyph = "\uE71A";
         private const string ProcessingGlyph = "\uE8A0";
-        private const double DefaultTextBoxLineHeight = 24d;
+        private const double DefaultEstimatedLineHeight = 22d;
 
         private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
         private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
@@ -130,19 +130,28 @@ public sealed partial class MainWindow : Window
                 if (configuredLines <= 0)
                         configuredLines = 5;
 
-                double lineHeight = textBox.LineHeight;
-                if (lineHeight <= 0)
-                {
-                        double fontSize = textBox.FontSize;
-                        lineHeight = fontSize > 0 ? fontSize * 1.6 : DefaultTextBoxLineHeight;
-                }
+                double lineHeight = EstimateLineHeight(textBox);
+                double verticalPadding = textBox.Padding.Top + textBox.Padding.Bottom;
+                verticalPadding += textBox.BorderThickness.Top + textBox.BorderThickness.Bottom;
 
-                double maxHeight = configuredLines * lineHeight;
-                textBox.MinHeight = maxHeight;
+                double maxHeight = (configuredLines * lineHeight) + verticalPadding;
                 textBox.MaxHeight = maxHeight;
+
+                double minimumHeight = lineHeight + verticalPadding;
+                if (textBox.MinHeight < minimumHeight)
+                        textBox.MinHeight = Math.Min(minimumHeight, maxHeight);
 
                 ScrollViewer.SetVerticalScrollBarVisibility(textBox, ScrollBarVisibility.Auto);
                 ScrollViewer.SetHorizontalScrollBarVisibility(textBox, ScrollBarVisibility.Auto);
+        }
+
+        private static double EstimateLineHeight(TextBox textBox)
+        {
+                double fontSize = textBox.FontSize;
+                if (fontSize > 0)
+                        return fontSize * 1.35;
+
+                return DefaultEstimatedLineHeight;
         }
 
         public void AttachHotkeyManager(HotkeyManager hotkeyManager)
