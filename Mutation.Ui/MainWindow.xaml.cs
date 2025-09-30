@@ -1,4 +1,5 @@
 using CognitiveSupport;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -1070,14 +1071,18 @@ public sealed partial class MainWindow : Window
 
         private void PlaybackPlayer_MediaEnded(MediaPlayer sender, object args)
         {
-                if (!DispatcherQueue.TryEnqueue(StopPlayback))
-                        StopPlayback();
+                RunOnDispatcher(StopPlayback);
         }
 
         private void PlaybackPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
-                if (!DispatcherQueue.TryEnqueue(() => HandlePlaybackFailed(args.ErrorMessage)))
-                        HandlePlaybackFailed(args.ErrorMessage);
+                RunOnDispatcher(() => HandlePlaybackFailed(args.ErrorMessage));
+        }
+
+        private void RunOnDispatcher(DispatcherQueueHandler action)
+        {
+                if (!DispatcherQueue.TryEnqueue(action))
+                        action();
         }
 
         private void HandlePlaybackFailed(string errorMessage)
