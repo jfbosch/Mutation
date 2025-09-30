@@ -67,6 +67,7 @@
 		<PackageReference Include="Deepgram" Version="6.6.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+		<PackageReference Include="ScottPlot.WinUI" Version="5.0.56" />
 		<PackageReference Include="System.Speech" Version="9.0.9" />
 	</ItemGroup>
 
