@@ -1122,7 +1122,7 @@ public sealed partial class MainWindow : Window
                 if (!string.IsNullOrWhiteSpace(extension) && AudioMimeTypeMap.TryGetValue(extension, out var mimeType))
                         return mimeType;
 
-                return "application/octet-stream";
+                return "audio/wav";
         }
 
         private static async Task<string> DetermineContentTypeAsync(string path)
