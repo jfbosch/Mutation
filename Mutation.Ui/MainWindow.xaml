@@ -235,13 +235,10 @@
                                         Click="BtnPlayLatestRecording_Click"
                                         AutomationProperties.Name="Play latest recording"
                                         ToolTipService.ToolTip="Play the most recent speech recording">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <FontIcon
-                                                x:Name="BtnPlayLatestRecordingIcon"
-                                                Glyph="&#xE768;"
-                                                FontFamily="Segoe Fluent Icons" />
-                                            <TextBlock x:Name="BtnPlayLatestRecordingLabel" Text="Play latest recording" />
-                                        </StackPanel>
+                                        <FontIcon
+                                            x:Name="BtnPlayLatestRecordingIcon"
+                                            Glyph="&#xE768;"
+                                            FontFamily="Segoe Fluent Icons" />
                                     </Button>
 
                                     <Button
@@ -250,10 +247,7 @@
                                         Click="BtnRetrySpeechToText_Click"
                                         AutomationProperties.Name="Retry transcription"
                                         ToolTipService.ToolTip="Transcribe the latest recording again">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <FontIcon Glyph="&#xE72C;" FontFamily="Segoe Fluent Icons" />
-                                            <TextBlock Text="Retry transcription" />
-                                        </StackPanel>
+                                        <FontIcon Glyph="&#xE72C;" FontFamily="Segoe Fluent Icons" />
                                     </Button>
 
                                     <Button
@@ -262,10 +256,7 @@
                                         Click="BtnUploadSpeechAudio_Click"
                                         AutomationProperties.Name="Upload audio for transcription"
                                         ToolTipService.ToolTip="Upload an audio file for transcription">
-                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <FontIcon Glyph="&#xE898;" FontFamily="Segoe Fluent Icons" />
-                                            <TextBlock Text="Upload audio" />
-                                        </StackPanel>
+                                        <FontIcon Glyph="&#xE898;" FontFamily="Segoe Fluent Icons" />
                                     </Button>
                                 </StackPanel>
                             </Grid>
