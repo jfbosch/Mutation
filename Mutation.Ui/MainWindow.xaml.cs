@@ -49,6 +49,18 @@ public sealed partial class MainWindow : Window
         private readonly DispatcherTimer _statusDismissTimer;
         private bool _hotkeyRouterInitialized;
 
+        private static readonly IReadOnlyDictionary<string, string> AudioMimeTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+                [".aac"] = "audio/aac",
+                [".flac"] = "audio/flac",
+                [".m4a"] = "audio/mp4",
+                [".mp3"] = "audio/mpeg",
+                [".ogg"] = "audio/ogg",
+                [".opus"] = "audio/opus",
+                [".wav"] = "audio/wav",
+                [".wma"] = "audio/x-ms-wma",
+        };
+
         private const string MicOnGlyph = "\uE720";
         // '\uE7C8' is the Segoe MDL2 Assets glyph for a circular record icon, chosen for its clear visual representation.
         // Previously, '\uE768' was used, but '\uE7C8' better matches the standard record symbol.
@@ -1077,7 +1089,8 @@ public sealed partial class MainWindow : Window
                                 await writer.StoreAsync();
                         }
                         _playbackStream.Seek(0);
-                        _playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, "audio/mpeg");
+                        var contentType = await DetermineContentTypeAsync(path);
+                        _playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, contentType);
                 }
                 catch (Exception ex)
                 {
@@ -1101,6 +1114,31 @@ public sealed partial class MainWindow : Window
         private void PlaybackPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
                 RunOnDispatcher(() => HandlePlaybackFailed(args.ErrorMessage));
+        }
+
+        private static string GetMimeTypeFromExtension(string path)
+        {
+                var extension = Path.GetExtension(path);
+                if (!string.IsNullOrWhiteSpace(extension) && AudioMimeTypeMap.TryGetValue(extension, out var mimeType))
+                        return mimeType;
+
+                return "audio/wav";
+        }
+
+        private static async Task<string> DetermineContentTypeAsync(string path)
+        {
+                try
+                {
+                        var storageFile = await StorageFile.GetFileFromPathAsync(path);
+                        if (!string.IsNullOrWhiteSpace(storageFile.ContentType))
+                                return storageFile.ContentType;
+                }
+                catch (Exception)
+                {
+                        // Swallow and fall back to extension-based detection.
+                }
+
+                return GetMimeTypeFromExtension(path);
         }
 
         private void RunOnDispatcher(DispatcherQueueHandler action)
