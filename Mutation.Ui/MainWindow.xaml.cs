@@ -1,4 +1,5 @@
 using CognitiveSupport;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -11,6 +12,11 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Windows.Media.Core;
+using Windows.Media.Playback;
+using Windows.Storage;
+using Windows.Storage.Pickers;
+using WinRT.Interop;
 
 
 namespace Mutation.Ui;
@@ -28,6 +34,8 @@ public sealed partial class MainWindow : Window
         private readonly ITextToSpeechService _textToSpeech;
         private readonly Settings _settings;
         private HotkeyManager? _hotkeyManager;
+        private readonly MediaPlayer _playbackPlayer;
+        private bool _isPlayingRecording;
 
         // Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
         private bool _suppressAutoActions = false;
@@ -39,9 +47,12 @@ public sealed partial class MainWindow : Window
         private bool _hotkeyRouterInitialized;
 
         private const string MicOnGlyph = "\uE720";
-        private const string RecordGlyph = "\uE768";
+        // '\uE7C8' is the Segoe MDL2 Assets glyph for a circular record icon, chosen for its clear visual representation.
+        // Previously, '\uE768' was used, but '\uE7C8' better matches the standard record symbol.
+        private const string RecordGlyph = "\uE7C8";
         private const string StopGlyph = "\uE71A";
         private const string ProcessingGlyph = "\uE8A0";
+        private const string PlayGlyph = "\uE768";
 
         private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
         private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
@@ -70,12 +81,19 @@ public sealed partial class MainWindow : Window
 		_audioDeviceManager = audioDeviceManager;
 		_ocrManager = ocrManager;
 		_speechServices = speechServices;
-		_textToSpeech = textToSpeech;
+                _textToSpeech = textToSpeech;
                 _transcriptFormatter = transcriptFormatter;
                 _settings = settings;
                 _speechManager = new SpeechToTextManager(settings);
+                _playbackPlayer = new MediaPlayer { AutoPlay = false };
+                _playbackPlayer.MediaEnded += PlaybackPlayer_MediaEnded;
+                _playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
 
                 InitializeComponent();
+
+                UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
+                AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the latest recording again.");
+                AutomationProperties.SetHelpText(BtnUploadSpeechAudio, "Upload an audio file for transcription.");
 
                 ApplyMultiLineTextBoxPreferences();
 
@@ -93,10 +111,11 @@ public sealed partial class MainWindow : Window
 
 		RestorePersistedMicrophoneSelection(micList);
 
-		CmbSpeechService.ItemsSource = _speechServices;
-		CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
+                CmbSpeechService.ItemsSource = _speechServices;
+                CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
 
-		RestorePersistedSpeechServiceSelection();
+                RestorePersistedSpeechServiceSelection();
+                UpdateRecordingActionAvailability();
 
 		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
 
@@ -310,6 +329,10 @@ public sealed partial class MainWindow : Window
                 var normalizedPairs = SyncHotkeyRouterSettings();
                 _settingsManager.SaveSettingsToFile(_settings);
                 UpdateHotkeyRouterSnapshot(normalizedPairs);
+                StopPlayback();
+                _playbackPlayer.MediaEnded -= PlaybackPlayer_MediaEnded;
+                _playbackPlayer.MediaFailed -= PlaybackPlayer_MediaFailed;
+                _playbackPlayer.Dispose();
                 BeepPlayer.DisposePlayers();
         }
 
@@ -623,6 +646,152 @@ public sealed partial class MainWindow : Window
                 }
         }
 
+        private async void BtnPlayLatestRecording_Click(object? sender, RoutedEventArgs? e)
+        {
+                try
+                {
+                        if (_isPlayingRecording)
+                                StopPlayback();
+                        else
+                                StartPlayback();
+                }
+                catch (Exception ex)
+                {
+                        StopPlayback();
+                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Playback Error", ex);
+                }
+        }
+
+        private async void BtnRetrySpeechToText_Click(object? sender, RoutedEventArgs? e)
+        {
+                if (_speechManager.Recording || _speechManager.Transcribing)
+                {
+                        ShowStatus("Speech to Text", "Finish the current operation before retrying.", InfoBarSeverity.Warning);
+                        UpdateRecordingActionAvailability();
+                        return;
+                }
+
+                if (_activeSpeechService == null)
+                {
+                        ShowStatus("Speech to Text", "Select a speech-to-text service to retry.", InfoBarSeverity.Warning);
+                        UpdateRecordingActionAvailability();
+                        return;
+                }
+
+                if (!_speechManager.HasRecordedAudio())
+                {
+                        ShowStatus("Speech to Text", "No recording available to transcribe again.", InfoBarSeverity.Warning);
+                        UpdateRecordingActionAvailability();
+                        return;
+                }
+
+                try
+                {
+                        StopPlayback();
+
+                        _suppressAutoActions = true;
+                        TxtSpeechToText.IsReadOnly = true;
+                        TxtSpeechToText.Text = "Transcribing...";
+                        UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
+                        UpdateRecordingActionAvailability();
+                        ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
+
+                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        FinalizeTranscript(text, "Transcript refreshed from the latest recording.");
+                }
+                catch (OperationCanceledException)
+                {
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        TxtSpeechToText.IsReadOnly = false;
+                        _suppressAutoActions = false;
+                        ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
+                        UpdateRecordingActionAvailability();
+                }
+                catch (Exception ex)
+                {
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        TxtSpeechToText.IsReadOnly = false;
+                        _suppressAutoActions = false;
+                        UpdateRecordingActionAvailability();
+                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Speech to Text Error", ex);
+                }
+        }
+
+        private async void BtnUploadSpeechAudio_Click(object? sender, RoutedEventArgs? e)
+        {
+                if (_speechManager.Recording || _speechManager.Transcribing)
+                {
+                        ShowStatus("Speech to Text", "Finish the current operation before uploading.", InfoBarSeverity.Warning);
+                        UpdateRecordingActionAvailability();
+                        return;
+                }
+
+                if (_activeSpeechService == null)
+                {
+                        ShowStatus("Speech to Text", "Select a speech-to-text service to transcribe audio.", InfoBarSeverity.Warning);
+                        UpdateRecordingActionAvailability();
+                        return;
+                }
+
+                var picker = new FileOpenPicker
+                {
+                        SuggestedStartLocation = PickerLocationId.MusicLibrary,
+                        ViewMode = PickerViewMode.List
+                };
+                picker.FileTypeFilter.Add(".mp3");
+                picker.FileTypeFilter.Add(".wav");
+                picker.FileTypeFilter.Add(".m4a");
+                picker.FileTypeFilter.Add(".aac");
+                picker.FileTypeFilter.Add(".flac");
+                picker.FileTypeFilter.Add(".ogg");
+                picker.FileTypeFilter.Add(".opus");
+                picker.FileTypeFilter.Add(".wma");
+                picker.FileTypeFilter.Add(".webm");
+
+                InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+                StorageFile? file = await picker.PickSingleFileAsync();
+                if (file is null)
+                        return;
+
+                try
+                {
+                        StopPlayback();
+
+                        _suppressAutoActions = true;
+                        TxtSpeechToText.IsReadOnly = true;
+                        TxtSpeechToText.Text = "Transcribing...";
+                        UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
+                        UpdateRecordingActionAvailability();
+                        ShowStatus("Speech to Text", $"Transcribing {file.Name}...", InfoBarSeverity.Informational);
+
+                        string text = await _activeSpeechService.ConvertAudioToText(string.Empty, file.Path, CancellationToken.None);
+
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        FinalizeTranscript(text, $"Transcript generated from {file.Name}.");
+                }
+                catch (OperationCanceledException)
+                {
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        TxtSpeechToText.IsReadOnly = false;
+                        _suppressAutoActions = false;
+                        UpdateRecordingActionAvailability();
+                        ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
+                }
+                catch (Exception ex)
+                {
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        TxtSpeechToText.IsReadOnly = false;
+                        _suppressAutoActions = false;
+                        UpdateRecordingActionAvailability();
+                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Speech to Text Error", ex);
+                }
+        }
+
         private async void BtnOcrClipboardLrtb_Click(object sender, RoutedEventArgs e)
         {
                 try
@@ -642,24 +811,25 @@ public sealed partial class MainWindow : Window
                 }
         }
 
-	public async Task StartStopSpeechToTextAsync()
-	{
-		try
-		{
-			if (_speechManager.Transcribing)
-			{
-				_speechManager.CancelTranscription();
-				UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-				BtnSpeechToText.IsEnabled = true;
-				TxtSpeechToText.IsReadOnly = false;
-				_suppressAutoActions = false;
-				ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
-				BeepPlayer.Play(BeepType.Failure);
-				return;
-			}
+        public async Task StartStopSpeechToTextAsync()
+        {
+                try
+                {
+                        if (_speechManager.Transcribing)
+                        {
+                                _speechManager.CancelTranscription();
+                                UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                                BtnSpeechToText.IsEnabled = true;
+                                TxtSpeechToText.IsReadOnly = false;
+                                _suppressAutoActions = false;
+                                ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
+                                BeepPlayer.Play(BeepType.Failure);
+                                UpdateRecordingActionAvailability();
+                                return;
+                        }
 
-			if (_activeSpeechService == null)
-			{
+                        if (_activeSpeechService == null)
+                        {
 				var dlg = new ContentDialog
 				{
 					Title = "Warning",
@@ -671,65 +841,60 @@ public sealed partial class MainWindow : Window
 				AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
 				ShowStatus("Speech to Text", "Select a speech-to-text service to begin.", InfoBarSeverity.Warning);
 				await dlg.ShowAsync();
-				return;
-			}
+                                return;
+                        }
 
-			if (!_speechManager.Recording)
-			{
-				_suppressAutoActions = true;
-				TxtSpeechToText.IsReadOnly = true;
-				TxtSpeechToText.Text = "Recording...";
-				UpdateSpeechButtonVisuals("Stop recording", StopGlyph);
-				ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
-				BeepPlayer.Play(BeepType.Start);
-				await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
-				_suppressAutoActions = false;
-			}
-			else
-			{
-				BtnSpeechToText.IsEnabled = false;
-				_suppressAutoActions = true;
-				TxtSpeechToText.Text = "Transcribing...";
-				UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
-				ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
+                        if (!_speechManager.Recording)
+                        {
+                                _suppressAutoActions = true;
+                                TxtSpeechToText.IsReadOnly = true;
+                                TxtSpeechToText.Text = "Recording...";
+                                UpdateSpeechButtonVisuals("Stop recording", StopGlyph);
+                                ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
+                                BeepPlayer.Play(BeepType.Start);
+                                StopPlayback();
+                                await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+                                _suppressAutoActions = false;
+                                UpdateRecordingActionAvailability();
+                        }
+                        else
+                        {
+                                BtnSpeechToText.IsEnabled = false;
+                                _suppressAutoActions = true;
+                                TxtSpeechToText.Text = "Transcribing...";
+                                UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
+                                ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
+                                StopPlayback();
+                                UpdateRecordingActionAvailability();
 
-				try
-				{
-					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-					string formatted = _transcriptFormatter.ApplyRules(text, false);
+                                try
+                                {
+                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
 
-					TxtSpeechToText.Text = text;
-					TxtFormatTranscript.Text = formatted;
-
-					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-					BtnSpeechToText.IsEnabled = true;
-
-					_clipboard.SetText(formatted);
-					InsertIntoActiveApplication(formatted);
-
-					BeepPlayer.Play(BeepType.Success);
-					TxtSpeechToText.IsReadOnly = false;
-					_suppressAutoActions = false;
-					ShowStatus("Speech to Text", "Transcript ready and copied.", InfoBarSeverity.Success);
-                                    HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
-				}
-				catch (OperationCanceledException)
-				{
-					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-					BtnSpeechToText.IsEnabled = true;
-					TxtSpeechToText.IsReadOnly = false;
-					_suppressAutoActions = false;
-					ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
-					return;
-				}
-			}
-		}
-		catch (Exception ex)
-		{
-			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-			await ShowErrorDialog("Speech to Text Error", ex);
-		}
-	}
+                                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                                        BtnSpeechToText.IsEnabled = true;
+                                        FinalizeTranscript(text, "Transcript ready and copied.");
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                                        BtnSpeechToText.IsEnabled = true;
+                                        TxtSpeechToText.IsReadOnly = false;
+                                        _suppressAutoActions = false;
+                                        ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
+                                        UpdateRecordingActionAvailability();
+                                        return;
+                                }
+                                UpdateRecordingActionAvailability();
+                        }
+                }
+                catch (Exception ex)
+                {
+                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Speech to Text Error", ex);
+                        UpdateRecordingActionAvailability();
+                }
+        }
 
 	private async void ShowMessage(string title, string message)
 	{
@@ -817,6 +982,113 @@ public sealed partial class MainWindow : Window
                 BtnSpeechToText.IsEnabled = isEnabled;
                 AutomationProperties.SetName(BtnSpeechToText, label);
                 ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
+        }
+
+        private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
+        {
+                BtnPlayLatestRecordingIcon.Glyph = glyph;
+                string tooltip = automationName == "Play latest recording"
+                        ? "Play the most recent speech recording"
+                        : "Stop playing the most recent speech recording";
+                ToolTipService.SetToolTip(BtnPlayLatestRecording, tooltip);
+                AutomationProperties.SetName(BtnPlayLatestRecording, automationName);
+                AutomationProperties.SetHelpText(BtnPlayLatestRecording, tooltip);
+        }
+
+        private void UpdateRecordingActionAvailability()
+        {
+                bool hasRecording = _speechManager.HasRecordedAudio();
+                bool busy = _speechManager.Recording || _speechManager.Transcribing;
+
+                // The play button remains enabled during playback (_isPlayingRecording) so the user can stop playback,
+                // but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+                BtnPlayLatestRecording.IsEnabled = ShouldEnablePlayLatestRecordingButton(hasRecording, busy);
+                BtnRetrySpeechToText.IsEnabled = hasRecording && _activeSpeechService != null && !busy && !_isPlayingRecording;
+                BtnUploadSpeechAudio.IsEnabled = !busy && !_isPlayingRecording;
+        }
+
+        /// <summary>
+        /// Determines whether the Play Latest Recording button should be enabled.
+        /// The button remains enabled during playback so the user can stop playback,
+        /// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+        /// </summary>
+        private bool ShouldEnablePlayLatestRecordingButton(bool hasRecording, bool busy)
+        {
+                return _isPlayingRecording || (hasRecording && !busy);
+        }
+
+        private void FinalizeTranscript(string rawText, string successMessage)
+        {
+                string formatted = _transcriptFormatter.ApplyRules(rawText, false);
+
+                TxtSpeechToText.Text = rawText;
+                TxtFormatTranscript.Text = formatted;
+
+                _clipboard.SetText(formatted);
+                InsertIntoActiveApplication(formatted);
+
+                BeepPlayer.Play(BeepType.Success);
+                TxtSpeechToText.IsReadOnly = false;
+                _suppressAutoActions = false;
+
+                ShowStatus("Speech to Text", successMessage, InfoBarSeverity.Success);
+                HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
+                UpdateRecordingActionAvailability();
+        }
+
+        private void StopPlayback()
+        {
+                if (!_isPlayingRecording && _playbackPlayer.Source == null)
+                        return;
+
+                _playbackPlayer.Pause();
+                if (_playbackPlayer.PlaybackSession != null)
+                        _playbackPlayer.PlaybackSession.Position = TimeSpan.Zero;
+                _playbackPlayer.Source = null;
+                _isPlayingRecording = false;
+                UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
+                UpdateRecordingActionAvailability();
+        }
+
+        private void StartPlayback()
+        {
+                if (!_speechManager.TryGetLatestRecording(out var path))
+                {
+                        UpdateRecordingActionAvailability();
+                        ShowStatus("Speech to Text", "Record speech before attempting playback.", InfoBarSeverity.Warning);
+                        return;
+                }
+
+                StopPlayback();
+
+                _playbackPlayer.Source = MediaSource.CreateFromUri(new Uri(path, UriKind.Absolute));
+                _isPlayingRecording = true;
+                UpdatePlaybackButtonVisuals("Stop playback", StopGlyph);
+                UpdateRecordingActionAvailability();
+                ShowStatus("Speech to Text", "Playing the latest recording...", InfoBarSeverity.Informational);
+                _playbackPlayer.Play();
+        }
+
+        private void PlaybackPlayer_MediaEnded(MediaPlayer sender, object args)
+        {
+                RunOnDispatcher(StopPlayback);
+        }
+
+        private void PlaybackPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+        {
+                RunOnDispatcher(() => HandlePlaybackFailed(args.ErrorMessage));
+        }
+
+        private void RunOnDispatcher(DispatcherQueueHandler action)
+        {
+                if (!DispatcherQueue.TryEnqueue(action))
+                        action();
+        }
+
+        private void HandlePlaybackFailed(string errorMessage)
+        {
+                StopPlayback();
+                ShowStatus("Speech to Text", $"Playback failed: {errorMessage}", InfoBarSeverity.Error);
         }
 
         private void ConfigureButtonHotkey(Button button, TextBlock? hotkeyTextBlock, string? hotkey, string baseTooltip)
@@ -909,11 +1181,12 @@ public sealed partial class MainWindow : Window
                 }
         }
 
-	private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
-	{
-		if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
-			_activeSpeechService = svc;
-	}
+        private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+                if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
+                        _activeSpeechService = svc;
+                UpdateRecordingActionAvailability();
+        }
 
         private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
