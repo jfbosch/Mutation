@@ -10,12 +10,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 using WinRT.Interop;
 
 
@@ -36,6 +38,7 @@ public sealed partial class MainWindow : Window
         private HotkeyManager? _hotkeyManager;
         private readonly MediaPlayer _playbackPlayer;
         private bool _isPlayingRecording;
+        private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
 
         // Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
         private bool _suppressAutoActions = false;
@@ -653,7 +656,7 @@ public sealed partial class MainWindow : Window
                         if (_isPlayingRecording)
                                 StopPlayback();
                         else
-                                StartPlayback();
+                                await StartPlayback();
                 }
                 catch (Exception ex)
                 {
@@ -1045,12 +1048,14 @@ public sealed partial class MainWindow : Window
                 if (_playbackPlayer.PlaybackSession != null)
                         _playbackPlayer.PlaybackSession.Position = TimeSpan.Zero;
                 _playbackPlayer.Source = null;
+                _playbackStream?.Dispose();
+                _playbackStream = null;
                 _isPlayingRecording = false;
                 UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
                 UpdateRecordingActionAvailability();
         }
 
-        private void StartPlayback()
+        private async Task StartPlayback()
         {
                 if (!_speechManager.TryGetLatestRecording(out var path))
                 {
@@ -1060,8 +1065,27 @@ public sealed partial class MainWindow : Window
                 }
 
                 StopPlayback();
-
-                _playbackPlayer.Source = MediaSource.CreateFromUri(new Uri(path, UriKind.Absolute));
+                // Load file fully into memory to prevent file locking during/after playback.
+                try
+                {
+                        byte[] bytes = File.ReadAllBytes(path);
+                        _playbackStream?.Dispose();
+                        _playbackStream = new InMemoryRandomAccessStream();
+                        using (var writer = new DataWriter(_playbackStream.GetOutputStreamAt(0)))
+                        {
+                                writer.WriteBytes(bytes);
+                                await writer.StoreAsync();
+                        }
+                        _playbackStream.Seek(0);
+                        _playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, "audio/mpeg");
+                }
+                catch (Exception ex)
+                {
+                        _playbackStream?.Dispose();
+                        _playbackStream = null;
+                        ShowStatus("Speech to Text", $"Unable to play recording: {ex.Message}", InfoBarSeverity.Error);
+                        return;
+                }
                 _isPlayingRecording = true;
                 UpdatePlaybackButtonVisuals("Stop playback", StopGlyph);
                 UpdateRecordingActionAvailability();
