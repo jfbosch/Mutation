@@ -46,6 +46,7 @@ public sealed partial class MainWindow : Window
         private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
         private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
         private const string PasteExplanation = "Copies the transcript and pastes it into the active application.";
+        private const double ApproximateLineHeightMultiplier = 1.35;
 
         public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
         private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
@@ -69,15 +70,17 @@ public sealed partial class MainWindow : Window
 		_ocrManager = ocrManager;
 		_speechServices = speechServices;
 		_textToSpeech = textToSpeech;
-		_transcriptFormatter = transcriptFormatter;
-		_settings = settings;
-		_speechManager = new SpeechToTextManager(settings);
+                _transcriptFormatter = transcriptFormatter;
+                _settings = settings;
+                _speechManager = new SpeechToTextManager(settings);
 
-		InitializeComponent();
+                InitializeComponent();
 
-		_statusDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-		_statusDismissTimer.Tick += StatusDismissTimer_Tick;
-		StatusInfoBar.CloseButtonClick += StatusInfoBar_CloseButtonClick;
+                ApplyMultiLineTextBoxPreferences();
+
+                _statusDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+                _statusDismissTimer.Tick += StatusDismissTimer_Tick;
+                StatusInfoBar.CloseButtonClick += StatusInfoBar_CloseButtonClick;
 
 		_audioDeviceManager.EnsureDefaultMicrophoneSelected();
 
@@ -112,6 +115,40 @@ public sealed partial class MainWindow : Window
                 InitializeHotkeyRouter();
 
                 this.Closed += MainWindow_Closed;
+        }
+
+        private void ApplyMultiLineTextBoxPreferences()
+        {
+                int configuredMaxLines = _settings.MainWindowUiSettings?.MaxTextBoxLineCount ?? 5;
+                if (configuredMaxLines <= 0)
+                        configuredMaxLines = 5;
+
+                foreach (var textBox in GetMultiLineTextBoxes())
+                {
+                        if (textBox is null)
+                                continue;
+
+                        double lineHeight = Math.Max(textBox.FontSize * ApproximateLineHeightMultiplier, 1);
+                        double padding = textBox.Padding.Top + textBox.Padding.Bottom;
+                        double desiredMaxHeight = (lineHeight * configuredMaxLines) + padding;
+
+                        if (double.IsNaN(desiredMaxHeight) || double.IsInfinity(desiredMaxHeight) || desiredMaxHeight <= 0)
+                                continue;
+
+                        textBox.MaxHeight = desiredMaxHeight;
+
+                        if (textBox.MinHeight > desiredMaxHeight)
+                                textBox.MinHeight = desiredMaxHeight;
+                }
+        }
+
+        private IEnumerable<TextBox> GetMultiLineTextBoxes()
+        {
+                yield return TxtSpeechToText;
+                yield return TxtFormatPrompt;
+                yield return TxtFormatTranscript;
+                yield return TxtOcr;
+                yield return TxtClipboard;
         }
 
         public void AttachHotkeyManager(HotkeyManager hotkeyManager)

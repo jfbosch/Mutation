@@ -74,18 +74,20 @@ public class AudioSettings
 
 public class MainWindowUiSettings
 {
-	public Point WindowLocation { get; set; }
-	public Size WindowSize { get; set; }
+        public Point WindowLocation { get; set; }
+        public Size WindowSize { get; set; }
+        public int MaxTextBoxLineCount { get; set; } = 5;
 
-	public MainWindowUiSettings()
-	{
-	}
+        public MainWindowUiSettings()
+        {
+        }
 
-	public MainWindowUiSettings(Point windowLocation, Size windowSize)
-	{
-		WindowLocation = windowLocation;
-		WindowSize = windowSize;
-	}
+        public MainWindowUiSettings(Point windowLocation, Size windowSize, int maxTextBoxLineCount = 5)
+        {
+                WindowLocation = windowLocation;
+                WindowSize = windowSize;
+                MaxTextBoxLineCount = maxTextBoxLineCount;
+        }
 }
 
 public class AzureComputerVisionSettings
