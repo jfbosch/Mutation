@@ -71,7 +71,9 @@
 
                     <!-- Microphone Management -->
                     <Border x:Name="MicrophoneCard" Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="0">
-                        <StackPanel Spacing="16">
+                        <Grid>
+                            <Rectangle x:Name="MicPulseOverlay" Fill="{ThemeResource PrimaryBrush}" Opacity="0" IsHitTestVisible="False" RadiusX="16" RadiusY="16" />
+                            <StackPanel Spacing="16">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Microphone" Style="{StaticResource SectionHeaderTextStyle}" />
                                 <TextBlock Text="Select your preferred capture device and control mute states instantly." Style="{StaticResource CaptionTextStyle}" />
@@ -172,12 +174,23 @@
                                 </Button>
                             </Grid>
 
+                            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                <ToggleSwitch x:Name="TglWaveform" Header="Waveform" OnContent="On" OffContent="Off" Toggled="TglWaveform_Toggled" />
+                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                                    <Grid Width="110" Height="10" Background="{ThemeResource ControlFillColorDefaultBrush}" CornerRadius="5">
+                                        <Rectangle x:Name="RmsLevelBar" Height="10" HorizontalAlignment="Left" Fill="{ThemeResource PrimaryBrush}" Width="0" RadiusX="5" RadiusY="5" />
+                                    </Grid>
+                                    <TextBlock x:Name="LblLevels" Text="Peak: 0.00  RMS: 0.00" Style="{StaticResource CaptionTextStyle}" />
+                                </StackPanel>
+                            </StackPanel>
+
                             <ScottPlot:WinUIPlot
                                 x:Name="MicWaveformPlot"
                                 Height="120"
                                 Margin="0,4,0,0"
                                 IsHitTestVisible="False" />
-                        </StackPanel>
+                            </StackPanel>
+                        </Grid>
                     </Border>
 
                     <!-- Speech to Text -->

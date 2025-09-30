@@ -46,6 +46,10 @@ public sealed partial class MainWindow : Window
         private WaveInEvent? _waveformCapture;
         private DispatcherQueueTimer? _waveformTimer;
         private DataStreamer? _waveformStreamer;
+        private double _waveformPeak;
+        private double _waveformRms;
+        private double _waveformPulse; // smoothed peak for visual pulse
+        private bool VisualizationEnabled => _settings.AudioSettings?.EnableMicrophoneVisualization != false;
 
         // Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
         private bool _suppressAutoActions = false;
@@ -132,9 +136,10 @@ public sealed partial class MainWindow : Window
 
 		UpdateMicrophoneToggleVisuals();
 		UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-		var micList = _audioDeviceManager.CaptureDevices.ToList();
+                var micList = _audioDeviceManager.CaptureDevices.ToList();
                 CmbMicrophone.ItemsSource = micList;
-                CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
+                // DisplayMemberPath replaced by using custom CaptureDeviceComboItem if needed; keep for compatibility
+                CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.DeviceFriendlyName);
 
                 RestorePersistedMicrophoneSelection(micList);
                 StartMicrophoneVisualizationCapture();
@@ -229,12 +234,22 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
+        private static string GetDeviceFriendlyName(CoreAudio.MMDevice device)
+        {
+#pragma warning disable CS0618
+                var name = device.DeviceFriendlyName;
+                if (string.IsNullOrWhiteSpace(name))
+                        name = device.FriendlyName;
+#pragma warning restore CS0618
+                return name ?? string.Empty;
+        }
+
         private void RestorePersistedMicrophoneSelection(System.Collections.Generic.List<CoreAudio.MMDevice> micList)
         {
                 string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
                 if (!string.IsNullOrWhiteSpace(savedMicFullName))
                 {
-			var match = micList.FirstOrDefault(m => m.FriendlyName == savedMicFullName);
+                        var match = micList.FirstOrDefault(m => GetDeviceFriendlyName(m) == savedMicFullName);
 			if (match != null)
 				CmbMicrophone.SelectedItem = match;
 			else if (_audioDeviceManager.Microphone != null)
@@ -299,6 +314,8 @@ public sealed partial class MainWindow : Window
                 plot.Axes.SetLimitsY(-1, 1);
                 plot.HideGrid();
                 MicWaveformPlot.Refresh();
+                if (TglWaveform != null && _settings.AudioSettings != null)
+                        TglWaveform.IsOn = VisualizationEnabled;
 
                 _waveformTimer = DispatcherQueue.CreateTimer();
                 _waveformTimer.Interval = TimeSpan.FromMilliseconds(16);
@@ -308,7 +325,37 @@ public sealed partial class MainWindow : Window
 
         private void WaveformTimer_Tick(DispatcherQueueTimer sender, object args)
         {
+                if (!VisualizationEnabled)
+                {
+                        if (MicWaveformPlot.Visibility == Visibility.Visible)
+                        {
+                                MicWaveformPlot.Visibility = Visibility.Collapsed;
+                                if (RmsLevelBar != null) RmsLevelBar.Width = 0;
+                                if (LblLevels != null) LblLevels.Text = "Waveform disabled";
+                        }
+                        return;
+                }
+
+                if (MicWaveformPlot.Visibility != Visibility.Visible)
+                        MicWaveformPlot.Visibility = Visibility.Visible;
+
                 MicWaveformPlot.Refresh();
+
+                // Update RMS/Peak meter UI
+                double peak = _waveformPeak;
+                double rms = _waveformRms;
+                if (RmsLevelBar != null)
+                {
+                        double clamped = Math.Min(1.0, Math.Max(0, rms));
+                        RmsLevelBar.Width = 110 * clamped; // matches container width
+                }
+                if (LblLevels != null)
+                        LblLevels.Text = $"Peak: {peak:F2}  RMS: {rms:F2}";
+
+                // Pulse overlay based on smoothed peak
+                _waveformPulse = Math.Max(_waveformPulse * 0.85, Math.Min(1.0, peak));
+                if (MicPulseOverlay != null)
+                        MicPulseOverlay.Opacity = _waveformPulse * 0.35; // subtle
         }
 
         private void StartMicrophoneVisualizationCapture()
@@ -396,11 +443,20 @@ public sealed partial class MainWindow : Window
                         return;
 
                 double[] samples = new double[sampleCount];
+                double peak = 0;
+                double sumSquares = 0;
                 for (int i = 0; i < sampleCount; i++)
                 {
                         short sample = BitConverter.ToInt16(e.Buffer, i * 2);
-                        samples[i] = sample / 32768d;
+                        double v = sample / 32768d;
+                        samples[i] = v;
+                        double av = Math.Abs(v);
+                        if (av > peak) peak = av;
+                        sumSquares += v * v;
                 }
+                double rms = Math.Sqrt(sumSquares / sampleCount);
+                _waveformPeak = peak;
+                _waveformRms = rms;
 
                 // ScottPlot's DataStreamer is UI-bound for rendering; ensure we marshal additions
                 // onto the UI thread to avoid silent failures or missed refreshes when receiving
@@ -1379,7 +1435,7 @@ public sealed partial class MainWindow : Window
                         _audioDeviceManager.SelectMicrophone(device);
                         if (_settings.AudioSettings != null)
                         {
-                                _settings.AudioSettings.ActiveCaptureDeviceFullName = device.FriendlyName;
+                                _settings.AudioSettings.ActiveCaptureDeviceFullName = GetDeviceFriendlyName(device);
                                 _settingsManager.SaveSettingsToFile(_settings);
                         }
                         RestartMicrophoneVisualizationCapture();
@@ -1387,6 +1443,23 @@ public sealed partial class MainWindow : Window
                 else
                 {
                         StopMicrophoneVisualizationCapture();
+                }
+        }
+
+        private void TglWaveform_Toggled(object sender, RoutedEventArgs e)
+        {
+                if (_settings.AudioSettings == null)
+                        return;
+                _settings.AudioSettings.EnableMicrophoneVisualization = TglWaveform.IsOn;
+                _settingsManager.SaveSettingsToFile(_settings);
+                if (TglWaveform.IsOn)
+                {
+                        InitializeMicrophoneVisualization();
+                        StartMicrophoneVisualizationCapture();
+                }
+                else
+                {
+                        DisposeMicrophoneVisualization();
                 }
         }
 
