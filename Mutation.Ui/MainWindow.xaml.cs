@@ -320,7 +320,12 @@ public sealed partial class MainWindow : Window
 
                 int deviceIndex = _audioDeviceManager.MicrophoneDeviceIndex;
                 if (deviceIndex < 0)
+                {
+                        // Provide a visible hint if selection failed to map to an NAudio device index.
+                        DispatcherQueue.TryEnqueue(() =>
+                                ShowStatus("Microphone", "Unable to start waveform monitor (device not resolved)", InfoBarSeverity.Warning));
                         return;
+                }
 
                 try
                 {
@@ -397,7 +402,18 @@ public sealed partial class MainWindow : Window
                         samples[i] = sample / 32768d;
                 }
 
-                _waveformStreamer.AddRange(samples);
+                // ScottPlot's DataStreamer is UI-bound for rendering; ensure we marshal additions
+                // onto the UI thread to avoid silent failures or missed refreshes when receiving
+                // audio callbacks on a background thread from NAudio.
+                var streamer = _waveformStreamer;
+                if (streamer is null)
+                        return;
+
+                // Reuse the computed samples without further mutation.
+                _ = DispatcherQueue.TryEnqueue(() =>
+                {
+                        streamer.AddRange(samples);
+                });
         }
 
         private void RefreshHotkeyRouterRegistrations()

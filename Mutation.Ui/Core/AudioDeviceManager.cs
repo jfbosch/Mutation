@@ -26,7 +26,7 @@ public class AudioDeviceManager
 
         public MMDevice? Microphone => _microphone;
 
-	public int MicrophoneDeviceIndex => _microphoneDeviceIndex;
+        public int MicrophoneDeviceIndex => _microphoneDeviceIndex;
 
         public bool IsMuted => _microphone != null && _microphone.AudioEndpointVolume.Mute;
 
@@ -67,23 +67,44 @@ public class AudioDeviceManager
 			return;
 		}
 
-                string startsWithNameToMatch = $"{_microphone.FriendlyName} (";
+                // NAudio's WaveIn device ProductName often matches the CoreAudio friendly name exactly
+                // (e.g., "Microphone (Realtek(R) Audio)"). The previous implementation appended " (" to
+                // the friendly name before comparison, preventing any matches and leaving the device
+                // index at -1 (so no waveform capture would occur). Use more flexible matching.
 		int deviceCount = WaveIn.DeviceCount;
-		for (int i = 0; i < deviceCount; i++)
-		{
-			if (WaveInEvent.GetCapabilities(i).ProductName.StartsWith(startsWithNameToMatch))
-			{
-				_microphoneDeviceIndex = i;
-				return;
-			}
-		}
-		_microphoneDeviceIndex = -1;
+                string friendly = _microphone.FriendlyName;
+                int bestMatchIndex = -1;
+                for (int i = 0; i < deviceCount; i++)
+                {
+                        string product = WaveInEvent.GetCapabilities(i).ProductName;
+                        if (string.Equals(product, friendly, StringComparison.OrdinalIgnoreCase))
+                        {
+                                bestMatchIndex = i; // exact match wins immediately
+                                break;
+                        }
+                        // Fallback heuristics (partial contains either direction)
+                        if (bestMatchIndex == -1 && (product.Contains(friendly, StringComparison.OrdinalIgnoreCase) ||
+                                                      friendly.Contains(product, StringComparison.OrdinalIgnoreCase)))
+                        {
+                                bestMatchIndex = i;
+                        }
+                }
+                _microphoneDeviceIndex = bestMatchIndex;
 	}
 
-	public void ToggleMute()
-	{
-		bool newMuteState = !IsMuted;
+        public void ToggleMute()
+        {
+                bool newMuteState = !IsMuted;
                 foreach (var mic in _captureDevices)
-                        mic.AudioEndpointVolume.Mute = newMuteState;
+                {
+                        if (mic == null)
+                                continue;
+                        try
+                        {
+                                if (mic.AudioEndpointVolume != null)
+                                        mic.AudioEndpointVolume.Mute = newMuteState;
+                        }
+                        catch { }
+                }
         }
 }
