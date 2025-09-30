@@ -42,6 +42,7 @@ public sealed partial class MainWindow : Window
         private const string RecordGlyph = "\uE768";
         private const string StopGlyph = "\uE71A";
         private const string ProcessingGlyph = "\uE8A0";
+        private const double DefaultTextBoxLineHeight = 24d;
 
         private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
         private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
@@ -73,9 +74,9 @@ public sealed partial class MainWindow : Window
 		_settings = settings;
 		_speechManager = new SpeechToTextManager(settings);
 
-		InitializeComponent();
+                InitializeComponent();
 
-		_statusDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+                _statusDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
 		_statusDismissTimer.Tick += StatusDismissTimer_Tick;
 		StatusInfoBar.CloseButtonClick += StatusInfoBar_CloseButtonClick;
 
@@ -112,6 +113,36 @@ public sealed partial class MainWindow : Window
                 InitializeHotkeyRouter();
 
                 this.Closed += MainWindow_Closed;
+        }
+
+        private void MultiLineTextBox_Loaded(object sender, RoutedEventArgs e)
+        {
+                if (sender is not TextBox textBox)
+                        return;
+
+                ConfigureMultiLineTextBox(textBox);
+                textBox.Loaded -= MultiLineTextBox_Loaded;
+        }
+
+        private void ConfigureMultiLineTextBox(TextBox textBox)
+        {
+                int configuredLines = _settings.MainWindowUiSettings?.MaxTextBoxLineHeight ?? 5;
+                if (configuredLines <= 0)
+                        configuredLines = 5;
+
+                double lineHeight = textBox.LineHeight;
+                if (lineHeight <= 0)
+                {
+                        double fontSize = textBox.FontSize;
+                        lineHeight = fontSize > 0 ? fontSize * 1.6 : DefaultTextBoxLineHeight;
+                }
+
+                double maxHeight = configuredLines * lineHeight;
+                textBox.MinHeight = maxHeight;
+                textBox.MaxHeight = maxHeight;
+
+                ScrollViewer.SetVerticalScrollBarVisibility(textBox, ScrollBarVisibility.Auto);
+                ScrollViewer.SetHorizontalScrollBarVisibility(textBox, ScrollBarVisibility.Auto);
         }
 
         public void AttachHotkeyManager(HotkeyManager hotkeyManager)

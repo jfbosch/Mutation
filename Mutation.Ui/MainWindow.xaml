@@ -232,9 +232,11 @@
                             <TextBlock Text="Transcript" Style="{StaticResource CaptionTextStyle}" />
                             <TextBox
                                 x:Name="TxtSpeechToText"
-                                MinHeight="140"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
+                                ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                Loaded="MultiLineTextBox_Loaded"
                                 AutomationProperties.Name="Speech to text transcript"
                                 ToolTipService.ToolTip="Raw transcript generated from speech"
                                 TextChanged="TxtSpeechToText_TextChanged" />
@@ -277,8 +279,10 @@
                                         x:Name="TxtFormatPrompt"
                                         PlaceholderText="Add optional guidance for LLM formatting"
                                         AcceptsReturn="True"
-                                        MinHeight="88"
                                         TextWrapping="Wrap"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                        Loaded="MultiLineTextBox_Loaded"
                                         AutomationProperties.Name="Format prompt"
                                         ToolTipService.ToolTip="Prompt used for large language model formatting" />
                                 </StackPanel>
@@ -314,9 +318,11 @@
 
                             <TextBox
                                 x:Name="TxtFormatTranscript"
-                                MinHeight="140"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
+                                ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                Loaded="MultiLineTextBox_Loaded"
                                 AutomationProperties.Name="Formatted transcript"
                                 ToolTipService.ToolTip="Formatted transcript ready for sharing" />
                         </StackPanel>
@@ -484,9 +490,11 @@
 
                             <TextBox
                                 x:Name="TxtOcr"
-                                MinHeight="120"
                                 AcceptsReturn="True"
                                 TextWrapping="Wrap"
+                                ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                Loaded="MultiLineTextBox_Loaded"
                                 AutomationProperties.Name="OCR result"
                                 ToolTipService.ToolTip="Text extracted from captured images" />
                         </StackPanel>
@@ -505,8 +513,10 @@
                                     x:Name="TxtClipboard"
                                     PlaceholderText="Clipboard text"
                                     AcceptsReturn="True"
-                                    MinHeight="88"
                                     TextWrapping="Wrap"
+                                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                    Loaded="MultiLineTextBox_Loaded"
                                     AutomationProperties.Name="Clipboard text"
                                     ToolTipService.ToolTip="Text that will be copied or spoken" />
 

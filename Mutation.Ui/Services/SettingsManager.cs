@@ -47,15 +47,27 @@ internal class SettingsManager : ISettingsManager
 		const string PlaceholderValue = "<placeholder>";
 		const string PlaceholderUrl = "https://placeholder.com";
 
-		bool somethingWasMissing = false;
+                bool somethingWasMissing = false;
 
-		settings.UserInstructions = "Change the values of the settings below to your preferences, save the file, and restart Mutation.exe. DeploymentId in the LlmSettings should be set to your Azure model Deployment Name.";
+                settings.UserInstructions = "Change the values of the settings below to your preferences, save the file, and restart Mutation.exe. DeploymentId in the LlmSettings should be set to your Azure model Deployment Name.";
 
-		if (settings.AzureComputerVisionSettings is null)
-		{
-			settings.AzureComputerVisionSettings = new AzureComputerVisionSettings();
-			somethingWasMissing = true;
-		}
+                if (settings.MainWindowUiSettings is null)
+                {
+                        settings.MainWindowUiSettings = new MainWindowUiSettings();
+                        somethingWasMissing = true;
+                }
+
+                if (settings.MainWindowUiSettings.MaxTextBoxLineHeight <= 0)
+                {
+                        settings.MainWindowUiSettings.MaxTextBoxLineHeight = 5;
+                        somethingWasMissing = true;
+                }
+
+                if (settings.AzureComputerVisionSettings is null)
+                {
+                        settings.AzureComputerVisionSettings = new AzureComputerVisionSettings();
+                        somethingWasMissing = true;
+                }
 		var azureComputerVisionSettings = settings.AzureComputerVisionSettings;
 
 		if (azureComputerVisionSettings.TimeoutSeconds <= 0)
