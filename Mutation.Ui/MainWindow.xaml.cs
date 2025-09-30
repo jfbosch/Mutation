@@ -46,6 +46,8 @@ public sealed partial class MainWindow : Window
         private bool _hotkeyRouterInitialized;
 
         private const string MicOnGlyph = "\uE720";
+        // '\uE7C8' is the Segoe MDL2 Assets glyph for a circular record icon, chosen for its clear visual representation.
+        // Previously, '\uE768' was used, but '\uE7C8' better matches the standard record symbol.
         private const string RecordGlyph = "\uE7C8";
         private const string StopGlyph = "\uE71A";
         private const string ProcessingGlyph = "\uE8A0";
@@ -869,6 +871,7 @@ public sealed partial class MainWindow : Window
                                         string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
 
                                         UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                                        BtnSpeechToText.IsEnabled = true;
                                         FinalizeTranscript(text, "Transcript ready and copied.");
                                 }
                                 catch (OperationCanceledException)
@@ -996,9 +999,21 @@ public sealed partial class MainWindow : Window
                 bool hasRecording = _speechManager.HasRecordedAudio();
                 bool busy = _speechManager.Recording || _speechManager.Transcribing;
 
-                BtnPlayLatestRecording.IsEnabled = _isPlayingRecording || (hasRecording && !busy);
+                // The play button remains enabled during playback (_isPlayingRecording) so the user can stop playback,
+                // but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+                BtnPlayLatestRecording.IsEnabled = ShouldEnablePlayLatestRecordingButton(hasRecording, busy);
                 BtnRetrySpeechToText.IsEnabled = hasRecording && _activeSpeechService != null && !busy && !_isPlayingRecording;
                 BtnUploadSpeechAudio.IsEnabled = !busy && !_isPlayingRecording;
+        }
+
+        /// <summary>
+        /// Determines whether the Play Latest Recording button should be enabled.
+        /// The button remains enabled during playback so the user can stop playback,
+        /// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+        /// </summary>
+        private bool ShouldEnablePlayLatestRecordingButton(bool hasRecording, bool busy)
+        {
+                return _isPlayingRecording || (hasRecording && !busy);
         }
 
         private void FinalizeTranscript(string rawText, string successMessage)
@@ -1061,15 +1076,14 @@ public sealed partial class MainWindow : Window
 
         private void PlaybackPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
         {
-                if (!DispatcherQueue.TryEnqueue(() =>
-                {
-                        StopPlayback();
-                        ShowStatus("Speech to Text", $"Playback failed: {args.ErrorMessage}", InfoBarSeverity.Error);
-                }))
-                {
-                        StopPlayback();
-                        ShowStatus("Speech to Text", $"Playback failed: {args.ErrorMessage}", InfoBarSeverity.Error);
-                }
+                if (!DispatcherQueue.TryEnqueue(() => HandlePlaybackFailed(args.ErrorMessage)))
+                        HandlePlaybackFailed(args.ErrorMessage);
+        }
+
+        private void HandlePlaybackFailed(string errorMessage)
+        {
+                StopPlayback();
+                ShowStatus("Speech to Text", $"Playback failed: {errorMessage}", InfoBarSeverity.Error);
         }
 
         private void ConfigureButtonHotkey(Button button, TextBlock? hotkeyTextBlock, string? hotkey, string baseTooltip)

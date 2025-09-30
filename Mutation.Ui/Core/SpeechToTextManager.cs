@@ -37,7 +37,19 @@ internal class SpeechToTextManager
                         var info = new FileInfo(path);
                         return info.Length > 0;
                 }
-                catch (Exception)
+                catch (UnauthorizedAccessException)
+                {
+                        return false;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                        return false;
+                }
+                catch (PathTooLongException)
+                {
+                        return false;
+                }
+                catch (IOException)
                 {
                         return false;
                 }
