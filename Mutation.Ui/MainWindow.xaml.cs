@@ -47,6 +47,7 @@ public sealed partial class MainWindow : Window
         private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
         private const string PasteExplanation = "Copies the transcript and pastes it into the active application.";
         private const double ApproximateLineHeightMultiplier = 1.35;
+        private const double MinimumLineHeight = 1;
 
         public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
         private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
@@ -128,7 +129,7 @@ public sealed partial class MainWindow : Window
                         if (textBox is null)
                                 continue;
 
-                        double lineHeight = Math.Max(textBox.FontSize * ApproximateLineHeightMultiplier, 1);
+                        double lineHeight = Math.Max(textBox.FontSize * ApproximateLineHeightMultiplier, MinimumLineHeight);
                         double padding = textBox.Padding.Top + textBox.Padding.Bottom;
                         double desiredMaxHeight = (lineHeight * configuredMaxLines) + padding;
 
@@ -138,7 +139,7 @@ public sealed partial class MainWindow : Window
                         textBox.MaxHeight = desiredMaxHeight;
 
                         if (textBox.MinHeight > desiredMaxHeight)
-                                textBox.MinHeight = desiredMaxHeight;
+                                textBox.MinHeight = lineHeight + padding;
                 }
         }
 
