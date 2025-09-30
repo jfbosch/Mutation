@@ -67,6 +67,7 @@
 		<PackageReference Include="Deepgram" Version="6.6.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+		<PackageReference Include="ScottPlot.WinUI" Version="5.0.56" />
 		<PackageReference Include="System.Speech" Version="9.0.9" />
 	</ItemGroup>
 
@@ -103,8 +104,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
-		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250907003" />
+		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.6584" />
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.250916003" />
 	</ItemGroup>
 
 
