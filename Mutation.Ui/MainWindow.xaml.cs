@@ -5,6 +5,9 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
+using NAudio.Wave;
+using ScottPlot;
+using ScottPlot.Plottables;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -40,6 +43,10 @@ public sealed partial class MainWindow : Window
         private bool _isPlayingRecording;
         private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
 
+        private WaveInEvent? _waveformCapture;
+        private DispatcherQueueTimer? _waveformTimer;
+        private DataStreamer? _waveformStreamer;
+
         // Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
         private bool _suppressAutoActions = false;
 
@@ -68,6 +75,10 @@ public sealed partial class MainWindow : Window
         private const string StopGlyph = "\uE71A";
         private const string ProcessingGlyph = "\uE8A0";
         private const string PlayGlyph = "\uE768";
+
+        private const int WaveformSampleRate = 16_000;
+        private const int WaveformVisibleSeconds = 2;
+        private const int WaveformBufferMilliseconds = 15;
 
         private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
         private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
@@ -105,6 +116,7 @@ public sealed partial class MainWindow : Window
                 _playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
 
                 InitializeComponent();
+                InitializeMicrophoneVisualization();
 
                 UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
                 AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the latest recording again.");
@@ -121,10 +133,11 @@ public sealed partial class MainWindow : Window
 		UpdateMicrophoneToggleVisuals();
 		UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
 		var micList = _audioDeviceManager.CaptureDevices.ToList();
-		CmbMicrophone.ItemsSource = micList;
-		CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
+                CmbMicrophone.ItemsSource = micList;
+                CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.FriendlyName);
 
-		RestorePersistedMicrophoneSelection(micList);
+                RestorePersistedMicrophoneSelection(micList);
+                StartMicrophoneVisualizationCapture();
 
                 CmbSpeechService.ItemsSource = _speechServices;
                 CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
@@ -275,6 +288,118 @@ public sealed partial class MainWindow : Window
                 _hotkeyRouterInitialized = true;
         }
 
+        private void InitializeMicrophoneVisualization()
+        {
+                if (MicWaveformPlot is null)
+                        return;
+
+                var plot = MicWaveformPlot.Plot;
+                _waveformStreamer = plot.Add.DataStreamer(WaveformSampleRate * WaveformVisibleSeconds);
+                _waveformStreamer.ViewWipeRight();
+                plot.Axes.SetLimitsY(-1, 1);
+                plot.HideGrid();
+                MicWaveformPlot.Refresh();
+
+                _waveformTimer = DispatcherQueue.CreateTimer();
+                _waveformTimer.Interval = TimeSpan.FromMilliseconds(16);
+                _waveformTimer.Tick += WaveformTimer_Tick;
+                _waveformTimer.Start();
+        }
+
+        private void WaveformTimer_Tick(DispatcherQueueTimer sender, object args)
+        {
+                MicWaveformPlot.Refresh();
+        }
+
+        private void StartMicrophoneVisualizationCapture()
+        {
+                if (_waveformStreamer is null)
+                        return;
+
+                StopMicrophoneVisualizationCapture();
+
+                int deviceIndex = _audioDeviceManager.MicrophoneDeviceIndex;
+                if (deviceIndex < 0)
+                        return;
+
+                try
+                {
+                        _waveformCapture = new WaveInEvent
+                        {
+                                DeviceNumber = deviceIndex,
+                                WaveFormat = new WaveFormat(WaveformSampleRate, 16, 1),
+                                BufferMilliseconds = WaveformBufferMilliseconds
+                        };
+                        _waveformCapture.DataAvailable += OnWaveformDataAvailable;
+                        _waveformCapture.StartRecording();
+                }
+                catch (Exception ex)
+                {
+                        _waveformCapture?.Dispose();
+                        _waveformCapture = null;
+                        DispatcherQueue.TryEnqueue(() =>
+                                ShowStatus("Microphone", $"Unable to monitor audio: {ex.Message}", InfoBarSeverity.Error));
+                }
+        }
+
+        private void RestartMicrophoneVisualizationCapture()
+        {
+                StopMicrophoneVisualizationCapture();
+                StartMicrophoneVisualizationCapture();
+        }
+
+        private void StopMicrophoneVisualizationCapture()
+        {
+                if (_waveformCapture is null)
+                        return;
+
+                try
+                {
+                        _waveformCapture.DataAvailable -= OnWaveformDataAvailable;
+                        _waveformCapture.StopRecording();
+                }
+                catch
+                {
+                        // Ignore failures that occur while shutting down capture.
+                }
+
+                _waveformCapture.Dispose();
+                _waveformCapture = null;
+        }
+
+        private void DisposeMicrophoneVisualization()
+        {
+                StopMicrophoneVisualizationCapture();
+
+                if (_waveformTimer is not null)
+                {
+                        _waveformTimer.Tick -= WaveformTimer_Tick;
+                        _waveformTimer.Stop();
+                        _waveformTimer = null;
+                }
+
+                _waveformStreamer = null;
+        }
+
+        private void OnWaveformDataAvailable(object? sender, WaveInEventArgs e)
+        {
+                if (_waveformStreamer is null || e.BytesRecorded <= 0)
+                        return;
+
+                int sampleCount = e.BytesRecorded / 2;
+                if (sampleCount <= 0)
+                        return;
+
+                double[] samples = new double[sampleCount];
+                for (int i = 0; i < sampleCount; i++)
+                {
+                        short sample = BitConverter.ToInt16(e.Buffer, i * 2);
+                        samples[i] = sample / 32768d;
+                }
+
+                _waveformStreamer.AddRange(samples);
+        }
+
         private void RefreshHotkeyRouterRegistrations()
         {
                 _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
@@ -349,6 +474,7 @@ public sealed partial class MainWindow : Window
                 _playbackPlayer.MediaFailed -= PlaybackPlayer_MediaFailed;
                 _playbackPlayer.Dispose();
                 BeepPlayer.DisposePlayers();
+                DisposeMicrophoneVisualization();
         }
 
         private void CopyText_Click(object sender, RoutedEventArgs e)
@@ -1230,8 +1356,8 @@ public sealed partial class MainWindow : Window
 		await dialog.ShowAsync();
 	}
 
-	private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
-	{
+        private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
                 if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
                 {
                         _audioDeviceManager.SelectMicrophone(device);
@@ -1240,6 +1366,11 @@ public sealed partial class MainWindow : Window
                                 _settings.AudioSettings.ActiveCaptureDeviceFullName = device.FriendlyName;
                                 _settingsManager.SaveSettingsToFile(_settings);
                         }
+                        RestartMicrophoneVisualizationCapture();
+                }
+                else
+                {
+                        StopMicrophoneVisualizationCapture();
                 }
         }
 
