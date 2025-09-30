@@ -980,15 +980,14 @@ public sealed partial class MainWindow : Window
                 ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
         }
 
-        private void UpdatePlaybackButtonVisuals(string label, string glyph)
+        private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
         {
-                BtnPlayLatestRecordingLabel.Text = label;
                 BtnPlayLatestRecordingIcon.Glyph = glyph;
-                string tooltip = label == "Play latest recording"
+                string tooltip = automationName == "Play latest recording"
                         ? "Play the most recent speech recording"
                         : "Stop playing the most recent speech recording";
                 ToolTipService.SetToolTip(BtnPlayLatestRecording, tooltip);
-                AutomationProperties.SetName(BtnPlayLatestRecording, label);
+                AutomationProperties.SetName(BtnPlayLatestRecording, automationName);
                 AutomationProperties.SetHelpText(BtnPlayLatestRecording, tooltip);
         }
 
