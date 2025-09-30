@@ -186,8 +186,12 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                                <StackPanel Grid.Column="0" Spacing="6">
+                                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
                                     <TextBlock x:Name="LblSpeechService" Text="Speech service" Style="{StaticResource CaptionTextStyle}" />
                                     <ComboBox
                                         x:Name="CmbSpeechService"
@@ -200,6 +204,7 @@
 
                                 <Button
                                     x:Name="BtnSpeechToText"
+                                    Grid.Row="0"
                                     Grid.Column="1"
                                     Style="{StaticResource AccentButtonStyle}"
                                     Click="BtnSpeechToText_Click"
@@ -209,7 +214,7 @@
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                                         <FontIcon
                                             x:Name="BtnSpeechToTextIcon"
-                                            Glyph="&#xE768;"
+                                            Glyph="&#xE7C8;"
                                             FontFamily="Segoe Fluent Icons"
                                         />
                                         <StackPanel Spacing="2">
@@ -222,6 +227,47 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </Button>
+
+                                <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
+                                    <Button
+                                        x:Name="BtnPlayLatestRecording"
+                                        Style="{StaticResource OutlinedButtonStyle}"
+                                        Click="BtnPlayLatestRecording_Click"
+                                        AutomationProperties.Name="Play latest recording"
+                                        ToolTipService.ToolTip="Play the most recent speech recording">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                            <FontIcon
+                                                x:Name="BtnPlayLatestRecordingIcon"
+                                                Glyph="&#xE768;"
+                                                FontFamily="Segoe Fluent Icons" />
+                                            <TextBlock x:Name="BtnPlayLatestRecordingLabel" Text="Play latest recording" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        x:Name="BtnRetrySpeechToText"
+                                        Style="{StaticResource OutlinedButtonStyle}"
+                                        Click="BtnRetrySpeechToText_Click"
+                                        AutomationProperties.Name="Retry transcription"
+                                        ToolTipService.ToolTip="Transcribe the latest recording again">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                            <FontIcon Glyph="&#xE72C;" FontFamily="Segoe Fluent Icons" />
+                                            <TextBlock Text="Retry transcription" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button
+                                        x:Name="BtnUploadSpeechAudio"
+                                        Style="{StaticResource OutlinedButtonStyle}"
+                                        Click="BtnUploadSpeechAudio_Click"
+                                        AutomationProperties.Name="Upload audio for transcription"
+                                        ToolTipService.ToolTip="Upload an audio file for transcription">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                            <FontIcon Glyph="&#xE898;" FontFamily="Segoe Fluent Icons" />
+                                            <TextBlock Text="Upload audio" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>

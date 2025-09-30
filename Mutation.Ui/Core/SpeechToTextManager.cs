@@ -22,7 +22,26 @@ internal class SpeechToTextManager
 	public bool Transcribing => _state.TranscribingAudio;
 
         private string SessionsDirectory => Path.Combine(_settings.SpeechToTextSettings!.TempDirectory!, Constants.SessionsDirectoryName);
-	private string AudioFilePath => Path.Combine(SessionsDirectory, "mutation_recording.mp3");
+        private string AudioFilePath => Path.Combine(SessionsDirectory, "mutation_recording.mp3");
+
+        public bool HasRecordedAudio() => TryGetLatestRecording(out _);
+
+        public bool TryGetLatestRecording(out string path)
+        {
+                path = AudioFilePath;
+                if (!File.Exists(path))
+                        return false;
+
+                try
+                {
+                        var info = new FileInfo(path);
+                        return info.Length > 0;
+                }
+                catch (Exception)
+                {
+                        return false;
+                }
+        }
 
 	public async Task StartRecordingAsync(int microphoneDeviceIndex)
 	{
@@ -39,10 +58,10 @@ internal class SpeechToTextManager
 		}
 	}
 
-	public async Task<string> StopRecordingAndTranscribeAsync(CognitiveSupport.ISpeechToTextService service, string prompt, CancellationToken token)
-	{
-		if (service is null)
-			throw new ArgumentNullException(nameof(service));
+        public async Task<string> StopRecordingAndTranscribeAsync(CognitiveSupport.ISpeechToTextService service, string prompt, CancellationToken token)
+        {
+                if (service is null)
+                        throw new ArgumentNullException(nameof(service));
 
 		await _state.AudioRecorderLock.WaitAsync(token).ConfigureAwait(false);
 		try
@@ -65,14 +84,47 @@ internal class SpeechToTextManager
 		}
 		finally
 		{
-			_state.AudioRecorderLock.Release();
-		}
-	}
+                        _state.AudioRecorderLock.Release();
+                }
+        }
 
-	public void CancelTranscription()
-	{
-		_state.StopTranscription();
-	}
+        public async Task<string> TranscribeExistingRecordingAsync(CognitiveSupport.ISpeechToTextService service, string prompt, CancellationToken token)
+        {
+                if (service is null)
+                        throw new ArgumentNullException(nameof(service));
+
+                await _state.AudioRecorderLock.WaitAsync(token).ConfigureAwait(false);
+                try
+                {
+                        if (_audioRecorder != null)
+                                throw new InvalidOperationException("Recording is currently in progress.");
+
+                        if (!TryGetLatestRecording(out var path))
+                                throw new FileNotFoundException("No recording is available for transcription.", AudioFilePath);
+
+                        string text = string.Empty;
+                        _state.StartTranscription();
+                        try
+                        {
+                                text = await service.ConvertAudioToText(prompt, path, _state.TranscriptionCancellationTokenSource!.Token).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                                _state.StopTranscription();
+                        }
+
+                        return text;
+                }
+                finally
+                {
+                        _state.AudioRecorderLock.Release();
+                }
+        }
+
+        public void CancelTranscription()
+        {
+                _state.StopTranscription();
+        }
 
 	public async Task StopRecordingAsync()
 	{
