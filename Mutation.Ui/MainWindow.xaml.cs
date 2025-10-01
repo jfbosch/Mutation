@@ -314,8 +314,14 @@ public sealed partial class MainWindow : Window
                 plot.Axes.SetLimitsY(-1, 1);
                 plot.HideGrid();
                 MicWaveformPlot.Refresh();
-                if (TglWaveform != null && _settings.AudioSettings != null)
-                        TglWaveform.IsOn = VisualizationEnabled;
+                if (_settings.AudioSettings != null)
+                {
+                        if (!VisualizationEnabled)
+                        {
+                                MicWaveformPlot.Visibility = Visibility.Collapsed;
+                                if (MicWaveformOffLabel != null) MicWaveformOffLabel.Visibility = Visibility.Visible;
+                        }
+                }
 
                 _waveformTimer = DispatcherQueue.CreateTimer();
                 _waveformTimer.Interval = TimeSpan.FromMilliseconds(16);
@@ -327,35 +333,37 @@ public sealed partial class MainWindow : Window
         {
                 if (!VisualizationEnabled)
                 {
-                        if (MicWaveformPlot.Visibility == Visibility.Visible)
-                        {
+                        if (MicWaveformPlot.Visibility != Visibility.Collapsed)
                                 MicWaveformPlot.Visibility = Visibility.Collapsed;
-                                if (RmsLevelBar != null) RmsLevelBar.Width = 0;
-                                if (LblLevels != null) LblLevels.Text = "Waveform disabled";
-                        }
+                        if (MicWaveformOffLabel != null)
+                                MicWaveformOffLabel.Visibility = Visibility.Visible;
+                        if (RmsLevelBar != null)
+                                RmsLevelBar.Height = 0;
                         return;
                 }
 
                 if (MicWaveformPlot.Visibility != Visibility.Visible)
                         MicWaveformPlot.Visibility = Visibility.Visible;
+                if (MicWaveformOffLabel != null && MicWaveformOffLabel.Visibility == Visibility.Visible)
+                        MicWaveformOffLabel.Visibility = Visibility.Collapsed;
 
                 MicWaveformPlot.Refresh();
 
-                // Update RMS/Peak meter UI
                 double peak = _waveformPeak;
                 double rms = _waveformRms;
                 if (RmsLevelBar != null)
                 {
                         double clamped = Math.Min(1.0, Math.Max(0, rms));
-                        RmsLevelBar.Width = 110 * clamped; // matches container width
+                        RmsLevelBar.Height = 120 * clamped; // fits container height
                 }
-                if (LblLevels != null)
-                        LblLevels.Text = $"Peak: {peak:F2}  RMS: {rms:F2}";
+                if (LblPeak != null)
+                        LblPeak.Text = $"Peak: {peak:F2}";
+                if (LblRms != null)
+                        LblRms.Text = $"RMS: {rms:F2}";
 
-                // Pulse overlay based on smoothed peak
                 _waveformPulse = Math.Max(_waveformPulse * 0.85, Math.Min(1.0, peak));
                 if (MicPulseOverlay != null)
-                        MicPulseOverlay.Opacity = _waveformPulse * 0.35; // subtle
+                        MicPulseOverlay.Opacity = _waveformPulse * 0.35;
         }
 
         private void StartMicrophoneVisualizationCapture()
@@ -1446,13 +1454,14 @@ public sealed partial class MainWindow : Window
                 }
         }
 
-        private void TglWaveform_Toggled(object sender, RoutedEventArgs e)
+        private void MicWaveArea_PointerReleased(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
         {
                 if (_settings.AudioSettings == null)
                         return;
-                _settings.AudioSettings.EnableMicrophoneVisualization = TglWaveform.IsOn;
+                bool newState = !_settings.AudioSettings.EnableMicrophoneVisualization;
+                _settings.AudioSettings.EnableMicrophoneVisualization = newState;
                 _settingsManager.SaveSettingsToFile(_settings);
-                if (TglWaveform.IsOn)
+                if (newState)
                 {
                         InitializeMicrophoneVisualization();
                         StartMicrophoneVisualizationCapture();
@@ -1460,6 +1469,8 @@ public sealed partial class MainWindow : Window
                 else
                 {
                         DisposeMicrophoneVisualization();
+                        if (MicWaveformOffLabel != null)
+                                MicWaveformOffLabel.Visibility = Visibility.Visible;
                 }
         }
 
