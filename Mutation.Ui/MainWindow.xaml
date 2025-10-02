@@ -187,11 +187,22 @@
                                     <TextBlock x:Name="MicWaveformOffLabel" Text="Off" FontSize="32" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
                                 </Grid>
                                 <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="6" VerticalAlignment="Stretch">
-                                    <Grid Width="16" Height="120" Background="{ThemeResource ControlFillColorDefaultBrush}" CornerRadius="8">
-                                        <Rectangle x:Name="RmsLevelBar" Width="16" Height="0" Fill="{ThemeResource PrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" RadiusX="8" RadiusY="8" />
+                                    <Grid
+                                        Width="16"
+                                        Height="120"
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        CornerRadius="8"
+                                        x:Name="MicLevelMeter">
+                                        <Rectangle
+                                            x:Name="RmsLevelBar"
+                                            Width="16"
+                                            Height="0"
+                                            Fill="{ThemeResource PrimaryBrush}"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Bottom"
+                                            RadiusX="8"
+                                            RadiusY="8" />
                                     </Grid>
-                                    <TextBlock x:Name="LblPeak" Text="Peak: 0.00" Style="{StaticResource CaptionTextStyle}" />
-                                    <TextBlock x:Name="LblRms" Text="RMS: 0.00" Style="{StaticResource CaptionTextStyle}" />
                                 </StackPanel>
                             </Grid>
                             </StackPanel>

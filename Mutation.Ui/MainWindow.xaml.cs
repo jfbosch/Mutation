@@ -45,7 +45,12 @@ public sealed partial class MainWindow : Window
 
         private WaveInEvent? _waveformCapture;
         private DispatcherQueueTimer? _waveformTimer;
-        private DataStreamer? _waveformStreamer;
+        private SignalPlot? _waveformSignal;
+        private double[] _waveformBuffer = Array.Empty<double>();
+        private double[] _waveformRenderBuffer = Array.Empty<double>();
+        private int _waveformBufferIndex;
+        private bool _waveformBufferFilled;
+        private readonly object _waveformBufferLock = new();
         private double _waveformPeak;
         private double _waveformRms;
         private double _waveformPulse; // smoothed peak for visual pulse
@@ -81,7 +86,9 @@ public sealed partial class MainWindow : Window
         private const string PlayGlyph = "\uE768";
 
         private const int WaveformSampleRate = 16_000;
-        private const int WaveformVisibleSeconds = 2;
+        private const int WaveformWindowMilliseconds = 40;
+        private const int WaveformWindowSampleCount = WaveformSampleRate * WaveformWindowMilliseconds / 1_000;
+        private const double WaveformFrameIntervalMilliseconds = 1_000.0 / 30.0;
         private const int WaveformBufferMilliseconds = 15;
 
         private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
@@ -308,9 +315,15 @@ public sealed partial class MainWindow : Window
                 if (MicWaveformPlot is null)
                         return;
 
+                _waveformBuffer = new double[WaveformWindowSampleCount];
+                _waveformRenderBuffer = new double[WaveformWindowSampleCount];
+                _waveformBufferIndex = 0;
+                _waveformBufferFilled = false;
+
                 var plot = MicWaveformPlot.Plot;
-                _waveformStreamer = plot.Add.DataStreamer(WaveformSampleRate * WaveformVisibleSeconds);
-                _waveformStreamer.ViewWipeRight();
+                plot.Clear();
+                _waveformSignal = plot.Add.Signal(_waveformRenderBuffer);
+                plot.Axes.SetLimitsX(0, Math.Max(1, WaveformWindowSampleCount - 1));
                 plot.Axes.SetLimitsY(-1, 1);
                 plot.HideGrid();
                 MicWaveformPlot.Refresh();
@@ -324,7 +337,7 @@ public sealed partial class MainWindow : Window
                 }
 
                 _waveformTimer = DispatcherQueue.CreateTimer();
-                _waveformTimer.Interval = TimeSpan.FromMilliseconds(16);
+                _waveformTimer.Interval = TimeSpan.FromMilliseconds(WaveformFrameIntervalMilliseconds);
                 _waveformTimer.Tick += WaveformTimer_Tick;
                 _waveformTimer.Start();
         }
@@ -347,31 +360,108 @@ public sealed partial class MainWindow : Window
                 if (MicWaveformOffLabel != null && MicWaveformOffLabel.Visibility == Visibility.Visible)
                         MicWaveformOffLabel.Visibility = Visibility.Collapsed;
 
-                MicWaveformPlot.Refresh();
+                int validSamples = PopulateWaveformRenderBuffer();
 
-                double peak = _waveformPeak;
-                double rms = _waveformRms;
-                if (RmsLevelBar != null)
+                double peak = 0;
+                double sumSquares = 0;
+                if (validSamples > 0)
                 {
-                        double clamped = Math.Min(1.0, Math.Max(0, rms));
-                        RmsLevelBar.Height = 120 * clamped; // fits container height
+                        int startIndex = _waveformRenderBuffer.Length - validSamples;
+                        if (startIndex < 0)
+                                startIndex = 0;
+                        for (int i = startIndex; i < _waveformRenderBuffer.Length; i++)
+                        {
+                                double value = _waveformRenderBuffer[i];
+                                double abs = Math.Abs(value);
+                                if (abs > peak)
+                                        peak = abs;
+                                sumSquares += value * value;
+                        }
+                        _waveformRms = Math.Sqrt(sumSquares / validSamples);
                 }
-                if (LblPeak != null)
-                        LblPeak.Text = $"Peak: {peak:F2}";
-                if (LblRms != null)
-                        LblRms.Text = $"RMS: {rms:F2}";
+                else
+                {
+                        _waveformRms = 0;
+                }
+
+                _waveformPeak = peak;
+
+                if (_waveformSignal != null)
+                        MicWaveformPlot.Refresh();
+
+                UpdateMicLevelMeter(peak, _waveformRms);
 
                 _waveformPulse = Math.Max(_waveformPulse * 0.85, Math.Min(1.0, peak));
                 if (MicPulseOverlay != null)
                         MicPulseOverlay.Opacity = _waveformPulse * 0.35;
         }
 
+        private int PopulateWaveformRenderBuffer()
+        {
+                if (_waveformRenderBuffer.Length == 0 || _waveformBuffer.Length == 0)
+                {
+                        return 0;
+                }
+
+                lock (_waveformBufferLock)
+                {
+                        if (!_waveformBufferFilled && _waveformBufferIndex == 0)
+                        {
+                                Array.Clear(_waveformRenderBuffer, 0, _waveformRenderBuffer.Length);
+                                return 0;
+                        }
+
+                        if (_waveformBufferFilled)
+                        {
+                                int tailLength = _waveformRenderBuffer.Length - _waveformBufferIndex;
+                                Array.Copy(_waveformBuffer, _waveformBufferIndex, _waveformRenderBuffer, 0, tailLength);
+                                Array.Copy(_waveformBuffer, 0, _waveformRenderBuffer, tailLength, _waveformBufferIndex);
+                                return _waveformRenderBuffer.Length;
+                        }
+
+                        int validCount = _waveformBufferIndex;
+                        int leadingZeros = _waveformRenderBuffer.Length - validCount;
+                        if (leadingZeros > 0)
+                                Array.Clear(_waveformRenderBuffer, 0, leadingZeros);
+                        Array.Copy(_waveformBuffer, 0, _waveformRenderBuffer, Math.Max(0, leadingZeros), validCount);
+                        return validCount;
+                }
+        }
+
+        private void UpdateMicLevelMeter(double peak, double rms)
+        {
+                if (RmsLevelBar is null || MicWaveformPlot is null)
+                        return;
+
+                double waveformHeight = MicWaveformPlot.ActualHeight;
+                if (double.IsNaN(waveformHeight) || waveformHeight <= 0)
+                        waveformHeight = MicWaveformPlot.Height;
+
+                if (MicLevelMeter is not null && waveformHeight > 0)
+                        MicLevelMeter.Height = waveformHeight;
+
+                double levelValue = Math.Max(peak, rms);
+                levelValue = Math.Min(1.0, Math.Max(0, levelValue));
+
+                RmsLevelBar.Height = waveformHeight * levelValue;
+        }
+
         private void StartMicrophoneVisualizationCapture()
         {
-                if (_waveformStreamer is null)
+                if (_waveformRenderBuffer.Length == 0)
                         return;
 
                 StopMicrophoneVisualizationCapture();
+
+                lock (_waveformBufferLock)
+                {
+                        if (_waveformBuffer.Length > 0)
+                                Array.Clear(_waveformBuffer, 0, _waveformBuffer.Length);
+                        if (_waveformRenderBuffer.Length > 0)
+                                Array.Clear(_waveformRenderBuffer, 0, _waveformRenderBuffer.Length);
+                        _waveformBufferIndex = 0;
+                        _waveformBufferFilled = false;
+                }
 
                 int deviceIndex = _audioDeviceManager.MicrophoneDeviceIndex;
                 if (deviceIndex < 0)
@@ -438,46 +528,36 @@ public sealed partial class MainWindow : Window
                         _waveformTimer = null;
                 }
 
-                _waveformStreamer = null;
+                _waveformSignal = null;
+                _waveformBuffer = Array.Empty<double>();
+                _waveformRenderBuffer = Array.Empty<double>();
+                _waveformBufferIndex = 0;
+                _waveformBufferFilled = false;
         }
 
         private void OnWaveformDataAvailable(object? sender, WaveInEventArgs e)
         {
-                if (_waveformStreamer is null || e.BytesRecorded <= 0)
+                if (_waveformBuffer.Length == 0 || e.BytesRecorded <= 0)
                         return;
 
                 int sampleCount = e.BytesRecorded / 2;
                 if (sampleCount <= 0)
                         return;
 
-                double[] samples = new double[sampleCount];
-                double peak = 0;
-                double sumSquares = 0;
-                for (int i = 0; i < sampleCount; i++)
+                lock (_waveformBufferLock)
                 {
-                        short sample = BitConverter.ToInt16(e.Buffer, i * 2);
-                        double v = sample / 32768d;
-                        samples[i] = v;
-                        double av = Math.Abs(v);
-                        if (av > peak) peak = av;
-                        sumSquares += v * v;
+                        for (int i = 0; i < sampleCount; i++)
+                        {
+                                short sample = BitConverter.ToInt16(e.Buffer, i * 2);
+                                double value = sample / 32768d;
+                                _waveformBuffer[_waveformBufferIndex++] = value;
+                                if (_waveformBufferIndex >= _waveformBuffer.Length)
+                                {
+                                        _waveformBufferIndex = 0;
+                                        _waveformBufferFilled = true;
+                                }
+                        }
                 }
-                double rms = Math.Sqrt(sumSquares / sampleCount);
-                _waveformPeak = peak;
-                _waveformRms = rms;
-
-                // ScottPlot's DataStreamer is UI-bound for rendering; ensure we marshal additions
-                // onto the UI thread to avoid silent failures or missed refreshes when receiving
-                // audio callbacks on a background thread from NAudio.
-                var streamer = _waveformStreamer;
-                if (streamer is null)
-                        return;
-
-                // Reuse the computed samples without further mutation.
-                _ = DispatcherQueue.TryEnqueue(() =>
-                {
-                        streamer.AddRange(samples);
-                });
         }
 
         private void RefreshHotkeyRouterRegistrations()
