@@ -27,6 +27,34 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
+            <!-- Hamburger Menu (File / Settings) -->
+                <Button
+                x:Name="BtnHamburger"
+                Grid.Column="0"
+                Width="40"
+                Height="40"
+                Margin="16,20,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Style="{StaticResource SubtleButtonStyle}"
+                AccessKey="F"
+                AutomationProperties.Name="Menu"
+                AutomationProperties.HelpText="Open menu (Alt+F)"
+                ToolTipService.ToolTip="Menu (Alt+F)"
+                Click="Hamburger_Click"
+                AccessKeyInvoked="Hamburger_AccessKeyInvoked">
+                <FontIcon Glyph="&#xE700;" FontFamily="Segoe Fluent Icons" />
+                <FlyoutBase.AttachedFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem Text="Settings" Click="MenuSettings_Click">
+                            <MenuFlyoutItem.Icon>
+                                <SymbolIcon Symbol="Setting" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </FlyoutBase.AttachedFlyout>
+            </Button>
+
             <StackPanel Grid.Column="1" Margin="32,24,32,12" Spacing="4">
                 <TextBlock Text="Mutation Workspace" Style="{StaticResource TitleTextStyle}" AutomationProperties.Name="Application Title" />
                 <TextBlock Text="Capture ideas, format transcripts, and automate workflows from one polished surface." Style="{StaticResource SubtitleTextStyle}" />
@@ -368,7 +396,7 @@
                                     x:Name="BtnFormatTranscript"
                                     Style="{StaticResource AccentButtonStyle}"
                                     Click="BtnFormatTranscript_Click"
-                                    AccessKey="F"
+                                    AccessKey="A"
                                     AutomationProperties.Name="Format transcript"
                                     ToolTipService.ToolTip="Apply local formatting rules to the transcript">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
