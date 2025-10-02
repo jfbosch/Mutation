@@ -363,23 +363,22 @@ public sealed partial class MainWindow : Window
 
 		int validSamples = PopulateWaveformRenderBuffer();
 
-		double peak = 0;
-		double sumSquares = 0;
-		if (validSamples > 0)
-		{
-			int startIndex = _waveformRenderBuffer.Length - validSamples;
-			if (startIndex < 0)
-				startIndex = 0;
-			for (int i = startIndex; i < _waveformRenderBuffer.Length; i++)
-			{
-				double value = _waveformRenderBuffer[i];
-				double abs = Math.Abs(value);
-				if (abs > peak)
-					peak = abs;
-				sumSquares += value * value;
-			}
-			_waveformRms = Math.Sqrt(sumSquares / validSamples);
-		}
+                double peak = 0;
+                double sumSquares = 0;
+                if (validSamples > 0)
+                {
+                        int samplesToProcess = Math.Min(validSamples, _waveformRenderBuffer.Length);
+                        int startIndex = _waveformRenderBuffer.Length - samplesToProcess;
+                        for (int i = startIndex; i < _waveformRenderBuffer.Length; i++)
+                        {
+                                double value = _waveformRenderBuffer[i];
+                                double abs = Math.Abs(value);
+                                if (abs > peak)
+                                        peak = abs;
+                                sumSquares += value * value;
+                        }
+                        _waveformRms = Math.Sqrt(sumSquares / Math.Max(1, samplesToProcess));
+                }
 		else
 		{
 			_waveformRms = 0;
@@ -412,13 +411,19 @@ public sealed partial class MainWindow : Window
 				return 0;
 			}
 
-			if (_waveformBufferFilled)
-			{
-				int tailLength = _waveformRenderBuffer.Length - _waveformBufferIndex;
-				Array.Copy(_waveformBuffer, _waveformBufferIndex, _waveformRenderBuffer, 0, tailLength);
-				Array.Copy(_waveformBuffer, 0, _waveformRenderBuffer, tailLength, _waveformBufferIndex);
-				return _waveformRenderBuffer.Length;
-			}
+                        if (_waveformBufferFilled)
+                        {
+                                int bufferLen = _waveformRenderBuffer.Length;
+                                int index = _waveformBufferIndex;
+                                if (index > bufferLen)
+                                        index = bufferLen;
+                                int tailLength = bufferLen - index;
+                                if (tailLength > 0)
+                                        Array.Copy(_waveformBuffer, index, _waveformRenderBuffer, 0, tailLength);
+                                if (index > 0)
+                                        Array.Copy(_waveformBuffer, 0, _waveformRenderBuffer, tailLength, index);
+                                return bufferLen;
+                        }
 
 			int validCount = _waveformBufferIndex;
 			int leadingZeros = _waveformRenderBuffer.Length - validCount;
@@ -441,7 +446,7 @@ public sealed partial class MainWindow : Window
 		if (MicLevelMeter is not null && waveformHeight > 0)
 			MicLevelMeter.Height = waveformHeight;
 
-		double levelValue = Math.Max(peak, rms);
+                double levelValue = rms;
 		levelValue = Math.Min(1.0, Math.Max(0, levelValue));
 
 		RmsLevelBar.Height = waveformHeight * levelValue;
