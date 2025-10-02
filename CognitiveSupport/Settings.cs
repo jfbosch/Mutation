@@ -39,6 +39,8 @@ public class AudioSettings
 
 	public string? ActiveCaptureDeviceFullName { get; set; }
 	public string? MicrophoneToggleMuteHotKey { get; set; }
+        // Allows users to disable microphone visualization to save CPU
+        public bool EnableMicrophoneVisualization { get; set; } = true;
 	public CustomBeepSettingsData? CustomBeepSettings { get => customBeepSettings; set => customBeepSettings = value; }
 
 	public AudioSettings() { }
