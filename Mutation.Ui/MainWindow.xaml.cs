@@ -1,4 +1,4 @@
-using CognitiveSupport;
+﻿using CognitiveSupport;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -35,63 +35,71 @@ public sealed partial class MainWindow : Window
 	private readonly OcrManager _ocrManager;
 	private readonly ISpeechToTextService[] _speechServices;
 	private readonly SpeechToTextManager _speechManager;
-        private readonly TranscriptFormatter _transcriptFormatter;
-        private readonly ITextToSpeechService _textToSpeech;
-        private readonly Settings _settings;
-        private HotkeyManager? _hotkeyManager;
-        private readonly MediaPlayer _playbackPlayer;
-        private bool _isPlayingRecording;
-        private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
+	private readonly TranscriptFormatter _transcriptFormatter;
+	private readonly ITextToSpeechService _textToSpeech;
+	private readonly Settings _settings;
+	private HotkeyManager? _hotkeyManager;
+	private readonly MediaPlayer _playbackPlayer;
+	private bool _isPlayingRecording;
+	private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
 
-        private WaveInEvent? _waveformCapture;
-        private DispatcherQueueTimer? _waveformTimer;
-        private DataStreamer? _waveformStreamer;
-        private double _waveformPeak;
-        private double _waveformRms;
-        private double _waveformPulse; // smoothed peak for visual pulse
-        private bool VisualizationEnabled => _settings.AudioSettings?.EnableMicrophoneVisualization != false;
+	private WaveInEvent? _waveformCapture;
+	private DispatcherQueueTimer? _waveformTimer;
+	// ScottPlot v5 renamed SignalPlot (v4) to Signal. Adjusting type accordingly.
+	private Signal? _waveformSignal;
+	private double[] _waveformBuffer = Array.Empty<double>();
+	private double[] _waveformRenderBuffer = Array.Empty<double>();
+	private int _waveformBufferIndex;
+	private bool _waveformBufferFilled;
+	private readonly object _waveformBufferLock = new();
+	private double _waveformPeak;
+	private double _waveformRms;
+	private double _waveformPulse; // smoothed peak for visual pulse
+	private bool VisualizationEnabled => _settings.AudioSettings?.EnableMicrophoneVisualization != false;
 
-        // Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
-        private bool _suppressAutoActions = false;
+	// Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
+	private bool _suppressAutoActions = false;
 
 	private ISpeechToTextService? _activeSpeechService;
 	private CancellationTokenSource _formatDebounceCts = new();
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
-        private readonly DispatcherTimer _statusDismissTimer;
-        private bool _hotkeyRouterInitialized;
+	private readonly DispatcherTimer _statusDismissTimer;
+	private bool _hotkeyRouterInitialized;
 
-        private static readonly IReadOnlyDictionary<string, string> AudioMimeTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-                [".aac"] = "audio/aac",
-                [".flac"] = "audio/flac",
-                [".m4a"] = "audio/mp4",
-                [".mp3"] = "audio/mpeg",
-                [".ogg"] = "audio/ogg",
-                [".opus"] = "audio/opus",
-                [".wav"] = "audio/wav",
-                [".wma"] = "audio/x-ms-wma",
-        };
+	private static readonly IReadOnlyDictionary<string, string> AudioMimeTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+	{
+		[".aac"] = "audio/aac",
+		[".flac"] = "audio/flac",
+		[".m4a"] = "audio/mp4",
+		[".mp3"] = "audio/mpeg",
+		[".ogg"] = "audio/ogg",
+		[".opus"] = "audio/opus",
+		[".wav"] = "audio/wav",
+		[".wma"] = "audio/x-ms-wma",
+	};
 
-        private const string MicOnGlyph = "\uE720";
-        // '\uE7C8' is the Segoe MDL2 Assets glyph for a circular record icon, chosen for its clear visual representation.
-        // Previously, '\uE768' was used, but '\uE7C8' better matches the standard record symbol.
-        private const string RecordGlyph = "\uE7C8";
-        private const string StopGlyph = "\uE71A";
-        private const string ProcessingGlyph = "\uE8A0";
-        private const string PlayGlyph = "\uE768";
+	private const string MicOnGlyph = "\uE720";
+	// '\uE7C8' is the Segoe MDL2 Assets glyph for a circular record icon, chosen for its clear visual representation.
+	// Previously, '\uE768' was used, but '\uE7C8' better matches the standard record symbol.
+	private const string RecordGlyph = "\uE7C8";
+	private const string StopGlyph = "\uE71A";
+	private const string ProcessingGlyph = "\uE8A0";
+	private const string PlayGlyph = "\uE768";
 
-        private const int WaveformSampleRate = 16_000;
-        private const int WaveformVisibleSeconds = 2;
-        private const int WaveformBufferMilliseconds = 15;
+	private const int WaveformSampleRate = 16_000;
+	private const int WaveformWindowMilliseconds = 40;
+	private const int WaveformWindowSampleCount = WaveformSampleRate * WaveformWindowMilliseconds / 1_000;
+	private const double WaveformFrameIntervalMilliseconds = 1_000.0 / 30.0;
+	private const int WaveformBufferMilliseconds = 15;
 
-        private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
-        private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
-        private const string PasteExplanation = "Copies the transcript and pastes it into the active application.";
-        private const double ApproximateLineHeightMultiplier = 1.35;
-        private const double MinimumLineHeightInDips = 1.0;
+	private const string DoNotInsertExplanation = "Keep the transcript inside Mutation without sending it anywhere.";
+	private const string SendKeysExplanation = "Types the transcript into the active app as if you entered it yourself.";
+	private const string PasteExplanation = "Copies the transcript and pastes it into the active application.";
+	private const double ApproximateLineHeightMultiplier = 1.35;
+	private const double MinimumLineHeightInDips = 1.0;
 
-        public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
-        private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
+	public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
+	private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
 
 	public MainWindow(
 		ClipboardManager clipboard,
@@ -111,108 +119,108 @@ public sealed partial class MainWindow : Window
 		_audioDeviceManager = audioDeviceManager;
 		_ocrManager = ocrManager;
 		_speechServices = speechServices;
-                _textToSpeech = textToSpeech;
-                _transcriptFormatter = transcriptFormatter;
-                _settings = settings;
-                _speechManager = new SpeechToTextManager(settings);
-                _playbackPlayer = new MediaPlayer { AutoPlay = false };
-                _playbackPlayer.MediaEnded += PlaybackPlayer_MediaEnded;
-                _playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
+		_textToSpeech = textToSpeech;
+		_transcriptFormatter = transcriptFormatter;
+		_settings = settings;
+		_speechManager = new SpeechToTextManager(settings);
+		_playbackPlayer = new MediaPlayer { AutoPlay = false };
+		_playbackPlayer.MediaEnded += PlaybackPlayer_MediaEnded;
+		_playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
 
-                InitializeComponent();
-                InitializeMicrophoneVisualization();
+		InitializeComponent();
+		InitializeMicrophoneVisualization();
 
-                UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
-                AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the latest recording again.");
-                AutomationProperties.SetHelpText(BtnUploadSpeechAudio, "Upload an audio file for transcription.");
+		UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
+		AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the latest recording again.");
+		AutomationProperties.SetHelpText(BtnUploadSpeechAudio, "Upload an audio file for transcription.");
 
-                ApplyMultiLineTextBoxPreferences();
+		ApplyMultiLineTextBoxPreferences();
 
-                _statusDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-                _statusDismissTimer.Tick += StatusDismissTimer_Tick;
-                StatusInfoBar.CloseButtonClick += StatusInfoBar_CloseButtonClick;
+		_statusDismissTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
+		_statusDismissTimer.Tick += StatusDismissTimer_Tick;
+		StatusInfoBar.CloseButtonClick += StatusInfoBar_CloseButtonClick;
 
 		_audioDeviceManager.EnsureDefaultMicrophoneSelected();
 
 		UpdateMicrophoneToggleVisuals();
 		UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                var micList = _audioDeviceManager.CaptureDevices.ToList();
-                CmbMicrophone.ItemsSource = micList;
-                // DisplayMemberPath replaced by using custom CaptureDeviceComboItem if needed; keep for compatibility
-                CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.DeviceFriendlyName);
+		var micList = _audioDeviceManager.CaptureDevices.ToList();
+		CmbMicrophone.ItemsSource = micList;
+		// DisplayMemberPath replaced by using custom CaptureDeviceComboItem if needed; keep for compatibility
+		CmbMicrophone.DisplayMemberPath = nameof(CoreAudio.MMDevice.DeviceFriendlyName);
 
-                RestorePersistedMicrophoneSelection(micList);
-                StartMicrophoneVisualizationCapture();
+		RestorePersistedMicrophoneSelection(micList);
+		StartMicrophoneVisualizationCapture();
 
-                CmbSpeechService.ItemsSource = _speechServices;
-                CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
+		CmbSpeechService.ItemsSource = _speechServices;
+		CmbSpeechService.DisplayMemberPath = nameof(ISpeechToTextService.ServiceName);
 
-                RestorePersistedSpeechServiceSelection();
-                UpdateRecordingActionAvailability();
+		RestorePersistedSpeechServiceSelection();
+		UpdateRecordingActionAvailability();
 
 		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
 
 		var tooltipManager = new TooltipManager(_settings);
 		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
 
-                CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
-                CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
-                UpdateThirdPartyExplanation(DictationInsertOption.Paste);
+		CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
+		CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
+		UpdateThirdPartyExplanation(DictationInsertOption.Paste);
 
 		// After initializing and restoring the active microphone, play a sound
 		// representing the current state (mute/unmute) to reflect actual status.
-                if (_audioDeviceManager.Microphone != null)
-                        BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
+		if (_audioDeviceManager.Microphone != null)
+			BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
 
-                InitializeHotkeyVisuals();
-                InitializeHotkeyRouter();
+		InitializeHotkeyVisuals();
+		InitializeHotkeyRouter();
 
-                this.Closed += MainWindow_Closed;
-        }
+		this.Closed += MainWindow_Closed;
+	}
 
-        private void ApplyMultiLineTextBoxPreferences()
-        {
-                int configuredMaxLines = _settings.MainWindowUiSettings?.MaxTextBoxLineCount ?? 5;
-                if (configuredMaxLines <= 0)
-                        configuredMaxLines = 5;
+	private void ApplyMultiLineTextBoxPreferences()
+	{
+		int configuredMaxLines = _settings.MainWindowUiSettings?.MaxTextBoxLineCount ?? 5;
+		if (configuredMaxLines <= 0)
+			configuredMaxLines = 5;
 
-                foreach (var textBox in GetMultiLineTextBoxes())
-                {
-                        if (textBox is null)
-                                continue;
+		foreach (var textBox in GetMultiLineTextBoxes())
+		{
+			if (textBox is null)
+				continue;
 
-                        double lineHeight = Math.Max(textBox.FontSize * ApproximateLineHeightMultiplier, MinimumLineHeightInDips);
-                        double padding = textBox.Padding.Top + textBox.Padding.Bottom;
-                        double desiredMaxHeight = (lineHeight * configuredMaxLines) + padding;
+			double lineHeight = Math.Max(textBox.FontSize * ApproximateLineHeightMultiplier, MinimumLineHeightInDips);
+			double padding = textBox.Padding.Top + textBox.Padding.Bottom;
+			double desiredMaxHeight = (lineHeight * configuredMaxLines) + padding;
 
-                        if (double.IsNaN(desiredMaxHeight) || double.IsInfinity(desiredMaxHeight) || desiredMaxHeight <= 0)
-                                continue;
+			if (double.IsNaN(desiredMaxHeight) || double.IsInfinity(desiredMaxHeight) || desiredMaxHeight <= 0)
+				continue;
 
-                        textBox.MaxHeight = desiredMaxHeight;
+			textBox.MaxHeight = desiredMaxHeight;
 
-                        if (textBox.MinHeight > desiredMaxHeight)
-                                textBox.MinHeight = lineHeight + padding;
-                }
-        }
+			if (textBox.MinHeight > desiredMaxHeight)
+				textBox.MinHeight = lineHeight + padding;
+		}
+	}
 
-        private IEnumerable<TextBox> GetMultiLineTextBoxes()
-        {
-                yield return TxtSpeechToText;
-                yield return TxtFormatPrompt;
-                yield return TxtFormatTranscript;
-                yield return TxtOcr;
-                yield return TxtClipboard;
-        }
+	private IEnumerable<TextBox> GetMultiLineTextBoxes()
+	{
+		yield return TxtSpeechToText;
+		yield return TxtFormatPrompt;
+		yield return TxtFormatTranscript;
+		yield return TxtOcr;
+		yield return TxtClipboard;
+	}
 
-        public void AttachHotkeyManager(HotkeyManager hotkeyManager)
-        {
-                _hotkeyManager = hotkeyManager;
-                RefreshHotkeyRouterRegistrations();
-        }
+	public void AttachHotkeyManager(HotkeyManager hotkeyManager)
+	{
+		_hotkeyManager = hotkeyManager;
+		RefreshHotkeyRouterRegistrations();
+	}
 
 	private void RestorePersistedSpeechServiceSelection()
 	{
-                string? savedServiceName = _settings.SpeechToTextSettings?.ActiveSpeechToTextService;
+		string? savedServiceName = _settings.SpeechToTextSettings?.ActiveSpeechToTextService;
 		if (!string.IsNullOrWhiteSpace(savedServiceName))
 		{
 			var match = _speechServices.FirstOrDefault(s => s.ServiceName == savedServiceName);
@@ -234,22 +242,22 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-        private static string GetDeviceFriendlyName(CoreAudio.MMDevice device)
-        {
+	private static string GetDeviceFriendlyName(CoreAudio.MMDevice device)
+	{
 #pragma warning disable CS0618
-                var name = device.DeviceFriendlyName;
-                if (string.IsNullOrWhiteSpace(name))
-                        name = device.FriendlyName;
+		var name = device.DeviceFriendlyName;
+		if (string.IsNullOrWhiteSpace(name))
+			name = device.FriendlyName;
 #pragma warning restore CS0618
-                return name ?? string.Empty;
-        }
+		return name ?? string.Empty;
+	}
 
-        private void RestorePersistedMicrophoneSelection(System.Collections.Generic.List<CoreAudio.MMDevice> micList)
-        {
-                string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
-                if (!string.IsNullOrWhiteSpace(savedMicFullName))
-                {
-                        var match = micList.FirstOrDefault(m => GetDeviceFriendlyName(m) == savedMicFullName);
+	private void RestorePersistedMicrophoneSelection(System.Collections.Generic.List<CoreAudio.MMDevice> micList)
+	{
+		string? savedMicFullName = _settings.AudioSettings?.ActiveCaptureDeviceFullName;
+		if (!string.IsNullOrWhiteSpace(savedMicFullName))
+		{
+			var match = micList.FirstOrDefault(m => GetDeviceFriendlyName(m) == savedMicFullName);
 			if (match != null)
 				CmbMicrophone.SelectedItem = match;
 			else if (_audioDeviceManager.Microphone != null)
@@ -261,273 +269,351 @@ public sealed partial class MainWindow : Window
 			CmbMicrophone.SelectedItem = _audioDeviceManager.Microphone;
 		else if (micList.Count > 0)
 			CmbMicrophone.SelectedIndex = 0;
-        }
+	}
 
-        private void InitializeHotkeyVisuals()
-        {
-                ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
-                ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, BtnSpeechToTextLabel.Text);
-                ConfigureButtonHotkey(BtnScreenshot, BtnScreenshotHotkey, _settings.AzureComputerVisionSettings?.ScreenshotHotKey, "Copy a screenshot directly to the clipboard");
-                ConfigureButtonHotkey(BtnOcrClipboard, BtnOcrClipboardHotkey, _settings.AzureComputerVisionSettings?.OcrHotKey, "Run OCR on an image stored in the clipboard");
-                ConfigureButtonHotkey(BtnOcrClipboardLrtb, BtnOcrClipboardLrtbHotkey, _settings.AzureComputerVisionSettings?.OcrLeftToRightTopToBottomHotKey, "Run OCR on an image stored in the clipboard using left-to-right reading order");
-                ConfigureButtonHotkey(BtnScreenshotOcr, BtnScreenshotOcrHotkey, _settings.AzureComputerVisionSettings?.ScreenshotOcrHotKey, "Capture a screenshot and extract text automatically");
-                ConfigureButtonHotkey(BtnScreenshotOcrLrtb, BtnScreenshotOcrLrtbHotkey, _settings.AzureComputerVisionSettings?.ScreenshotLeftToRightTopToBottomOcrHotKey, "Capture a screenshot and extract text using left-to-right reading order");
-                ConfigureButtonHotkey(BtnTextToSpeech, BtnTextToSpeechHotkey, _settings.TextToSpeechSettings?.TextToSpeechHotKey, "Play the clipboard text using text-to-speech");
-        }
+	private void InitializeHotkeyVisuals()
+	{
+		ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
+		ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, BtnSpeechToTextLabel.Text);
+		ConfigureButtonHotkey(BtnScreenshot, BtnScreenshotHotkey, _settings.AzureComputerVisionSettings?.ScreenshotHotKey, "Copy a screenshot directly to the clipboard");
+		ConfigureButtonHotkey(BtnOcrClipboard, BtnOcrClipboardHotkey, _settings.AzureComputerVisionSettings?.OcrHotKey, "Run OCR on an image stored in the clipboard");
+		ConfigureButtonHotkey(BtnOcrClipboardLrtb, BtnOcrClipboardLrtbHotkey, _settings.AzureComputerVisionSettings?.OcrLeftToRightTopToBottomHotKey, "Run OCR on an image stored in the clipboard using left-to-right reading order");
+		ConfigureButtonHotkey(BtnScreenshotOcr, BtnScreenshotOcrHotkey, _settings.AzureComputerVisionSettings?.ScreenshotOcrHotKey, "Capture a screenshot and extract text automatically");
+		ConfigureButtonHotkey(BtnScreenshotOcrLrtb, BtnScreenshotOcrLrtbHotkey, _settings.AzureComputerVisionSettings?.ScreenshotLeftToRightTopToBottomOcrHotKey, "Capture a screenshot and extract text using left-to-right reading order");
+		ConfigureButtonHotkey(BtnTextToSpeech, BtnTextToSpeechHotkey, _settings.TextToSpeechSettings?.TextToSpeechHotKey, "Play the clipboard text using text-to-speech");
+	}
 
-        private void InitializeHotkeyRouter()
-        {
-                _hotkeyRouterInitialized = false;
+	private void InitializeHotkeyRouter()
+	{
+		_hotkeyRouterInitialized = false;
 
-                _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
+		_settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
-                foreach (var entry in HotkeyRouterEntries)
-                        DetachHotkeyRouterEntry(entry);
-                HotkeyRouterEntries.Clear();
-                foreach (var map in _settings.HotKeyRouterSettings.Mappings)
-                {
-                        var entry = new HotkeyRouterEntry(map);
-                        AttachHotkeyRouterEntry(entry);
-                        HotkeyRouterEntries.Add(entry);
-                }
+		foreach (var entry in HotkeyRouterEntries)
+			DetachHotkeyRouterEntry(entry);
+		HotkeyRouterEntries.Clear();
+		foreach (var map in _settings.HotKeyRouterSettings.Mappings)
+		{
+			var entry = new HotkeyRouterEntry(map);
+			AttachHotkeyRouterEntry(entry);
+			HotkeyRouterEntries.Add(entry);
+		}
 
-                var initialPairs = HotkeyRouterEntries
-                        .Where(e => e.IsValid && e.NormalizedFromHotkey is not null && e.NormalizedToHotkey is not null)
-                        .Select(e => (From: e.NormalizedFromHotkey!, To: e.NormalizedToHotkey!))
-                        .ToList();
-                UpdateHotkeyRouterSnapshot(initialPairs);
+		var initialPairs = HotkeyRouterEntries
+				  .Where(e => e.IsValid && e.NormalizedFromHotkey is not null && e.NormalizedToHotkey is not null)
+				  .Select(e => (From: e.NormalizedFromHotkey!, To: e.NormalizedToHotkey!))
+				  .ToList();
+		UpdateHotkeyRouterSnapshot(initialPairs);
 
-                RecalculateHotkeyRouterDuplicates();
-                // Defer registration & persistence until HotkeyManager is attached to avoid
-                // any chance of wiping persisted mappings during initial construction.
-                _hotkeyRouterInitialized = true;
-        }
+		RecalculateHotkeyRouterDuplicates();
+		// Defer registration & persistence until HotkeyManager is attached to avoid
+		// any chance of wiping persisted mappings during initial construction.
+		_hotkeyRouterInitialized = true;
+	}
 
-        private void InitializeMicrophoneVisualization()
-        {
-                if (MicWaveformPlot is null)
-                        return;
+	private void InitializeMicrophoneVisualization()
+	{
+		if (MicWaveformPlot is null)
+			return;
 
-                var plot = MicWaveformPlot.Plot;
-                _waveformStreamer = plot.Add.DataStreamer(WaveformSampleRate * WaveformVisibleSeconds);
-                _waveformStreamer.ViewWipeRight();
-                plot.Axes.SetLimitsY(-1, 1);
-                plot.HideGrid();
-                MicWaveformPlot.Refresh();
-                if (_settings.AudioSettings != null)
-                {
-                        if (!VisualizationEnabled)
-                        {
-                                MicWaveformPlot.Visibility = Visibility.Collapsed;
-                                if (MicWaveformOffLabel != null) MicWaveformOffLabel.Visibility = Visibility.Visible;
-                        }
-                }
+		_waveformBuffer = new double[WaveformWindowSampleCount];
+		_waveformRenderBuffer = new double[WaveformWindowSampleCount];
+		_waveformBufferIndex = 0;
+		_waveformBufferFilled = false;
 
-                _waveformTimer = DispatcherQueue.CreateTimer();
-                _waveformTimer.Interval = TimeSpan.FromMilliseconds(16);
-                _waveformTimer.Tick += WaveformTimer_Tick;
-                _waveformTimer.Start();
-        }
+		var plot = MicWaveformPlot.Plot;
+		plot.Clear();
+		_waveformSignal = plot.Add.Signal(_waveformRenderBuffer);
+		plot.Axes.SetLimitsX(0, Math.Max(1, WaveformWindowSampleCount - 1));
+		plot.Axes.SetLimitsY(-1, 1);
+		plot.HideGrid();
+		MicWaveformPlot.Refresh();
+		if (_settings.AudioSettings != null)
+		{
+			if (!VisualizationEnabled)
+			{
+				MicWaveformPlot.Visibility = Visibility.Collapsed;
+				if (MicWaveformOffLabel != null) MicWaveformOffLabel.Visibility = Visibility.Visible;
+			}
+		}
 
-        private void WaveformTimer_Tick(DispatcherQueueTimer sender, object args)
-        {
-                if (!VisualizationEnabled)
-                {
-                        if (MicWaveformPlot.Visibility != Visibility.Collapsed)
-                                MicWaveformPlot.Visibility = Visibility.Collapsed;
-                        if (MicWaveformOffLabel != null)
-                                MicWaveformOffLabel.Visibility = Visibility.Visible;
-                        if (RmsLevelBar != null)
-                                RmsLevelBar.Height = 0;
-                        return;
-                }
+		_waveformTimer = DispatcherQueue.CreateTimer();
+		_waveformTimer.Interval = TimeSpan.FromMilliseconds(WaveformFrameIntervalMilliseconds);
+		_waveformTimer.Tick += WaveformTimer_Tick;
+		_waveformTimer.Start();
+	}
 
-                if (MicWaveformPlot.Visibility != Visibility.Visible)
-                        MicWaveformPlot.Visibility = Visibility.Visible;
-                if (MicWaveformOffLabel != null && MicWaveformOffLabel.Visibility == Visibility.Visible)
-                        MicWaveformOffLabel.Visibility = Visibility.Collapsed;
+	private void WaveformTimer_Tick(DispatcherQueueTimer sender, object args)
+	{
+		if (!VisualizationEnabled)
+		{
+			if (MicWaveformPlot.Visibility != Visibility.Collapsed)
+				MicWaveformPlot.Visibility = Visibility.Collapsed;
+			if (MicWaveformOffLabel != null)
+				MicWaveformOffLabel.Visibility = Visibility.Visible;
+			if (RmsLevelBar != null)
+				RmsLevelBar.Height = 0;
+			return;
+		}
 
-                MicWaveformPlot.Refresh();
+		if (MicWaveformPlot.Visibility != Visibility.Visible)
+			MicWaveformPlot.Visibility = Visibility.Visible;
+		if (MicWaveformOffLabel != null && MicWaveformOffLabel.Visibility == Visibility.Visible)
+			MicWaveformOffLabel.Visibility = Visibility.Collapsed;
 
-                double peak = _waveformPeak;
-                double rms = _waveformRms;
-                if (RmsLevelBar != null)
-                {
-                        double clamped = Math.Min(1.0, Math.Max(0, rms));
-                        RmsLevelBar.Height = 120 * clamped; // fits container height
-                }
-                if (LblPeak != null)
-                        LblPeak.Text = $"Peak: {peak:F2}";
-                if (LblRms != null)
-                        LblRms.Text = $"RMS: {rms:F2}";
+		int validSamples = PopulateWaveformRenderBuffer();
 
-                _waveformPulse = Math.Max(_waveformPulse * 0.85, Math.Min(1.0, peak));
-                if (MicPulseOverlay != null)
-                        MicPulseOverlay.Opacity = _waveformPulse * 0.35;
-        }
-
-        private void StartMicrophoneVisualizationCapture()
-        {
-                if (_waveformStreamer is null)
-                        return;
-
-                StopMicrophoneVisualizationCapture();
-
-                int deviceIndex = _audioDeviceManager.MicrophoneDeviceIndex;
-                if (deviceIndex < 0)
-                {
-                        // Provide a visible hint if selection failed to map to an NAudio device index.
-                        DispatcherQueue.TryEnqueue(() =>
-                                ShowStatus("Microphone", "Unable to start waveform monitor (device not resolved)", InfoBarSeverity.Warning));
-                        return;
-                }
-
-                try
-                {
-                        _waveformCapture = new WaveInEvent
-                        {
-                                DeviceNumber = deviceIndex,
-                                WaveFormat = new WaveFormat(WaveformSampleRate, 16, 1),
-                                BufferMilliseconds = WaveformBufferMilliseconds
-                        };
-                        _waveformCapture.DataAvailable += OnWaveformDataAvailable;
-                        _waveformCapture.StartRecording();
-                }
-                catch (Exception ex)
-                {
-                        _waveformCapture?.Dispose();
-                        _waveformCapture = null;
-                        DispatcherQueue.TryEnqueue(() =>
-                                ShowStatus("Microphone", $"Unable to monitor audio: {ex.Message}", InfoBarSeverity.Error));
-                }
-        }
-
-        private void RestartMicrophoneVisualizationCapture()
-        {
-                StopMicrophoneVisualizationCapture();
-                StartMicrophoneVisualizationCapture();
-        }
-
-        private void StopMicrophoneVisualizationCapture()
-        {
-                if (_waveformCapture is null)
-                        return;
-
-                try
-                {
-                        _waveformCapture.DataAvailable -= OnWaveformDataAvailable;
-                        _waveformCapture.StopRecording();
-                }
-                catch
-                {
-                        // Ignore failures that occur while shutting down capture.
-                }
-
-                _waveformCapture.Dispose();
-                _waveformCapture = null;
-        }
-
-        private void DisposeMicrophoneVisualization()
-        {
-                StopMicrophoneVisualizationCapture();
-
-                if (_waveformTimer is not null)
-                {
-                        _waveformTimer.Tick -= WaveformTimer_Tick;
-                        _waveformTimer.Stop();
-                        _waveformTimer = null;
-                }
-
-                _waveformStreamer = null;
-        }
-
-        private void OnWaveformDataAvailable(object? sender, WaveInEventArgs e)
-        {
-                if (_waveformStreamer is null || e.BytesRecorded <= 0)
-                        return;
-
-                int sampleCount = e.BytesRecorded / 2;
-                if (sampleCount <= 0)
-                        return;
-
-                double[] samples = new double[sampleCount];
                 double peak = 0;
                 double sumSquares = 0;
-                for (int i = 0; i < sampleCount; i++)
+                if (validSamples > 0)
                 {
-                        short sample = BitConverter.ToInt16(e.Buffer, i * 2);
-                        double v = sample / 32768d;
-                        samples[i] = v;
-                        double av = Math.Abs(v);
-                        if (av > peak) peak = av;
-                        sumSquares += v * v;
-                }
-                double rms = Math.Sqrt(sumSquares / sampleCount);
-                _waveformPeak = peak;
-                _waveformRms = rms;
-
-                // ScottPlot's DataStreamer is UI-bound for rendering; ensure we marshal additions
-                // onto the UI thread to avoid silent failures or missed refreshes when receiving
-                // audio callbacks on a background thread from NAudio.
-                var streamer = _waveformStreamer;
-                if (streamer is null)
-                        return;
-
-                // Reuse the computed samples without further mutation.
-                _ = DispatcherQueue.TryEnqueue(() =>
-                {
-                        streamer.AddRange(samples);
-                });
-        }
-
-        private void RefreshHotkeyRouterRegistrations()
-        {
-                _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
-
-                RecalculateHotkeyRouterDuplicates();
-                var normalizedPairs = SyncHotkeyRouterSettings();
-
-                if (_hotkeyManager is null)
-                {
-                        foreach (var entry in HotkeyRouterEntries)
-                                entry.SetBindingResult(HotkeyBindingState.Inactive, null);
-
-                        if (ShouldPersistHotkeyRouterMappings(normalizedPairs))
+                        int samplesToProcess = Math.Min(validSamples, _waveformRenderBuffer.Length);
+                        int startIndex = _waveformRenderBuffer.Length - samplesToProcess;
+                        for (int i = startIndex; i < _waveformRenderBuffer.Length; i++)
                         {
-                                _settingsManager.SaveSettingsToFile(_settings);
-                                UpdateHotkeyRouterSnapshot(normalizedPairs);
+                                double value = _waveformRenderBuffer[i];
+                                double abs = Math.Abs(value);
+                                if (abs > peak)
+                                        peak = abs;
+                                sumSquares += value * value;
                         }
-                        return;
+                        _waveformRms = Math.Sqrt(sumSquares / Math.Max(1, samplesToProcess));
                 }
+		else
+		{
+			_waveformRms = 0;
+		}
 
-                var mappings = _settings.HotKeyRouterSettings.Mappings;
-                var results = _hotkeyManager.RefreshRouterHotkeys(mappings);
-                var resultLookup = results.ToDictionary(r => r.Map);
+		_waveformPeak = peak;
 
-                foreach (var entry in HotkeyRouterEntries)
-                {
-                        if (resultLookup.TryGetValue(entry.Map, out var result))
+		if (_waveformSignal != null)
+			MicWaveformPlot.Refresh();
+
+		UpdateMicLevelMeter(peak, _waveformRms);
+
+		_waveformPulse = Math.Max(_waveformPulse * 0.85, Math.Min(1.0, peak));
+		if (MicPulseOverlay != null)
+			MicPulseOverlay.Opacity = _waveformPulse * 0.35;
+	}
+
+	private int PopulateWaveformRenderBuffer()
+	{
+		if (_waveformRenderBuffer.Length == 0 || _waveformBuffer.Length == 0)
+		{
+			return 0;
+		}
+
+		lock (_waveformBufferLock)
+		{
+			if (!_waveformBufferFilled && _waveformBufferIndex == 0)
+			{
+				Array.Clear(_waveformRenderBuffer, 0, _waveformRenderBuffer.Length);
+				return 0;
+			}
+
+                        if (_waveformBufferFilled)
                         {
-                                entry.SetBindingResult(result.Success ? HotkeyBindingState.Bound : HotkeyBindingState.Failed, result.ErrorMessage);
+                                int bufferLen = _waveformRenderBuffer.Length;
+                                int index = _waveformBufferIndex;
+                                if (index > bufferLen)
+                                        index = bufferLen;
+                                int tailLength = bufferLen - index;
+                                if (tailLength > 0)
+                                        Array.Copy(_waveformBuffer, index, _waveformRenderBuffer, 0, tailLength);
+                                if (index > 0)
+                                        Array.Copy(_waveformBuffer, 0, _waveformRenderBuffer, tailLength, index);
+                                return bufferLen;
                         }
-                        else
-                        {
-                                entry.SetBindingResult(HotkeyBindingState.Inactive, null);
-                        }
-                }
 
-                if (ShouldPersistHotkeyRouterMappings(normalizedPairs))
-                {
-                        _settingsManager.SaveSettingsToFile(_settings);
-                        UpdateHotkeyRouterSnapshot(normalizedPairs);
-                }
-        }
+			int validCount = _waveformBufferIndex;
+			int leadingZeros = _waveformRenderBuffer.Length - validCount;
+			if (leadingZeros > 0)
+				Array.Clear(_waveformRenderBuffer, 0, leadingZeros);
+			Array.Copy(_waveformBuffer, 0, _waveformRenderBuffer, Math.Max(0, leadingZeros), validCount);
+			return validCount;
+		}
+	}
 
-        private async void MainWindow_Closed(object sender, WindowEventArgs args)
-        {
-                // Prevent auto actions during shutdown
-                _suppressAutoActions = true;
-                try
+	private void UpdateMicLevelMeter(double peak, double rms)
+	{
+		if (RmsLevelBar is null || MicWaveformPlot is null)
+			return;
+
+		double waveformHeight = MicWaveformPlot.ActualHeight;
+		if (double.IsNaN(waveformHeight) || waveformHeight <= 0)
+			waveformHeight = MicWaveformPlot.Height;
+
+		if (MicLevelMeter is not null && waveformHeight > 0)
+			MicLevelMeter.Height = waveformHeight;
+
+                double levelValue = rms;
+		levelValue = Math.Min(1.0, Math.Max(0, levelValue));
+
+		RmsLevelBar.Height = waveformHeight * levelValue;
+	}
+
+	private void StartMicrophoneVisualizationCapture()
+	{
+		if (_waveformRenderBuffer.Length == 0)
+			return;
+
+		StopMicrophoneVisualizationCapture();
+
+		lock (_waveformBufferLock)
+		{
+			if (_waveformBuffer.Length > 0)
+				Array.Clear(_waveformBuffer, 0, _waveformBuffer.Length);
+			if (_waveformRenderBuffer.Length > 0)
+				Array.Clear(_waveformRenderBuffer, 0, _waveformRenderBuffer.Length);
+			_waveformBufferIndex = 0;
+			_waveformBufferFilled = false;
+		}
+
+		int deviceIndex = _audioDeviceManager.MicrophoneDeviceIndex;
+		if (deviceIndex < 0)
+		{
+			// Provide a visible hint if selection failed to map to an NAudio device index.
+			DispatcherQueue.TryEnqueue(() =>
+					  ShowStatus("Microphone", "Unable to start waveform monitor (device not resolved)", InfoBarSeverity.Warning));
+			return;
+		}
+
+		try
+		{
+			_waveformCapture = new WaveInEvent
+			{
+				DeviceNumber = deviceIndex,
+				WaveFormat = new WaveFormat(WaveformSampleRate, 16, 1),
+				BufferMilliseconds = WaveformBufferMilliseconds
+			};
+			_waveformCapture.DataAvailable += OnWaveformDataAvailable;
+			_waveformCapture.StartRecording();
+		}
+		catch (Exception ex)
+		{
+			_waveformCapture?.Dispose();
+			_waveformCapture = null;
+			DispatcherQueue.TryEnqueue(() =>
+					  ShowStatus("Microphone", $"Unable to monitor audio: {ex.Message}", InfoBarSeverity.Error));
+		}
+	}
+
+	private void RestartMicrophoneVisualizationCapture()
+	{
+		StopMicrophoneVisualizationCapture();
+		StartMicrophoneVisualizationCapture();
+	}
+
+	private void StopMicrophoneVisualizationCapture()
+	{
+		if (_waveformCapture is null)
+			return;
+
+		try
+		{
+			_waveformCapture.DataAvailable -= OnWaveformDataAvailable;
+			_waveformCapture.StopRecording();
+		}
+		catch
+		{
+			// Ignore failures that occur while shutting down capture.
+		}
+
+		_waveformCapture.Dispose();
+		_waveformCapture = null;
+	}
+
+	private void DisposeMicrophoneVisualization()
+	{
+		StopMicrophoneVisualizationCapture();
+
+		if (_waveformTimer is not null)
+		{
+			_waveformTimer.Tick -= WaveformTimer_Tick;
+			_waveformTimer.Stop();
+			_waveformTimer = null;
+		}
+
+		_waveformSignal = null;
+		_waveformBuffer = Array.Empty<double>();
+		_waveformRenderBuffer = Array.Empty<double>();
+		_waveformBufferIndex = 0;
+		_waveformBufferFilled = false;
+	}
+
+	private void OnWaveformDataAvailable(object? sender, WaveInEventArgs e)
+	{
+		if (_waveformBuffer.Length == 0 || e.BytesRecorded <= 0)
+			return;
+
+		int sampleCount = e.BytesRecorded / 2;
+		if (sampleCount <= 0)
+			return;
+
+		lock (_waveformBufferLock)
+		{
+			for (int i = 0; i < sampleCount; i++)
+			{
+				short sample = BitConverter.ToInt16(e.Buffer, i * 2);
+				double value = sample / 32768d;
+				_waveformBuffer[_waveformBufferIndex++] = value;
+				if (_waveformBufferIndex >= _waveformBuffer.Length)
+				{
+					_waveformBufferIndex = 0;
+					_waveformBufferFilled = true;
+				}
+			}
+		}
+	}
+
+	private void RefreshHotkeyRouterRegistrations()
+	{
+		_settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
+
+		RecalculateHotkeyRouterDuplicates();
+		var normalizedPairs = SyncHotkeyRouterSettings();
+
+		if (_hotkeyManager is null)
+		{
+			foreach (var entry in HotkeyRouterEntries)
+				entry.SetBindingResult(HotkeyBindingState.Inactive, null);
+
+			if (ShouldPersistHotkeyRouterMappings(normalizedPairs))
+			{
+				_settingsManager.SaveSettingsToFile(_settings);
+				UpdateHotkeyRouterSnapshot(normalizedPairs);
+			}
+			return;
+		}
+
+		var mappings = _settings.HotKeyRouterSettings.Mappings;
+		var results = _hotkeyManager.RefreshRouterHotkeys(mappings);
+		var resultLookup = results.ToDictionary(r => r.Map);
+
+		foreach (var entry in HotkeyRouterEntries)
+		{
+			if (resultLookup.TryGetValue(entry.Map, out var result))
+			{
+				entry.SetBindingResult(result.Success ? HotkeyBindingState.Bound : HotkeyBindingState.Failed, result.ErrorMessage);
+			}
+			else
+			{
+				entry.SetBindingResult(HotkeyBindingState.Inactive, null);
+			}
+		}
+
+		if (ShouldPersistHotkeyRouterMappings(normalizedPairs))
+		{
+			_settingsManager.SaveSettingsToFile(_settings);
+			UpdateHotkeyRouterSnapshot(normalizedPairs);
+		}
+	}
+
+	private async void MainWindow_Closed(object sender, WindowEventArgs args)
+	{
+		// Prevent auto actions during shutdown
+		_suppressAutoActions = true;
+		try
 		{
 			// Ensure we are not recording/transcribing when closing
 			if (_speechManager.Recording)
@@ -542,237 +628,237 @@ public sealed partial class MainWindow : Window
 		catch { }
 		_uiStateManager.Save(this);
 
-                if (_activeSpeechService != null)
-                        _settings.SpeechToTextSettings!.ActiveSpeechToTextService = _activeSpeechService.ServiceName;
-                _settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
+		if (_activeSpeechService != null)
+			_settings.SpeechToTextSettings!.ActiveSpeechToTextService = _activeSpeechService.ServiceName;
+		_settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
 
-                var normalizedPairs = SyncHotkeyRouterSettings();
-                _settingsManager.SaveSettingsToFile(_settings);
-                UpdateHotkeyRouterSnapshot(normalizedPairs);
-                StopPlayback();
-                _playbackPlayer.MediaEnded -= PlaybackPlayer_MediaEnded;
-                _playbackPlayer.MediaFailed -= PlaybackPlayer_MediaFailed;
-                _playbackPlayer.Dispose();
-                BeepPlayer.DisposePlayers();
-                DisposeMicrophoneVisualization();
-        }
+		var normalizedPairs = SyncHotkeyRouterSettings();
+		_settingsManager.SaveSettingsToFile(_settings);
+		UpdateHotkeyRouterSnapshot(normalizedPairs);
+		StopPlayback();
+		_playbackPlayer.MediaEnded -= PlaybackPlayer_MediaEnded;
+		_playbackPlayer.MediaFailed -= PlaybackPlayer_MediaFailed;
+		_playbackPlayer.Dispose();
+		BeepPlayer.DisposePlayers();
+		DisposeMicrophoneVisualization();
+	}
 
-        private void CopyText_Click(object sender, RoutedEventArgs e)
-        {
-                _clipboard.SetText(TxtClipboard.Text);
-                ShowStatus("Clipboard", "Text copied to the clipboard.", InfoBarSeverity.Success);
-        }
+	private void CopyText_Click(object sender, RoutedEventArgs e)
+	{
+		_clipboard.SetText(TxtClipboard.Text);
+		ShowStatus("Clipboard", "Text copied to the clipboard.", InfoBarSeverity.Success);
+	}
 
-        private void BtnAddHotkeyRoute_Click(object sender, RoutedEventArgs e)
-        {
-                _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
+	private void BtnAddHotkeyRoute_Click(object sender, RoutedEventArgs e)
+	{
+		_settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
-                var map = new HotKeyRouterSettings.HotKeyRouterMap(string.Empty, string.Empty);
+		var map = new HotKeyRouterSettings.HotKeyRouterMap(string.Empty, string.Empty);
 
-                var entry = new HotkeyRouterEntry(map);
-                AttachHotkeyRouterEntry(entry);
-                HotkeyRouterEntries.Add(entry);
+		var entry = new HotkeyRouterEntry(map);
+		AttachHotkeyRouterEntry(entry);
+		HotkeyRouterEntries.Add(entry);
 
-                RefreshHotkeyRouterRegistrations();
+		RefreshHotkeyRouterRegistrations();
 
-                // Defer focusing until the ListView generates the container
-                TryFocusHotkeyRouterFromTextBox(entry);
-        }
+		// Defer focusing until the ListView generates the container
+		TryFocusHotkeyRouterFromTextBox(entry);
+	}
 
-        private void HotkeyRouterDelete_Click(object sender, RoutedEventArgs e)
-        {
-                if (((FrameworkElement)sender).Tag is not HotkeyRouterEntry entry)
-                        return;
+	private void HotkeyRouterDelete_Click(object sender, RoutedEventArgs e)
+	{
+		if (((FrameworkElement)sender).Tag is not HotkeyRouterEntry entry)
+			return;
 
-                if (_settings.HotKeyRouterSettings is not null)
-                        _settings.HotKeyRouterSettings.Mappings.Remove(entry.Map);
+		if (_settings.HotKeyRouterSettings is not null)
+			_settings.HotKeyRouterSettings.Mappings.Remove(entry.Map);
 
-                DetachHotkeyRouterEntry(entry);
-                HotkeyRouterEntries.Remove(entry);
-                RefreshHotkeyRouterRegistrations();
-        }
+		DetachHotkeyRouterEntry(entry);
+		HotkeyRouterEntries.Remove(entry);
+		RefreshHotkeyRouterRegistrations();
+	}
 
-        private void HotkeyRouterFrom_LostFocus(object sender, RoutedEventArgs e)
-        {
-                if (sender is FrameworkElement { DataContext: HotkeyRouterEntry entry })
-                {
-                        entry.CommitFromHotkey();
-                        RefreshHotkeyRouterRegistrations();
-                }
-        }
+	private void HotkeyRouterFrom_LostFocus(object sender, RoutedEventArgs e)
+	{
+		if (sender is FrameworkElement { DataContext: HotkeyRouterEntry entry })
+		{
+			entry.CommitFromHotkey();
+			RefreshHotkeyRouterRegistrations();
+		}
+	}
 
-        private void HotkeyRouterTo_LostFocus(object sender, RoutedEventArgs e)
-        {
-                if (sender is FrameworkElement { DataContext: HotkeyRouterEntry entry })
-                {
-                        entry.CommitToHotkey();
-                        RefreshHotkeyRouterRegistrations();
-                }
-        }
+	private void HotkeyRouterTo_LostFocus(object sender, RoutedEventArgs e)
+	{
+		if (sender is FrameworkElement { DataContext: HotkeyRouterEntry entry })
+		{
+			entry.CommitToHotkey();
+			RefreshHotkeyRouterRegistrations();
+		}
+	}
 
-        private void HotkeyRouterEntry_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-                if (sender is not HotkeyRouterEntry)
-                        return;
+	private void HotkeyRouterEntry_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		if (sender is not HotkeyRouterEntry)
+			return;
 
-                if (e.PropertyName == nameof(HotkeyRouterEntry.FromHotkey) || e.PropertyName == nameof(HotkeyRouterEntry.IsFromValid))
-                        RecalculateHotkeyRouterDuplicates();
-        }
+		if (e.PropertyName == nameof(HotkeyRouterEntry.FromHotkey) || e.PropertyName == nameof(HotkeyRouterEntry.IsFromValid))
+			RecalculateHotkeyRouterDuplicates();
+	}
 
-        private void AttachHotkeyRouterEntry(HotkeyRouterEntry entry)
-        {
-                entry.PropertyChanged += HotkeyRouterEntry_PropertyChanged;
-        }
+	private void AttachHotkeyRouterEntry(HotkeyRouterEntry entry)
+	{
+		entry.PropertyChanged += HotkeyRouterEntry_PropertyChanged;
+	}
 
-        private void TryFocusHotkeyRouterFromTextBox(HotkeyRouterEntry entry)
-        {
-                // Run async attempts on dispatcher without blocking UI thread
-                DispatcherQueue.TryEnqueue(async () =>
-                {
-                        for (int i = 0; i < 8; i++)
-                        {
-                                var container = HotkeyRouterList.ContainerFromItem(entry) as ListViewItem;
-                                if (container?.ContentTemplateRoot is FrameworkElement root)
-                                {
-                                        // First TextBox inside the template corresponds to the 'From' hotkey
-                                        var fromTextBox = FindDescendant<TextBox>(root);
-                                        if (fromTextBox != null)
-                                        {
-                                                fromTextBox.Focus(FocusState.Programmatic);
-                                                // Select existing text (if any) to allow immediate typing
-                                                fromTextBox.SelectAll();
-                                                return;
-                                        }
-                                }
-                                await Task.Delay(40);
-                        }
-                });
-        }
+	private void TryFocusHotkeyRouterFromTextBox(HotkeyRouterEntry entry)
+	{
+		// Run async attempts on dispatcher without blocking UI thread
+		DispatcherQueue.TryEnqueue(async () =>
+		{
+			for (int i = 0; i < 8; i++)
+			{
+				var container = HotkeyRouterList.ContainerFromItem(entry) as ListViewItem;
+				if (container?.ContentTemplateRoot is FrameworkElement root)
+				{
+					// First TextBox inside the template corresponds to the 'From' hotkey
+					var fromTextBox = FindDescendant<TextBox>(root);
+					if (fromTextBox != null)
+					{
+						fromTextBox.Focus(FocusState.Programmatic);
+						// Select existing text (if any) to allow immediate typing
+						fromTextBox.SelectAll();
+						return;
+					}
+				}
+				await Task.Delay(40);
+			}
+		});
+	}
 
-        private static T? FindDescendant<T>(DependencyObject root) where T : class
-        {
-                int count = VisualTreeHelper.GetChildrenCount(root);
-                for (int i = 0; i < count; i++)
-                {
-                        var child = VisualTreeHelper.GetChild(root, i);
-                        if (child is T typed)
-                                return typed;
-                        var result = FindDescendant<T>(child);
-                        if (result != null)
-                                return result;
-                }
-                return null;
-        }
+	private static T? FindDescendant<T>(DependencyObject root) where T : class
+	{
+		int count = VisualTreeHelper.GetChildrenCount(root);
+		for (int i = 0; i < count; i++)
+		{
+			var child = VisualTreeHelper.GetChild(root, i);
+			if (child is T typed)
+				return typed;
+			var result = FindDescendant<T>(child);
+			if (result != null)
+				return result;
+		}
+		return null;
+	}
 
-        private void DetachHotkeyRouterEntry(HotkeyRouterEntry entry)
-        {
-                entry.PropertyChanged -= HotkeyRouterEntry_PropertyChanged;
-        }
+	private void DetachHotkeyRouterEntry(HotkeyRouterEntry entry)
+	{
+		entry.PropertyChanged -= HotkeyRouterEntry_PropertyChanged;
+	}
 
-        private void RecalculateHotkeyRouterDuplicates()
-        {
-                var duplicates = HotkeyRouterEntries
-                        .Where(e => e.IsFromValid && e.NormalizedFromHotkey is not null)
-                        .GroupBy(e => e.NormalizedFromHotkey!, StringComparer.OrdinalIgnoreCase)
-                        .Where(g => g.Count() > 1)
-                        .SelectMany(g => g);
+	private void RecalculateHotkeyRouterDuplicates()
+	{
+		var duplicates = HotkeyRouterEntries
+				  .Where(e => e.IsFromValid && e.NormalizedFromHotkey is not null)
+				  .GroupBy(e => e.NormalizedFromHotkey!, StringComparer.OrdinalIgnoreCase)
+				  .Where(g => g.Count() > 1)
+				  .SelectMany(g => g);
 
-                var duplicateSet = new HashSet<HotkeyRouterEntry>(duplicates);
+		var duplicateSet = new HashSet<HotkeyRouterEntry>(duplicates);
 
-                foreach (var entry in HotkeyRouterEntries)
-                        entry.SetDuplicate(duplicateSet.Contains(entry));
-        }
+		foreach (var entry in HotkeyRouterEntries)
+			entry.SetDuplicate(duplicateSet.Contains(entry));
+	}
 
-        private List<(string From, string To)> SyncHotkeyRouterSettings()
-        {
-                _settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
+	private List<(string From, string To)> SyncHotkeyRouterSettings()
+	{
+		_settings.HotKeyRouterSettings ??= new HotKeyRouterSettings();
 
-                foreach (var entry in HotkeyRouterEntries)
-                {
-                        entry.CommitFromHotkey();
-                        entry.CommitToHotkey();
-                }
+		foreach (var entry in HotkeyRouterEntries)
+		{
+			entry.CommitFromHotkey();
+			entry.CommitToHotkey();
+		}
 
-                var validEntries = HotkeyRouterEntries
-                        .Where(e => e.IsValid && e.NormalizedFromHotkey is not null && e.NormalizedToHotkey is not null)
-                        .ToList();
+		var validEntries = HotkeyRouterEntries
+				  .Where(e => e.IsValid && e.NormalizedFromHotkey is not null && e.NormalizedToHotkey is not null)
+				  .ToList();
 
-                // If no entries are currently valid but existing settings contain mappings, preserve them.
-                // This avoids wiping user settings due to a transient validation state during startup.
-                if (validEntries.Count == 0 && _settings.HotKeyRouterSettings.Mappings.Count > 0)
-                {
-                        return _settings.HotKeyRouterSettings.Mappings
-                                .Where(m => !string.IsNullOrWhiteSpace(m.FromHotKey) && !string.IsNullOrWhiteSpace(m.ToHotKey))
-                                .Select(m => (From: m.FromHotKey!, To: m.ToHotKey!))
-                                .ToList();
-                }
+		// If no entries are currently valid but existing settings contain mappings, preserve them.
+		// This avoids wiping user settings due to a transient validation state during startup.
+		if (validEntries.Count == 0 && _settings.HotKeyRouterSettings.Mappings.Count > 0)
+		{
+			return _settings.HotKeyRouterSettings.Mappings
+					  .Where(m => !string.IsNullOrWhiteSpace(m.FromHotKey) && !string.IsNullOrWhiteSpace(m.ToHotKey))
+					  .Select(m => (From: m.FromHotKey!, To: m.ToHotKey!))
+					  .ToList();
+		}
 
-                var normalizedPairs = validEntries
-                        .Select(e => (From: e.NormalizedFromHotkey!, To: e.NormalizedToHotkey!))
-                        .ToList();
+		var normalizedPairs = validEntries
+				  .Select(e => (From: e.NormalizedFromHotkey!, To: e.NormalizedToHotkey!))
+				  .ToList();
 
-                var existing = _settings.HotKeyRouterSettings.Mappings;
+		var existing = _settings.HotKeyRouterSettings.Mappings;
 
-                bool changed = existing.Count != normalizedPairs.Count;
-                if (!changed)
-                {
-                        for (int i = 0; i < existing.Count; i++)
-                        {
-                                var existingFrom = existing[i].FromHotKey ?? string.Empty;
-                                var existingTo = existing[i].ToHotKey ?? string.Empty;
+		bool changed = existing.Count != normalizedPairs.Count;
+		if (!changed)
+		{
+			for (int i = 0; i < existing.Count; i++)
+			{
+				var existingFrom = existing[i].FromHotKey ?? string.Empty;
+				var existingTo = existing[i].ToHotKey ?? string.Empty;
 
-                                if (!string.Equals(existingFrom, normalizedPairs[i].From, StringComparison.Ordinal) ||
-                                    !string.Equals(existingTo, normalizedPairs[i].To, StringComparison.Ordinal))
-                                {
-                                        changed = true;
-                                        break;
-                                }
-                        }
-                }
+				if (!string.Equals(existingFrom, normalizedPairs[i].From, StringComparison.Ordinal) ||
+					 !string.Equals(existingTo, normalizedPairs[i].To, StringComparison.Ordinal))
+				{
+					changed = true;
+					break;
+				}
+			}
+		}
 
-                if (changed)
-                {
-                        var updatedMaps = normalizedPairs
-                                .Select(pair => new HotKeyRouterSettings.HotKeyRouterMap(pair.From, pair.To))
-                                .ToList();
+		if (changed)
+		{
+			var updatedMaps = normalizedPairs
+					  .Select(pair => new HotKeyRouterSettings.HotKeyRouterMap(pair.From, pair.To))
+					  .ToList();
 
-                        _settings.HotKeyRouterSettings.Mappings = updatedMaps;
+			_settings.HotKeyRouterSettings.Mappings = updatedMaps;
 
-                        for (int i = 0; i < validEntries.Count; i++)
-                                validEntries[i].ReplaceBackingMap(updatedMaps[i]);
-                }
+			for (int i = 0; i < validEntries.Count; i++)
+				validEntries[i].ReplaceBackingMap(updatedMaps[i]);
+		}
 
-                return normalizedPairs;
-        }
+		return normalizedPairs;
+	}
 
-        private bool ShouldPersistHotkeyRouterMappings(List<(string From, string To)> normalizedPairs)
-        {
-                if (!_hotkeyRouterInitialized)
-                        return false;
+	private bool ShouldPersistHotkeyRouterMappings(List<(string From, string To)> normalizedPairs)
+	{
+		if (!_hotkeyRouterInitialized)
+			return false;
 
-                if (_hotkeyRouterPersistedSnapshot.Count != normalizedPairs.Count)
-                        return true;
+		if (_hotkeyRouterPersistedSnapshot.Count != normalizedPairs.Count)
+			return true;
 
-                for (int i = 0; i < normalizedPairs.Count; i++)
-                {
-                        var previous = _hotkeyRouterPersistedSnapshot[i];
-                        var current = normalizedPairs[i];
+		for (int i = 0; i < normalizedPairs.Count; i++)
+		{
+			var previous = _hotkeyRouterPersistedSnapshot[i];
+			var current = normalizedPairs[i];
 
-                        if (!string.Equals(previous.From, current.From, StringComparison.Ordinal) ||
-                            !string.Equals(previous.To, current.To, StringComparison.Ordinal))
-                        {
-                                return true;
-                        }
-                }
+			if (!string.Equals(previous.From, current.From, StringComparison.Ordinal) ||
+				 !string.Equals(previous.To, current.To, StringComparison.Ordinal))
+			{
+				return true;
+			}
+		}
 
-                return false;
-        }
+		return false;
+	}
 
-        private void UpdateHotkeyRouterSnapshot(IEnumerable<(string From, string To)> normalizedPairs)
-        {
-                _hotkeyRouterPersistedSnapshot.Clear();
-                _hotkeyRouterPersistedSnapshot.AddRange(normalizedPairs);
-        }
+	private void UpdateHotkeyRouterSnapshot(IEnumerable<(string From, string To)> normalizedPairs)
+	{
+		_hotkeyRouterPersistedSnapshot.Clear();
+		_hotkeyRouterPersistedSnapshot.AddRange(normalizedPairs);
+	}
 
 	public void BtnToggleMic_Click(object? sender, RoutedEventArgs? e)
 	{
@@ -797,13 +883,13 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-        private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
-        {
-                try
-                {
-                        var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
+	private async void BtnScreenshotOcr_Click(object sender, RoutedEventArgs e)
+	{
+		try
+		{
+			var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
 			SetOcrText(result.Message);
-                    HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 			if (result.Success)
 				ShowStatus("Screenshot & OCR", "Text captured from screenshot.", InfoBarSeverity.Success);
 			else
@@ -813,35 +899,35 @@ public sealed partial class MainWindow : Window
 		{
 			ShowStatus("Screenshot & OCR", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("Screenshot + OCR Error", ex);
-                }
-        }
+		}
+	}
 
-        private async void BtnScreenshotOcrLrtb_Click(object sender, RoutedEventArgs e)
-        {
-                try
-                {
-                        var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom);
-                        SetOcrText(result.Message);
-                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
-                        if (result.Success)
-                                ShowStatus("Screenshot & OCR (left-to-right)", "Text captured from screenshot using left-to-right reading order.", InfoBarSeverity.Success);
-                        else
-                                ShowStatus("Screenshot & OCR (left-to-right)", result.Message, InfoBarSeverity.Error);
-                }
-                catch (Exception ex)
-                {
-                        ShowStatus("Screenshot & OCR (left-to-right)", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("Screenshot + OCR (LRTB) Error", ex);
-                }
-        }
-
-        private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
-        {
-                try
-                {
-                        var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
+	private async void BtnScreenshotOcrLrtb_Click(object sender, RoutedEventArgs e)
+	{
+		try
+		{
+			var result = await _ocrManager.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom);
 			SetOcrText(result.Message);
-                    HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+			if (result.Success)
+				ShowStatus("Screenshot & OCR (left-to-right)", "Text captured from screenshot using left-to-right reading order.", InfoBarSeverity.Success);
+			else
+				ShowStatus("Screenshot & OCR (left-to-right)", result.Message, InfoBarSeverity.Error);
+		}
+		catch (Exception ex)
+		{
+			ShowStatus("Screenshot & OCR (left-to-right)", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Screenshot + OCR (LRTB) Error", ex);
+		}
+	}
+
+	private async void BtnOcrClipboard_Click(object sender, RoutedEventArgs e)
+	{
+		try
+		{
+			var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
+			SetOcrText(result.Message);
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 			if (result.Success)
 				ShowStatus("OCR", "Clipboard image converted to text.", InfoBarSeverity.Success);
 			else
@@ -854,203 +940,203 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-        public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
-        {
-                try
-                {
-                        await StartStopSpeechToTextAsync();
-                }
-                catch (Exception ex)
-                {
-                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("Speech to Text Error", ex);
-                }
-        }
+	public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
+		{
+			await StartStopSpeechToTextAsync();
+		}
+		catch (Exception ex)
+		{
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Speech to Text Error", ex);
+		}
+	}
 
-        private async void BtnPlayLatestRecording_Click(object? sender, RoutedEventArgs? e)
-        {
-                try
-                {
-                        if (_isPlayingRecording)
-                                StopPlayback();
-                        else
-                                await StartPlayback();
-                }
-                catch (Exception ex)
-                {
-                        StopPlayback();
-                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("Playback Error", ex);
-                }
-        }
+	private async void BtnPlayLatestRecording_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
+		{
+			if (_isPlayingRecording)
+				StopPlayback();
+			else
+				await StartPlayback();
+		}
+		catch (Exception ex)
+		{
+			StopPlayback();
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Playback Error", ex);
+		}
+	}
 
-        private async void BtnRetrySpeechToText_Click(object? sender, RoutedEventArgs? e)
-        {
-                if (_speechManager.Recording || _speechManager.Transcribing)
-                {
-                        ShowStatus("Speech to Text", "Finish the current operation before retrying.", InfoBarSeverity.Warning);
-                        UpdateRecordingActionAvailability();
-                        return;
-                }
+	private async void BtnRetrySpeechToText_Click(object? sender, RoutedEventArgs? e)
+	{
+		if (_speechManager.Recording || _speechManager.Transcribing)
+		{
+			ShowStatus("Speech to Text", "Finish the current operation before retrying.", InfoBarSeverity.Warning);
+			UpdateRecordingActionAvailability();
+			return;
+		}
 
-                if (_activeSpeechService == null)
-                {
-                        ShowStatus("Speech to Text", "Select a speech-to-text service to retry.", InfoBarSeverity.Warning);
-                        UpdateRecordingActionAvailability();
-                        return;
-                }
+		if (_activeSpeechService == null)
+		{
+			ShowStatus("Speech to Text", "Select a speech-to-text service to retry.", InfoBarSeverity.Warning);
+			UpdateRecordingActionAvailability();
+			return;
+		}
 
-                if (!_speechManager.HasRecordedAudio())
-                {
-                        ShowStatus("Speech to Text", "No recording available to transcribe again.", InfoBarSeverity.Warning);
-                        UpdateRecordingActionAvailability();
-                        return;
-                }
+		if (!_speechManager.HasRecordedAudio())
+		{
+			ShowStatus("Speech to Text", "No recording available to transcribe again.", InfoBarSeverity.Warning);
+			UpdateRecordingActionAvailability();
+			return;
+		}
 
-                try
-                {
-                        StopPlayback();
+		try
+		{
+			StopPlayback();
 
-                        _suppressAutoActions = true;
-                        TxtSpeechToText.IsReadOnly = true;
-                        TxtSpeechToText.Text = "Transcribing...";
-                        UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
-                        UpdateRecordingActionAvailability();
-                        ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
+			_suppressAutoActions = true;
+			TxtSpeechToText.IsReadOnly = true;
+			TxtSpeechToText.Text = "Transcribing...";
+			UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
+			UpdateRecordingActionAvailability();
+			ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
 
-                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+			string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, string.Empty, CancellationToken.None);
 
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                        FinalizeTranscript(text, "Transcript refreshed from the latest recording.");
-                }
-                catch (OperationCanceledException)
-                {
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                        TxtSpeechToText.IsReadOnly = false;
-                        _suppressAutoActions = false;
-                        ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
-                        UpdateRecordingActionAvailability();
-                }
-                catch (Exception ex)
-                {
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                        TxtSpeechToText.IsReadOnly = false;
-                        _suppressAutoActions = false;
-                        UpdateRecordingActionAvailability();
-                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("Speech to Text Error", ex);
-                }
-        }
+			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+			FinalizeTranscript(text, "Transcript refreshed from the latest recording.");
+		}
+		catch (OperationCanceledException)
+		{
+			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+			TxtSpeechToText.IsReadOnly = false;
+			_suppressAutoActions = false;
+			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
+			UpdateRecordingActionAvailability();
+		}
+		catch (Exception ex)
+		{
+			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+			TxtSpeechToText.IsReadOnly = false;
+			_suppressAutoActions = false;
+			UpdateRecordingActionAvailability();
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Speech to Text Error", ex);
+		}
+	}
 
-        private async void BtnUploadSpeechAudio_Click(object? sender, RoutedEventArgs? e)
-        {
-                if (_speechManager.Recording || _speechManager.Transcribing)
-                {
-                        ShowStatus("Speech to Text", "Finish the current operation before uploading.", InfoBarSeverity.Warning);
-                        UpdateRecordingActionAvailability();
-                        return;
-                }
+	private async void BtnUploadSpeechAudio_Click(object? sender, RoutedEventArgs? e)
+	{
+		if (_speechManager.Recording || _speechManager.Transcribing)
+		{
+			ShowStatus("Speech to Text", "Finish the current operation before uploading.", InfoBarSeverity.Warning);
+			UpdateRecordingActionAvailability();
+			return;
+		}
 
-                if (_activeSpeechService == null)
-                {
-                        ShowStatus("Speech to Text", "Select a speech-to-text service to transcribe audio.", InfoBarSeverity.Warning);
-                        UpdateRecordingActionAvailability();
-                        return;
-                }
+		if (_activeSpeechService == null)
+		{
+			ShowStatus("Speech to Text", "Select a speech-to-text service to transcribe audio.", InfoBarSeverity.Warning);
+			UpdateRecordingActionAvailability();
+			return;
+		}
 
-                var picker = new FileOpenPicker
-                {
-                        SuggestedStartLocation = PickerLocationId.MusicLibrary,
-                        ViewMode = PickerViewMode.List
-                };
-                picker.FileTypeFilter.Add(".mp3");
-                picker.FileTypeFilter.Add(".wav");
-                picker.FileTypeFilter.Add(".m4a");
-                picker.FileTypeFilter.Add(".aac");
-                picker.FileTypeFilter.Add(".flac");
-                picker.FileTypeFilter.Add(".ogg");
-                picker.FileTypeFilter.Add(".opus");
-                picker.FileTypeFilter.Add(".wma");
-                picker.FileTypeFilter.Add(".webm");
+		var picker = new FileOpenPicker
+		{
+			SuggestedStartLocation = PickerLocationId.MusicLibrary,
+			ViewMode = PickerViewMode.List
+		};
+		picker.FileTypeFilter.Add(".mp3");
+		picker.FileTypeFilter.Add(".wav");
+		picker.FileTypeFilter.Add(".m4a");
+		picker.FileTypeFilter.Add(".aac");
+		picker.FileTypeFilter.Add(".flac");
+		picker.FileTypeFilter.Add(".ogg");
+		picker.FileTypeFilter.Add(".opus");
+		picker.FileTypeFilter.Add(".wma");
+		picker.FileTypeFilter.Add(".webm");
 
-                InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
-                StorageFile? file = await picker.PickSingleFileAsync();
-                if (file is null)
-                        return;
+		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+		StorageFile? file = await picker.PickSingleFileAsync();
+		if (file is null)
+			return;
 
-                try
-                {
-                        StopPlayback();
+		try
+		{
+			StopPlayback();
 
-                        _suppressAutoActions = true;
-                        TxtSpeechToText.IsReadOnly = true;
-                        TxtSpeechToText.Text = "Transcribing...";
-                        UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
-                        UpdateRecordingActionAvailability();
-                        ShowStatus("Speech to Text", $"Transcribing {file.Name}...", InfoBarSeverity.Informational);
+			_suppressAutoActions = true;
+			TxtSpeechToText.IsReadOnly = true;
+			TxtSpeechToText.Text = "Transcribing...";
+			UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
+			UpdateRecordingActionAvailability();
+			ShowStatus("Speech to Text", $"Transcribing {file.Name}...", InfoBarSeverity.Informational);
 
-                        string text = await _activeSpeechService.ConvertAudioToText(string.Empty, file.Path, CancellationToken.None);
+			string text = await _activeSpeechService.ConvertAudioToText(string.Empty, file.Path, CancellationToken.None);
 
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                        FinalizeTranscript(text, $"Transcript generated from {file.Name}.");
-                }
-                catch (OperationCanceledException)
-                {
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                        TxtSpeechToText.IsReadOnly = false;
-                        _suppressAutoActions = false;
-                        UpdateRecordingActionAvailability();
-                        ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
-                }
-                catch (Exception ex)
-                {
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                        TxtSpeechToText.IsReadOnly = false;
-                        _suppressAutoActions = false;
-                        UpdateRecordingActionAvailability();
-                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("Speech to Text Error", ex);
-                }
-        }
+			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+			FinalizeTranscript(text, $"Transcript generated from {file.Name}.");
+		}
+		catch (OperationCanceledException)
+		{
+			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+			TxtSpeechToText.IsReadOnly = false;
+			_suppressAutoActions = false;
+			UpdateRecordingActionAvailability();
+			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
+		}
+		catch (Exception ex)
+		{
+			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+			TxtSpeechToText.IsReadOnly = false;
+			_suppressAutoActions = false;
+			UpdateRecordingActionAvailability();
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Speech to Text Error", ex);
+		}
+	}
 
-        private async void BtnOcrClipboardLrtb_Click(object sender, RoutedEventArgs e)
-        {
-                try
-                {
-                        var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom);
-                        SetOcrText(result.Message);
-                        HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
-                        if (result.Success)
-                                ShowStatus("OCR (left-to-right)", "Clipboard image converted using left-to-right reading order.", InfoBarSeverity.Success);
-                        else
-                                ShowStatus("OCR (left-to-right)", result.Message, InfoBarSeverity.Warning);
-                }
-                catch (Exception ex)
-                {
-                        ShowStatus("OCR (left-to-right)", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("OCR Clipboard (LRTB) Error", ex);
-                }
-        }
+	private async void BtnOcrClipboardLrtb_Click(object sender, RoutedEventArgs e)
+	{
+		try
+		{
+			var result = await _ocrManager.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom);
+			SetOcrText(result.Message);
+			HotkeyManager.SendHotkeyAfterDelay(_settings.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation ?? string.Empty, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+			if (result.Success)
+				ShowStatus("OCR (left-to-right)", "Clipboard image converted using left-to-right reading order.", InfoBarSeverity.Success);
+			else
+				ShowStatus("OCR (left-to-right)", result.Message, InfoBarSeverity.Warning);
+		}
+		catch (Exception ex)
+		{
+			ShowStatus("OCR (left-to-right)", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("OCR Clipboard (LRTB) Error", ex);
+		}
+	}
 
-        public async Task StartStopSpeechToTextAsync()
-        {
-                try
-                {
-                        if (_speechManager.Transcribing)
-                        {
-                                _speechManager.CancelTranscription();
-                                UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                                BtnSpeechToText.IsEnabled = true;
-                                TxtSpeechToText.IsReadOnly = false;
-                                _suppressAutoActions = false;
-                                ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
-                                BeepPlayer.Play(BeepType.Failure);
-                                UpdateRecordingActionAvailability();
-                                return;
-                        }
+	public async Task StartStopSpeechToTextAsync()
+	{
+		try
+		{
+			if (_speechManager.Transcribing)
+			{
+				_speechManager.CancelTranscription();
+				UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+				BtnSpeechToText.IsEnabled = true;
+				TxtSpeechToText.IsReadOnly = false;
+				_suppressAutoActions = false;
+				ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
+				BeepPlayer.Play(BeepType.Failure);
+				UpdateRecordingActionAvailability();
+				return;
+			}
 
-                        if (_activeSpeechService == null)
-                        {
+			if (_activeSpeechService == null)
+			{
 				var dlg = new ContentDialog
 				{
 					Title = "Warning",
@@ -1062,60 +1148,60 @@ public sealed partial class MainWindow : Window
 				AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
 				ShowStatus("Speech to Text", "Select a speech-to-text service to begin.", InfoBarSeverity.Warning);
 				await dlg.ShowAsync();
-                                return;
-                        }
+				return;
+			}
 
-                        if (!_speechManager.Recording)
-                        {
-                                _suppressAutoActions = true;
-                                TxtSpeechToText.IsReadOnly = true;
-                                TxtSpeechToText.Text = "Recording...";
-                                UpdateSpeechButtonVisuals("Stop recording", StopGlyph);
-                                ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
-                                BeepPlayer.Play(BeepType.Start);
-                                StopPlayback();
-                                await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
-                                _suppressAutoActions = false;
-                                UpdateRecordingActionAvailability();
-                        }
-                        else
-                        {
-                                BtnSpeechToText.IsEnabled = false;
-                                _suppressAutoActions = true;
-                                TxtSpeechToText.Text = "Transcribing...";
-                                UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
-                                ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
-                                StopPlayback();
-                                UpdateRecordingActionAvailability();
+			if (!_speechManager.Recording)
+			{
+				_suppressAutoActions = true;
+				TxtSpeechToText.IsReadOnly = true;
+				TxtSpeechToText.Text = "Recording...";
+				UpdateSpeechButtonVisuals("Stop recording", StopGlyph);
+				ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
+				BeepPlayer.Play(BeepType.Start);
+				StopPlayback();
+				await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+				_suppressAutoActions = false;
+				UpdateRecordingActionAvailability();
+			}
+			else
+			{
+				BtnSpeechToText.IsEnabled = false;
+				_suppressAutoActions = true;
+				TxtSpeechToText.Text = "Transcribing...";
+				UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
+				ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
+				StopPlayback();
+				UpdateRecordingActionAvailability();
 
-                                try
-                                {
-                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+				try
+				{
+					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
 
-                                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                                        BtnSpeechToText.IsEnabled = true;
-                                        FinalizeTranscript(text, "Transcript ready and copied.");
-                                }
-                                catch (OperationCanceledException)
-                                {
-                                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-                                        BtnSpeechToText.IsEnabled = true;
-                                        TxtSpeechToText.IsReadOnly = false;
-                                        _suppressAutoActions = false;
-                                        ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
-                                        UpdateRecordingActionAvailability();
-                                        return;
-                                }
-                                UpdateRecordingActionAvailability();
-                        }
-                }
-                catch (Exception ex)
-                {
-                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("Speech to Text Error", ex);
-                        UpdateRecordingActionAvailability();
-                }
-        }
+					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+					BtnSpeechToText.IsEnabled = true;
+					FinalizeTranscript(text, "Transcript ready and copied.");
+				}
+				catch (OperationCanceledException)
+				{
+					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+					BtnSpeechToText.IsEnabled = true;
+					TxtSpeechToText.IsReadOnly = false;
+					_suppressAutoActions = false;
+					ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
+					UpdateRecordingActionAvailability();
+					return;
+				}
+				UpdateRecordingActionAvailability();
+			}
+		}
+		catch (Exception ex)
+		{
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Speech to Text Error", ex);
+			UpdateRecordingActionAvailability();
+		}
+	}
 
 	private async void ShowMessage(string title, string message)
 	{
@@ -1171,229 +1257,229 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-        private void UpdateMicrophoneToggleVisuals()
-        {
-                bool muted = _audioDeviceManager.IsMuted;
-                BtnToggleMicLabel.Text = muted ? "Unmute microphone" : "Mute microphone";
-                BtnToggleMicIcon.Glyph = MicOnGlyph;
-                BtnToggleMicSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
-                AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
-                ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
-                MicStatusIcon.Glyph = MicOnGlyph;
-                MicStatusIconSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
-                MicStatusIcon.Foreground = ResolveBrush(muted ? "TextFillColorSecondaryBrush" : "TextFillColorPrimaryBrush");
-                ToolTipService.SetToolTip(MicStatusIcon, muted ? "Microphone muted" : "Microphone live");
-                AutomationProperties.SetName(MicStatusIcon, muted ? "Microphone muted" : "Microphone live");
-        }
+	private void UpdateMicrophoneToggleVisuals()
+	{
+		bool muted = _audioDeviceManager.IsMuted;
+		BtnToggleMicLabel.Text = muted ? "Unmute microphone" : "Mute microphone";
+		BtnToggleMicIcon.Glyph = MicOnGlyph;
+		BtnToggleMicSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
+		AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
+		ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
+		MicStatusIcon.Glyph = MicOnGlyph;
+		MicStatusIconSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
+		MicStatusIcon.Foreground = ResolveBrush(muted ? "TextFillColorSecondaryBrush" : "TextFillColorPrimaryBrush");
+		ToolTipService.SetToolTip(MicStatusIcon, muted ? "Microphone muted" : "Microphone live");
+		AutomationProperties.SetName(MicStatusIcon, muted ? "Microphone muted" : "Microphone live");
+	}
 
-        private static Brush ResolveBrush(string resourceKey)
-        {
-                if (Application.Current.Resources.TryGetValue(resourceKey, out var value) && value is Brush brush)
-                        return brush;
+	private static Brush ResolveBrush(string resourceKey)
+	{
+		if (Application.Current.Resources.TryGetValue(resourceKey, out var value) && value is Brush brush)
+			return brush;
 
-		  // Fallback to a neutral gray if the requested resource isn't found. In WinUI 3 the Colors struct lives under Microsoft.UI.
-		  return Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush 
-			  ?? new SolidColorBrush(Microsoft.UI.Colors.Gray);
-        }
+		// Fallback to a neutral gray if the requested resource isn't found. In WinUI 3 the Colors struct lives under Microsoft.UI.
+		return Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush
+			?? new SolidColorBrush(Microsoft.UI.Colors.Gray);
+	}
 
-        private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
-        {
-                BtnSpeechToTextLabel.Text = label;
-                BtnSpeechToTextIcon.Glyph = glyph;
-                BtnSpeechToText.IsEnabled = isEnabled;
-                AutomationProperties.SetName(BtnSpeechToText, label);
-                ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
-        }
+	private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
+	{
+		BtnSpeechToTextLabel.Text = label;
+		BtnSpeechToTextIcon.Glyph = glyph;
+		BtnSpeechToText.IsEnabled = isEnabled;
+		AutomationProperties.SetName(BtnSpeechToText, label);
+		ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
+	}
 
-        private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
-        {
-                BtnPlayLatestRecordingIcon.Glyph = glyph;
-                string tooltip = automationName == "Play latest recording"
-                        ? "Play the most recent speech recording"
-                        : "Stop playing the most recent speech recording";
-                ToolTipService.SetToolTip(BtnPlayLatestRecording, tooltip);
-                AutomationProperties.SetName(BtnPlayLatestRecording, automationName);
-                AutomationProperties.SetHelpText(BtnPlayLatestRecording, tooltip);
-        }
+	private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
+	{
+		BtnPlayLatestRecordingIcon.Glyph = glyph;
+		string tooltip = automationName == "Play latest recording"
+				  ? "Play the most recent speech recording"
+				  : "Stop playing the most recent speech recording";
+		ToolTipService.SetToolTip(BtnPlayLatestRecording, tooltip);
+		AutomationProperties.SetName(BtnPlayLatestRecording, automationName);
+		AutomationProperties.SetHelpText(BtnPlayLatestRecording, tooltip);
+	}
 
-        private void UpdateRecordingActionAvailability()
-        {
-                bool hasRecording = _speechManager.HasRecordedAudio();
-                bool busy = _speechManager.Recording || _speechManager.Transcribing;
+	private void UpdateRecordingActionAvailability()
+	{
+		bool hasRecording = _speechManager.HasRecordedAudio();
+		bool busy = _speechManager.Recording || _speechManager.Transcribing;
 
-                // The play button remains enabled during playback (_isPlayingRecording) so the user can stop playback,
-                // but is disabled during other busy states (recording/transcribing) to prevent conflicts.
-                BtnPlayLatestRecording.IsEnabled = ShouldEnablePlayLatestRecordingButton(hasRecording, busy);
-                BtnRetrySpeechToText.IsEnabled = hasRecording && _activeSpeechService != null && !busy && !_isPlayingRecording;
-                BtnUploadSpeechAudio.IsEnabled = !busy && !_isPlayingRecording;
-        }
+		// The play button remains enabled during playback (_isPlayingRecording) so the user can stop playback,
+		// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+		BtnPlayLatestRecording.IsEnabled = ShouldEnablePlayLatestRecordingButton(hasRecording, busy);
+		BtnRetrySpeechToText.IsEnabled = hasRecording && _activeSpeechService != null && !busy && !_isPlayingRecording;
+		BtnUploadSpeechAudio.IsEnabled = !busy && !_isPlayingRecording;
+	}
 
-        /// <summary>
-        /// Determines whether the Play Latest Recording button should be enabled.
-        /// The button remains enabled during playback so the user can stop playback,
-        /// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
-        /// </summary>
-        private bool ShouldEnablePlayLatestRecordingButton(bool hasRecording, bool busy)
-        {
-                return _isPlayingRecording || (hasRecording && !busy);
-        }
+	/// <summary>
+	/// Determines whether the Play Latest Recording button should be enabled.
+	/// The button remains enabled during playback so the user can stop playback,
+	/// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+	/// </summary>
+	private bool ShouldEnablePlayLatestRecordingButton(bool hasRecording, bool busy)
+	{
+		return _isPlayingRecording || (hasRecording && !busy);
+	}
 
-        private void FinalizeTranscript(string rawText, string successMessage)
-        {
-                string formatted = _transcriptFormatter.ApplyRules(rawText, false);
+	private void FinalizeTranscript(string rawText, string successMessage)
+	{
+		string formatted = _transcriptFormatter.ApplyRules(rawText, false);
 
-                TxtSpeechToText.Text = rawText;
-                TxtFormatTranscript.Text = formatted;
+		TxtSpeechToText.Text = rawText;
+		TxtFormatTranscript.Text = formatted;
 
-                _clipboard.SetText(formatted);
-                InsertIntoActiveApplication(formatted);
+		_clipboard.SetText(formatted);
+		InsertIntoActiveApplication(formatted);
 
-                BeepPlayer.Play(BeepType.Success);
-                TxtSpeechToText.IsReadOnly = false;
-                _suppressAutoActions = false;
+		BeepPlayer.Play(BeepType.Success);
+		TxtSpeechToText.IsReadOnly = false;
+		_suppressAutoActions = false;
 
-                ShowStatus("Speech to Text", successMessage, InfoBarSeverity.Success);
-                HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
-                UpdateRecordingActionAvailability();
-        }
+		ShowStatus("Speech to Text", successMessage, InfoBarSeverity.Success);
+		HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
+		UpdateRecordingActionAvailability();
+	}
 
-        private void StopPlayback()
-        {
-                if (!_isPlayingRecording && _playbackPlayer.Source == null)
-                        return;
+	private void StopPlayback()
+	{
+		if (!_isPlayingRecording && _playbackPlayer.Source == null)
+			return;
 
-                _playbackPlayer.Pause();
-                if (_playbackPlayer.PlaybackSession != null)
-                        _playbackPlayer.PlaybackSession.Position = TimeSpan.Zero;
-                _playbackPlayer.Source = null;
-                _playbackStream?.Dispose();
-                _playbackStream = null;
-                _isPlayingRecording = false;
-                UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
-                UpdateRecordingActionAvailability();
-        }
+		_playbackPlayer.Pause();
+		if (_playbackPlayer.PlaybackSession != null)
+			_playbackPlayer.PlaybackSession.Position = TimeSpan.Zero;
+		_playbackPlayer.Source = null;
+		_playbackStream?.Dispose();
+		_playbackStream = null;
+		_isPlayingRecording = false;
+		UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
+		UpdateRecordingActionAvailability();
+	}
 
-        private async Task StartPlayback()
-        {
-                if (!_speechManager.TryGetLatestRecording(out var path))
-                {
-                        UpdateRecordingActionAvailability();
-                        ShowStatus("Speech to Text", "Record speech before attempting playback.", InfoBarSeverity.Warning);
-                        return;
-                }
+	private async Task StartPlayback()
+	{
+		if (!_speechManager.TryGetLatestRecording(out var path))
+		{
+			UpdateRecordingActionAvailability();
+			ShowStatus("Speech to Text", "Record speech before attempting playback.", InfoBarSeverity.Warning);
+			return;
+		}
 
-                StopPlayback();
-                // Load file fully into memory to prevent file locking during/after playback.
-                try
-                {
-                        byte[] bytes = File.ReadAllBytes(path);
-                        _playbackStream?.Dispose();
-                        _playbackStream = new InMemoryRandomAccessStream();
-                        using (var writer = new DataWriter(_playbackStream.GetOutputStreamAt(0)))
-                        {
-                                writer.WriteBytes(bytes);
-                                await writer.StoreAsync();
-                        }
-                        _playbackStream.Seek(0);
-                        var contentType = await DetermineContentTypeAsync(path);
-                        _playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, contentType);
-                }
-                catch (Exception ex)
-                {
-                        _playbackStream?.Dispose();
-                        _playbackStream = null;
-                        ShowStatus("Speech to Text", $"Unable to play recording: {ex.Message}", InfoBarSeverity.Error);
-                        return;
-                }
-                _isPlayingRecording = true;
-                UpdatePlaybackButtonVisuals("Stop playback", StopGlyph);
-                UpdateRecordingActionAvailability();
-                ShowStatus("Speech to Text", "Playing the latest recording...", InfoBarSeverity.Informational);
-                _playbackPlayer.Play();
-        }
+		StopPlayback();
+		// Load file fully into memory to prevent file locking during/after playback.
+		try
+		{
+			byte[] bytes = File.ReadAllBytes(path);
+			_playbackStream?.Dispose();
+			_playbackStream = new InMemoryRandomAccessStream();
+			using (var writer = new DataWriter(_playbackStream.GetOutputStreamAt(0)))
+			{
+				writer.WriteBytes(bytes);
+				await writer.StoreAsync();
+			}
+			_playbackStream.Seek(0);
+			var contentType = await DetermineContentTypeAsync(path);
+			_playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, contentType);
+		}
+		catch (Exception ex)
+		{
+			_playbackStream?.Dispose();
+			_playbackStream = null;
+			ShowStatus("Speech to Text", $"Unable to play recording: {ex.Message}", InfoBarSeverity.Error);
+			return;
+		}
+		_isPlayingRecording = true;
+		UpdatePlaybackButtonVisuals("Stop playback", StopGlyph);
+		UpdateRecordingActionAvailability();
+		ShowStatus("Speech to Text", "Playing the latest recording...", InfoBarSeverity.Informational);
+		_playbackPlayer.Play();
+	}
 
-        private void PlaybackPlayer_MediaEnded(MediaPlayer sender, object args)
-        {
-                RunOnDispatcher(StopPlayback);
-        }
+	private void PlaybackPlayer_MediaEnded(MediaPlayer sender, object args)
+	{
+		RunOnDispatcher(StopPlayback);
+	}
 
-        private void PlaybackPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
-        {
-                RunOnDispatcher(() => HandlePlaybackFailed(args.ErrorMessage));
-        }
+	private void PlaybackPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+	{
+		RunOnDispatcher(() => HandlePlaybackFailed(args.ErrorMessage));
+	}
 
-        private static string GetMimeTypeFromExtension(string path)
-        {
-                var extension = Path.GetExtension(path);
-                if (!string.IsNullOrWhiteSpace(extension) && AudioMimeTypeMap.TryGetValue(extension, out var mimeType))
-                        return mimeType;
+	private static string GetMimeTypeFromExtension(string path)
+	{
+		var extension = Path.GetExtension(path);
+		if (!string.IsNullOrWhiteSpace(extension) && AudioMimeTypeMap.TryGetValue(extension, out var mimeType))
+			return mimeType;
 
-                return "audio/wav";
-        }
+		return "audio/wav";
+	}
 
-        private static async Task<string> DetermineContentTypeAsync(string path)
-        {
-                try
-                {
-                        var storageFile = await StorageFile.GetFileFromPathAsync(path);
-                        if (!string.IsNullOrWhiteSpace(storageFile.ContentType))
-                                return storageFile.ContentType;
-                }
-                catch (Exception)
-                {
-                        // Swallow and fall back to extension-based detection.
-                }
+	private static async Task<string> DetermineContentTypeAsync(string path)
+	{
+		try
+		{
+			var storageFile = await StorageFile.GetFileFromPathAsync(path);
+			if (!string.IsNullOrWhiteSpace(storageFile.ContentType))
+				return storageFile.ContentType;
+		}
+		catch (Exception)
+		{
+			// Swallow and fall back to extension-based detection.
+		}
 
-                return GetMimeTypeFromExtension(path);
-        }
+		return GetMimeTypeFromExtension(path);
+	}
 
-        private void RunOnDispatcher(DispatcherQueueHandler action)
-        {
-                if (!DispatcherQueue.TryEnqueue(action))
-                        action();
-        }
+	private void RunOnDispatcher(DispatcherQueueHandler action)
+	{
+		if (!DispatcherQueue.TryEnqueue(action))
+			action();
+	}
 
-        private void HandlePlaybackFailed(string errorMessage)
-        {
-                StopPlayback();
-                ShowStatus("Speech to Text", $"Playback failed: {errorMessage}", InfoBarSeverity.Error);
-        }
+	private void HandlePlaybackFailed(string errorMessage)
+	{
+		StopPlayback();
+		ShowStatus("Speech to Text", $"Playback failed: {errorMessage}", InfoBarSeverity.Error);
+	}
 
-        private void ConfigureButtonHotkey(Button button, TextBlock? hotkeyTextBlock, string? hotkey, string baseTooltip)
-        {
-                string tooltip = ComposeTooltip(baseTooltip, hotkey);
-                ToolTipService.SetToolTip(button, tooltip);
-                AutomationProperties.SetHelpText(button, tooltip);
-                UpdateHotkeyText(hotkeyTextBlock, hotkey);
-        }
+	private void ConfigureButtonHotkey(Button button, TextBlock? hotkeyTextBlock, string? hotkey, string baseTooltip)
+	{
+		string tooltip = ComposeTooltip(baseTooltip, hotkey);
+		ToolTipService.SetToolTip(button, tooltip);
+		AutomationProperties.SetHelpText(button, tooltip);
+		UpdateHotkeyText(hotkeyTextBlock, hotkey);
+	}
 
-        private static void UpdateHotkeyText(TextBlock? hotkeyTextBlock, string? hotkey)
-        {
-                if (hotkeyTextBlock == null)
-                        return;
+	private static void UpdateHotkeyText(TextBlock? hotkeyTextBlock, string? hotkey)
+	{
+		if (hotkeyTextBlock == null)
+			return;
 
-                if (string.IsNullOrWhiteSpace(hotkey))
-                {
-                        hotkeyTextBlock.Visibility = Visibility.Collapsed;
-                }
-                else
-                {
-                        hotkeyTextBlock.Text = $"Hotkey: {hotkey}";
-                        hotkeyTextBlock.Visibility = Visibility.Visible;
-                }
-        }
+		if (string.IsNullOrWhiteSpace(hotkey))
+		{
+			hotkeyTextBlock.Visibility = Visibility.Collapsed;
+		}
+		else
+		{
+			hotkeyTextBlock.Text = $"Hotkey: {hotkey}";
+			hotkeyTextBlock.Visibility = Visibility.Visible;
+		}
+	}
 
-        private static string ComposeTooltip(string baseTooltip, string? hotkey) =>
-                string.IsNullOrWhiteSpace(hotkey) ? baseTooltip : $"{baseTooltip} (Hotkey: {hotkey})";
+	private static string ComposeTooltip(string baseTooltip, string? hotkey) =>
+			  string.IsNullOrWhiteSpace(hotkey) ? baseTooltip : $"{baseTooltip} (Hotkey: {hotkey})";
 
-        private void ShowStatus(string title, string message, InfoBarSeverity severity)
-        {
-                void Update()
-                {
-                        StatusInfoBar.Title = title;
+	private void ShowStatus(string title, string message, InfoBarSeverity severity)
+	{
+		void Update()
+		{
+			StatusInfoBar.Title = title;
 			StatusInfoBar.Message = message;
 			StatusInfoBar.Severity = severity;
-                        StatusInfoBar.IsOpen = true;
+			StatusInfoBar.IsOpen = true;
 			AutomationProperties.SetName(StatusInfoBar, $"{title} status");
 			AutomationProperties.SetHelpText(StatusInfoBar, message);
 			_statusDismissTimer.Stop();
@@ -1409,13 +1495,13 @@ public sealed partial class MainWindow : Window
 	private void StatusDismissTimer_Tick(object? sender, object e)
 	{
 		_statusDismissTimer.Stop();
-                StatusInfoBar.IsOpen = false;
+		StatusInfoBar.IsOpen = false;
 	}
 
 	private void StatusInfoBar_CloseButtonClick(InfoBar sender, object args)
 	{
 		_statusDismissTimer.Stop();
-                StatusInfoBar.IsOpen = false;
+		StatusInfoBar.IsOpen = false;
 	}
 
 
@@ -1436,72 +1522,72 @@ public sealed partial class MainWindow : Window
 		await dialog.ShowAsync();
 	}
 
-        private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-                if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
-                {
-                        _audioDeviceManager.SelectMicrophone(device);
-                        if (_settings.AudioSettings != null)
-                        {
-                                _settings.AudioSettings.ActiveCaptureDeviceFullName = GetDeviceFriendlyName(device);
-                                _settingsManager.SaveSettingsToFile(_settings);
-                        }
-                        RestartMicrophoneVisualizationCapture();
-                }
-                else
-                {
-                        StopMicrophoneVisualizationCapture();
-                }
-        }
+	private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
+		{
+			_audioDeviceManager.SelectMicrophone(device);
+			if (_settings.AudioSettings != null)
+			{
+				_settings.AudioSettings.ActiveCaptureDeviceFullName = GetDeviceFriendlyName(device);
+				_settingsManager.SaveSettingsToFile(_settings);
+			}
+			RestartMicrophoneVisualizationCapture();
+		}
+		else
+		{
+			StopMicrophoneVisualizationCapture();
+		}
+	}
 
-        private void MicWaveArea_PointerReleased(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
-        {
-                if (_settings.AudioSettings == null)
-                        return;
-                bool newState = !_settings.AudioSettings.EnableMicrophoneVisualization;
-                _settings.AudioSettings.EnableMicrophoneVisualization = newState;
-                _settingsManager.SaveSettingsToFile(_settings);
-                if (newState)
-                {
-                        InitializeMicrophoneVisualization();
-                        StartMicrophoneVisualizationCapture();
-                }
-                else
-                {
-                        DisposeMicrophoneVisualization();
-                        if (MicWaveformOffLabel != null)
-                                MicWaveformOffLabel.Visibility = Visibility.Visible;
-                }
-        }
+	private void MicWaveArea_PointerReleased(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+	{
+		if (_settings.AudioSettings == null)
+			return;
+		bool newState = !_settings.AudioSettings.EnableMicrophoneVisualization;
+		_settings.AudioSettings.EnableMicrophoneVisualization = newState;
+		_settingsManager.SaveSettingsToFile(_settings);
+		if (newState)
+		{
+			InitializeMicrophoneVisualization();
+			StartMicrophoneVisualizationCapture();
+		}
+		else
+		{
+			DisposeMicrophoneVisualization();
+			if (MicWaveformOffLabel != null)
+				MicWaveformOffLabel.Visibility = Visibility.Visible;
+		}
+	}
 
-        private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-                if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
-                        _activeSpeechService = svc;
-                UpdateRecordingActionAvailability();
-        }
+	private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
+			_activeSpeechService = svc;
+		UpdateRecordingActionAvailability();
+	}
 
-        private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-                if (CmbInsertOption.SelectedItem is DictationInsertOption opt)
-                {
-                        _insertOption = opt;
-                        UpdateThirdPartyExplanation(opt);
-                }
-        }
+	private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (CmbInsertOption.SelectedItem is DictationInsertOption opt)
+		{
+			_insertOption = opt;
+			UpdateThirdPartyExplanation(opt);
+		}
+	}
 
-        private void UpdateThirdPartyExplanation(DictationInsertOption option)
-        {
-                string explanation = option switch
-                {
-                        DictationInsertOption.DoNotInsert => DoNotInsertExplanation,
-                        DictationInsertOption.SendKeys => SendKeysExplanation,
-                        DictationInsertOption.Paste => PasteExplanation,
-                        _ => string.Empty
-                };
+	private void UpdateThirdPartyExplanation(DictationInsertOption option)
+	{
+		string explanation = option switch
+		{
+			DictationInsertOption.DoNotInsert => DoNotInsertExplanation,
+			DictationInsertOption.SendKeys => SendKeysExplanation,
+			DictationInsertOption.Paste => PasteExplanation,
+			_ => string.Empty
+		};
 
-                ThirdPartyExplanationText.Text = explanation;
-        }
+		ThirdPartyExplanationText.Text = explanation;
+	}
 
 	private void InsertIntoActiveApplication(string text)
 	{
@@ -1545,9 +1631,9 @@ public sealed partial class MainWindow : Window
 		catch (TaskCanceledException) { }
 	}
 
-        internal void SetOcrText(string message)
-        {
-                TxtOcr.Text = message;
-        }
+	internal void SetOcrText(string message)
+	{
+		TxtOcr.Text = message;
+	}
 
 }
