@@ -3,8 +3,11 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
+using Mutation.Ui.ViewModels;
+using Mutation.Ui.Views;
 using NAudio.Wave;
 using ScottPlot;
 using ScottPlot.Plottables;
@@ -44,7 +47,7 @@ public sealed partial class MainWindow : Window
 	private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
 
 	private WaveInEvent? _waveformCapture;
-	private DispatcherQueueTimer? _waveformTimer;
+        private DispatcherQueueTimer? _waveformTimer;
 	// ScottPlot v5 renamed SignalPlot (v4) to Signal. Adjusting type accordingly.
 	private Signal? _waveformSignal;
 	private double[] _waveformBuffer = Array.Empty<double>();
@@ -63,8 +66,9 @@ public sealed partial class MainWindow : Window
 	private ISpeechToTextService? _activeSpeechService;
 	private CancellationTokenSource _formatDebounceCts = new();
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
-	private readonly DispatcherTimer _statusDismissTimer;
-	private bool _hotkeyRouterInitialized;
+        private readonly DispatcherTimer _statusDismissTimer;
+        private bool _hotkeyRouterInitialized;
+        private SettingsDialog? _settingsDialog;
 
 	private static readonly IReadOnlyDictionary<string, string> AudioMimeTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 	{
@@ -173,12 +177,12 @@ public sealed partial class MainWindow : Window
 			BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
 
 		InitializeHotkeyVisuals();
-		InitializeHotkeyRouter();
+                InitializeHotkeyRouter();
 
-		this.Closed += MainWindow_Closed;
-	}
+                this.Closed += MainWindow_Closed;
+        }
 
-	private void ApplyMultiLineTextBoxPreferences()
+        private void ApplyMultiLineTextBoxPreferences()
 	{
 		int configuredMaxLines = _settings.MainWindowUiSettings?.MaxTextBoxLineCount ?? 5;
 		if (configuredMaxLines <= 0)
@@ -200,7 +204,56 @@ public sealed partial class MainWindow : Window
 
 			if (textBox.MinHeight > desiredMaxHeight)
 				textBox.MinHeight = lineHeight + padding;
-		}
+        }
+
+        private async Task OpenSettingsDialogAsync()
+        {
+                if (_settingsDialog != null)
+                {
+                        _settingsDialog.Focus(FocusState.Programmatic);
+                        return;
+                }
+
+                var viewModel = new SettingsDialogViewModel(_settings, _settingsManager, OnSettingsDialogSaved);
+                var dialog = new SettingsDialog(viewModel)
+                {
+                        XamlRoot = Content is FrameworkElement fe ? fe.XamlRoot : null
+                };
+                dialog.Closed += SettingsDialog_Closed;
+                _settingsDialog = dialog;
+                await dialog.ShowAsync();
+        }
+
+        private void OnSettingsDialogSaved(Settings updatedSettings)
+        {
+                ApplyMultiLineTextBoxPreferences();
+        }
+
+        private void SettingsDialog_Closed(ContentDialog sender, ContentDialogClosedEventArgs args)
+        {
+                if (_settingsDialog != null)
+                {
+                        _settingsDialog.Closed -= SettingsDialog_Closed;
+                        _settingsDialog = null;
+                }
+        }
+
+        private async void HeaderNavigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+        {
+                if (args.SelectedItem is NavigationViewItem item && item.Tag is string tag && tag == "Settings")
+                {
+                        sender.SelectedItem = null;
+                        sender.IsPaneOpen = false;
+                        await OpenSettingsDialogAsync();
+                }
+        }
+
+        private void SettingsPaneAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        {
+                HeaderNavigation.IsPaneOpen = true;
+                HeaderNavigation.Focus(FocusState.Programmatic);
+                args.Handled = true;
+        }
 	}
 
 	private IEnumerable<TextBox> GetMultiLineTextBoxes()

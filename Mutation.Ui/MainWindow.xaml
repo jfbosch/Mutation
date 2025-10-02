@@ -10,6 +10,10 @@
     mc:Ignorable="d"
     Title="Mutation">
 
+    <Window.KeyboardAccelerators>
+        <KeyboardAccelerator Key="F" Modifiers="Menu" Invoked="SettingsPaneAccelerator_Invoked" />
+    </Window.KeyboardAccelerators>
+
     <Window.SystemBackdrop>
         <MicaBackdrop />
     </Window.SystemBackdrop>
@@ -31,6 +35,22 @@
                 <TextBlock Text="Mutation Workspace" Style="{StaticResource TitleTextStyle}" AutomationProperties.Name="Application Title" />
                 <TextBlock Text="Capture ideas, format transcripts, and automate workflows from one polished surface." Style="{StaticResource SubtitleTextStyle}" />
             </StackPanel>
+
+            <NavigationView
+                x:Name="HeaderNavigation"
+                Grid.Column="2"
+                Width="64"
+                PaneDisplayMode="LeftMinimal"
+                IsPaneOpen="False"
+                IsBackButtonVisible="Collapsed"
+                IsSettingsVisible="False"
+                IsPaneToggleButtonVisible="False"
+                AutomationProperties.Name="Main menu"
+                SelectionChanged="HeaderNavigation_SelectionChanged">
+                <NavigationView.MenuItems>
+                    <NavigationViewItem Content="Settings" Icon="Setting" Tag="Settings" />
+                </NavigationView.MenuItems>
+            </NavigationView>
         </Grid>
 
         <Grid Grid.Row="1">

@@ -24,9 +24,13 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
-	<PropertyGroup>
-		<ActiveDebugProfile>Mutation.Ui</ActiveDebugProfile>
-	</PropertyGroup>
+        <PropertyGroup>
+                <ActiveDebugProfile>Mutation.Ui</ActiveDebugProfile>
+        </PropertyGroup>
+
+        <PropertyGroup>
+                <EnableDefaultPageItems>false</EnableDefaultPageItems>
+        </PropertyGroup>
 
 	<ItemGroup>
 		<None Update="CustomAudio\*.wav">
@@ -116,7 +120,8 @@
 		<PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<Page Include="Views/RegionSelectionWindow.xaml" />
-	</ItemGroup>
+        <ItemGroup>
+                <Page Include="Views/RegionSelectionWindow.xaml" />
+                <Page Include="Views/SettingsDialog.xaml" />
+        </ItemGroup>
 </Project>
