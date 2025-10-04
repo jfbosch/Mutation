@@ -10,10 +10,6 @@
     mc:Ignorable="d"
     Title="Mutation">
 
-    <Window.KeyboardAccelerators>
-        <KeyboardAccelerator Key="F" Modifiers="Alt" ScopeOwner="{x:Bind BtnHamburger}" Invoked="HamburgerAccelerator_Invoked" />
-    </Window.KeyboardAccelerators>
-
     <Window.SystemBackdrop>
         <MicaBackdrop />
     </Window.SystemBackdrop>

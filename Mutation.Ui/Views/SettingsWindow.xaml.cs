@@ -1,4 +1,4 @@
-using CognitiveSupport;
+using AppSettings = CognitiveSupport.Settings;
 using CoreAudio;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -19,6 +19,7 @@ public sealed partial class SettingsWindow : ContentDialog
 {
     private readonly MainWindow _owner;
     private readonly DispatcherQueue _dispatcher;
+    private readonly Action<SettingsDialogSaveResult> _applySaveResult;
     private SettingsDialogSaveResult? _pendingSaveResult;
     private SettingsDialogCloseReason _lastCloseReason = SettingsDialogCloseReason.Cancel;
 
@@ -26,10 +27,11 @@ public sealed partial class SettingsWindow : ContentDialog
 
     public bool IsShowing { get; private set; }
 
-    public SettingsWindow(MainWindow owner, Settings settings, ISettingsManager settingsManager, AudioDeviceManager audioDeviceManager)
+    public SettingsWindow(MainWindow owner, AppSettings settings, ISettingsManager settingsManager, AudioDeviceManager audioDeviceManager, Action<SettingsDialogSaveResult> applyResult)
     {
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         _dispatcher = DispatcherQueue.GetForCurrentThread();
+        _applySaveResult = applyResult ?? throw new ArgumentNullException(nameof(applyResult));
         ViewModel = new SettingsDialogViewModel(settings, settingsManager, audioDeviceManager)
         {
             BrowseForFileAsync = BrowseForBeepAsync
@@ -92,27 +94,7 @@ public sealed partial class SettingsWindow : ContentDialog
 
     private void ApplySaveResult(SettingsDialogSaveResult result)
     {
-        if (result.ApplyMultiLinePreferences)
-        {
-            _owner.ApplyMultiLinePreferencesFromSettings();
-        }
-        if (result.RefreshHotkeyVisuals)
-        {
-            _owner.RefreshHotkeyVisualsFromSettings();
-        }
-        if (result.RefreshMicrophoneSelection)
-        {
-            _owner.RefreshMicrophoneSelectionFromSettings(result.ActiveMicrophoneName);
-        }
-        if (result.ReloadBeeps)
-        {
-            BeepPlayer.Initialize(_owner.Settings);
-        }
-        if (result.ResetWindowPosition)
-        {
-            _owner.CenterWindowOnCurrentDisplay();
-        }
-        _owner.ShowTransientStatus("Settings", "Settings saved.", InfoBarSeverity.Success);
+        _applySaveResult(result);
     }
 
     private async Task BrowseForBeepAsync(SettingRowViewModel row)
