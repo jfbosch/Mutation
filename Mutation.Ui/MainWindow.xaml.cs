@@ -4,7 +4,6 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
 using NAudio.Wave;
@@ -24,7 +23,6 @@ using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
-using Windows.System;
 using WinRT.Interop;
 
 
@@ -131,18 +129,8 @@ public sealed partial class MainWindow : Window
 		_playbackPlayer.MediaEnded += PlaybackPlayer_MediaEnded;
 		_playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
 
-                InitializeComponent();
-
-                var altF = new KeyboardAccelerator
-                {
-                        Key = VirtualKey.F,
-                        Modifiers = VirtualKeyModifiers.Menu,
-                        ScopeOwner = BtnHamburger
-                };
-                altF.Invoked += HamburgerAccelerator_Invoked;
-                BtnHamburger.KeyboardAccelerators.Add(altF);
-
-                InitializeMicrophoneVisualization();
+		InitializeComponent();
+		InitializeMicrophoneVisualization();
 
 		UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
 		AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the latest recording again.");
@@ -1648,6 +1636,67 @@ public sealed partial class MainWindow : Window
         internal void SetOcrText(string message)
         {
                 TxtOcr.Text = message;
+        }
+
+        internal Settings Settings => _settings;
+
+        internal void ApplyMultiLinePreferencesFromSettings()
+        {
+                ApplyMultiLineTextBoxPreferences();
+        }
+
+        internal void RefreshHotkeyVisualsFromSettings()
+        {
+                InitializeHotkeyVisuals();
+        }
+
+        internal void RefreshMicrophoneSelectionFromSettings(string? preferredDevice)
+        {
+                var devices = _audioDeviceManager.CaptureDevices.ToList();
+                CmbMicrophone.ItemsSource = devices;
+
+                if (!string.IsNullOrWhiteSpace(preferredDevice))
+                {
+                        var match = devices.FirstOrDefault(d => GetDeviceFriendlyName(d) == preferredDevice);
+                        if (match != null)
+                        {
+                                CmbMicrophone.SelectedItem = match;
+                        }
+                        else
+                        {
+                                RestorePersistedMicrophoneSelection(devices);
+                        }
+                }
+                else
+                {
+                        RestorePersistedMicrophoneSelection(devices);
+                }
+
+                if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
+                {
+                        _audioDeviceManager.SelectMicrophone(device);
+                        RestartMicrophoneVisualizationCapture();
+                }
+        }
+
+        internal void CenterWindowOnCurrentDisplay()
+        {
+                var appWindow = this.AppWindow;
+                if (appWindow is null)
+                        return;
+
+                var displayArea = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Primary);
+                var bounds = displayArea.WorkArea;
+                int width = appWindow.Size.Width;
+                int height = appWindow.Size.Height;
+                int x = bounds.X + Math.Max(0, (bounds.Width - width) / 2);
+                int y = bounds.Y + Math.Max(0, (bounds.Height - height) / 2);
+                appWindow.Move(new PointInt32(x, y));
+        }
+
+        internal void ShowTransientStatus(string title, string message, InfoBarSeverity severity)
+        {
+                ShowStatus(title, message, severity);
         }
 
 }

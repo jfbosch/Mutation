@@ -234,7 +234,7 @@
                                         Content="{x:Bind PrimaryActionLabel}"
                                         Command="{x:Bind PrimaryActionCommand}"
                                         Visibility="{x:Bind PrimaryActionLabel, Converter={StaticResource StringToVisibilityConverter}}"
-                                        AutomationProperties.Name="{x:Bind PrimaryActionLabel}"
+                                        AutomationProperties.Name="{x:Bind DisplayName} action"
                                         AutomationProperties.HelpText="{x:Bind Description}" />
                                     <Button
                                         Content="{x:Bind SecondaryActionLabel}"
