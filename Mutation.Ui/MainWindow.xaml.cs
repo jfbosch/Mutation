@@ -1,5 +1,6 @@
 ﻿using CognitiveSupport;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -16,6 +17,7 @@ using System.Linq;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Windows.Graphics;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage;
@@ -1631,9 +1633,70 @@ public sealed partial class MainWindow : Window
 		catch (TaskCanceledException) { }
 	}
 
-	internal void SetOcrText(string message)
-	{
-		TxtOcr.Text = message;
-	}
+        internal void SetOcrText(string message)
+        {
+                TxtOcr.Text = message;
+        }
+
+        internal Settings Settings => _settings;
+
+        internal void ApplyMultiLinePreferencesFromSettings()
+        {
+                ApplyMultiLineTextBoxPreferences();
+        }
+
+        internal void RefreshHotkeyVisualsFromSettings()
+        {
+                InitializeHotkeyVisuals();
+        }
+
+        internal void RefreshMicrophoneSelectionFromSettings(string? preferredDevice)
+        {
+                var devices = _audioDeviceManager.CaptureDevices.ToList();
+                CmbMicrophone.ItemsSource = devices;
+
+                if (!string.IsNullOrWhiteSpace(preferredDevice))
+                {
+                        var match = devices.FirstOrDefault(d => GetDeviceFriendlyName(d) == preferredDevice);
+                        if (match != null)
+                        {
+                                CmbMicrophone.SelectedItem = match;
+                        }
+                        else
+                        {
+                                RestorePersistedMicrophoneSelection(devices);
+                        }
+                }
+                else
+                {
+                        RestorePersistedMicrophoneSelection(devices);
+                }
+
+                if (CmbMicrophone.SelectedItem is CoreAudio.MMDevice device)
+                {
+                        _audioDeviceManager.SelectMicrophone(device);
+                        RestartMicrophoneVisualizationCapture();
+                }
+        }
+
+        internal void CenterWindowOnCurrentDisplay()
+        {
+                var appWindow = this.AppWindow;
+                if (appWindow is null)
+                        return;
+
+                var displayArea = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Primary);
+                var bounds = displayArea.WorkArea;
+                int width = appWindow.Size.Width;
+                int height = appWindow.Size.Height;
+                int x = bounds.X + Math.Max(0, (bounds.Width - width) / 2);
+                int y = bounds.Y + Math.Max(0, (bounds.Height - height) / 2);
+                appWindow.Move(new PointInt32(x, y));
+        }
+
+        internal void ShowTransientStatus(string title, string message, InfoBarSeverity severity)
+        {
+                ShowStatus(title, message, severity);
+        }
 
 }

@@ -570,18 +570,27 @@ public class HotkeyManager : IDisposable
 		catch { }
 	}
 
-	private static string NormalizeHotkey(Hotkey hk)
-	{
-		// Construct a deterministic modifier order & uppercase key for set membership
-		Span<char> buffer = stackalloc char[64];
-		var sb = new System.Text.StringBuilder(32);
-		if (hk.Control) sb.Append("CTRL+");
-		if (hk.Shift) sb.Append("SHIFT+");
-		if (hk.Alt) sb.Append("ALT+");
-		if (hk.Win) sb.Append("WIN+");
-		sb.Append(hk.Key.ToString().ToUpperInvariant());
-		return sb.ToString();
-	}
+        internal static string NormalizeHotkey(Hotkey hk)
+        {
+                // Construct a deterministic modifier order & uppercase key for set membership
+                Span<char> buffer = stackalloc char[64];
+                var sb = new System.Text.StringBuilder(32);
+                if (hk.Control) sb.Append("CTRL+");
+                if (hk.Shift) sb.Append("SHIFT+");
+                if (hk.Alt) sb.Append("ALT+");
+                if (hk.Win) sb.Append("WIN+");
+                sb.Append(hk.Key.ToString().ToUpperInvariant());
+                return sb.ToString();
+        }
+
+        public static string NormalizeHotkey(string text)
+        {
+                if (string.IsNullOrWhiteSpace(text))
+                        throw new ArgumentException("Hotkey cannot be empty.", nameof(text));
+
+                var parsed = Hotkey.Parse(text);
+                return NormalizeHotkey(parsed);
+        }
 
 	public void Dispose()
 	{
