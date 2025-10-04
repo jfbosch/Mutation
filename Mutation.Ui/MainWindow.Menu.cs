@@ -3,12 +3,14 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Automation;
+using Mutation.Ui.Views;
+using System.Threading.Tasks;
 
 namespace Mutation.Ui;
 
 public sealed partial class MainWindow
 {
-    private ContentDialog? _settingsDialog; // cached settings dialog moved to this partial
+    private SettingsWindow? _settingsDialog; // cached settings dialog moved to this partial
 
     // Hamburger / Menu related handlers split into partial for clarity
     private void Hamburger_Click(object sender, RoutedEventArgs e)
@@ -24,35 +26,44 @@ public sealed partial class MainWindow
             FlyoutBase.ShowAttachedFlyout(fe);
     }
 
-    private void MenuSettings_Click(object sender, RoutedEventArgs e)
+    private async void MenuSettings_Click(object sender, RoutedEventArgs e)
     {
-        if (_settingsDialog == null)
-        {
-            _settingsDialog = BuildSettingsDialog();
-        }
-        _settingsDialog.XamlRoot = (this.Content as FrameworkElement)?.XamlRoot; // ensure root
-        _ = _settingsDialog.ShowAsync();
+        await ShowSettingsDialogAsync();
     }
 
-    private ContentDialog BuildSettingsDialog()
+    private async Task ShowSettingsDialogAsync()
     {
-        // Simple placeholder settings dialog (extend later with real settings controls)
-        var panel = new StackPanel { Spacing = 12 };
-        panel.Children.Add(new TextBlock { Text = "Settings", FontSize = 20 });
-        panel.Children.Add(new TextBlock { Text = "Add settings controls here.", TextWrapping = TextWrapping.Wrap });
-
-        var dialog = new ContentDialog
+        if (_settingsDialog is null)
         {
-            Title = "Settings",
-            PrimaryButtonText = "Save",
-            SecondaryButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Primary,
-            Content = panel
-        };
-        AutomationProperties.SetName(dialog, "Settings dialog");
-        AutomationProperties.SetHelpText(dialog, "Application settings");
-        dialog.PrimaryButtonClick += (_, __) => { /* Persist settings if controls added */ ShowStatus("Settings", "Settings saved.", InfoBarSeverity.Success); };
-        return dialog;
+            _settingsDialog = new SettingsWindow(this, _settings, _settingsManager, _audioDeviceManager);
+        }
+
+        if (this.Content is FrameworkElement fe)
+        {
+            _settingsDialog.XamlRoot = fe.XamlRoot;
+        }
+
+        if (_settingsDialog.IsShowing)
+        {
+            _settingsDialog.FocusDialog();
+            return;
+        }
+
+        await _settingsDialog.ShowAsync();
+    }
+
+    private async void HeaderSettings_Click(object sender, RoutedEventArgs e)
+    {
+        await ShowSettingsDialogAsync();
+    }
+
+    private void HamburgerAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+        if (BtnHamburger is FrameworkElement button)
+        {
+            FlyoutBase.ShowAttachedFlyout(button);
+        }
     }
 
 }

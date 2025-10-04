@@ -116,7 +116,4 @@
 		<PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<Page Include="Views/RegionSelectionWindow.xaml" />
-	</ItemGroup>
 </Project>

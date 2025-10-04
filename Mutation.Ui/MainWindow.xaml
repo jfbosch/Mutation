@@ -10,6 +10,10 @@
     mc:Ignorable="d"
     Title="Mutation">
 
+    <Window.KeyboardAccelerators>
+        <KeyboardAccelerator Key="F" Modifiers="Alt" ScopeOwner="{x:Bind BtnHamburger}" Invoked="HamburgerAccelerator_Invoked" />
+    </Window.KeyboardAccelerators>
+
     <Window.SystemBackdrop>
         <MicaBackdrop />
     </Window.SystemBackdrop>
@@ -58,6 +62,20 @@
             <StackPanel Grid.Column="1" Margin="32,24,32,12" Spacing="4">
                 <TextBlock Text="Mutation Workspace" Style="{StaticResource TitleTextStyle}" AutomationProperties.Name="Application Title" />
                 <TextBlock Text="Capture ideas, format transcripts, and automate workflows from one polished surface." Style="{StaticResource SubtitleTextStyle}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,16,0">
+                <Button
+                    Style="{StaticResource SubtleButtonStyle}"
+                    Padding="12,6"
+                    AutomationProperties.Name="Open settings"
+                    AutomationProperties.HelpText="Open application settings"
+                    Click="HeaderSettings_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE713;" FontFamily="Segoe Fluent Icons" />
+                        <TextBlock Text="Settings" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
         </Grid>
 
