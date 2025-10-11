@@ -1,13 +1,10 @@
 ﻿using CognitiveSupport;
 using CoreAudio;
-using Deepgram;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Mutation.Ui.Services;
-using OpenAI;
-using OpenAI.Managers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -46,11 +43,10 @@ public partial class App : Application
 			builder.Services.AddSingleton<UiStateManager>();
 			builder.Services.AddSingleton<MMDeviceEnumerator>(_ => new MMDeviceEnumerator(Guid.NewGuid()));
 			builder.Services.AddSingleton<AudioDeviceManager>();
-			builder.Services.AddSingleton<IOcrService>(sp =>
-	 new OcrService(
-		  settings.AzureComputerVisionSettings?.ApiKey,
-		  settings.AzureComputerVisionSettings?.Endpoint,
-		  settings.AzureComputerVisionSettings?.TimeoutSeconds ?? 10));
+                        builder.Services.AddSingleton<OcrServiceFactory>();
+                        builder.Services.AddSingleton<SpeechToTextServiceFactory>();
+                        builder.Services.AddSingleton<IOcrService>(sp =>
+         sp.GetRequiredService<OcrServiceFactory>().Create(settings.AzureComputerVisionSettings));
 			builder.Services.AddSingleton<OcrManager>(sp =>
 					  new OcrManager(settings,
 									  sp.GetRequiredService<IOcrService>(),
@@ -65,7 +61,7 @@ public partial class App : Application
 			builder.Services.AddSingleton<TranscriptFormatter>();
                         builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 			builder.Services.AddHttpClient(OpenAiHttpClientName);
-			AddSpeechToTextServices(builder, settings);
+                        AddSpeechToTextServices(builder, settings);
 			builder.Services.AddSingleton<MainWindow>();
 
 			_host = builder.Build();
@@ -368,59 +364,13 @@ public partial class App : Application
 		}
 	}
 
-	private static void AddSpeechToTextServices(HostApplicationBuilder builder, Settings settings)
-	{
-		builder.Services.AddSingleton<ISpeechToTextService[]>(sp =>
-		{
-			List<ISpeechToTextService> services = new();
-			var sttSettings = settings.SpeechToTextSettings?.Services ?? Array.Empty<SpeechToTextServiceSettings>();
-			foreach (var serviceSettings in sttSettings)
-			{
-				switch (serviceSettings.Provider)
-				{
-					case SpeechToTextProviders.OpenAi:
-						services.Add(CreateWhisperSpeechToTextService(builder, serviceSettings, sp));
-						break;
-					case SpeechToTextProviders.Deepgram:
-						services.Add(CreateDeepgramSpeechToTextService(builder, serviceSettings));
-						break;
-					default:
-						throw new NotSupportedException($"The SpeechToText service '{serviceSettings.Provider}' is not supported.");
-				}
-			}
-			return services.ToArray();
-		});
-	}
-
-	private static ISpeechToTextService CreateWhisperSpeechToTextService(HostApplicationBuilder builder, SpeechToTextServiceSettings serviceSettings, IServiceProvider sp)
-	{
-		string baseDomain = serviceSettings.BaseDomain?.Trim() ?? string.Empty;
-
-		OpenAiOptions options = new OpenAiOptions
-		{
-			ApiKey = serviceSettings.ApiKey ?? string.Empty,
-			BaseDomain = baseDomain,
-		};
-
-		IHttpClientFactory httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-		HttpClient httpClient = httpClientFactory.CreateClient("openai-http-client");
-		var openAIService = new OpenAIService(options, httpClient);
-
-		return new OpenAiSpeechToTextService(
-				  serviceSettings.Name ?? string.Empty,
-				  openAIService,
-				  serviceSettings.ModelId ?? string.Empty,
-				  serviceSettings.TimeoutSeconds > 0 ? serviceSettings.TimeoutSeconds : 10);
-	}
-
-	private static ISpeechToTextService CreateDeepgramSpeechToTextService(HostApplicationBuilder builder, SpeechToTextServiceSettings serviceSettings)
-	{
-		Deepgram.Clients.Interfaces.v1.IListenRESTClient deepgramClient = ClientFactory.CreateListenRESTClient(serviceSettings.ApiKey ?? string.Empty);
-
-		return new DeepgramSpeechToTextService(
-				  serviceSettings.Name ?? string.Empty,
-				  deepgramClient,
-				  serviceSettings.ModelId ?? string.Empty,
-				  serviceSettings.TimeoutSeconds > 0 ? serviceSettings.TimeoutSeconds : 10);
-	}
+        private static void AddSpeechToTextServices(HostApplicationBuilder builder, Settings settings)
+        {
+                builder.Services.AddSingleton<ISpeechToTextService[]>(sp =>
+                {
+                        var factory = sp.GetRequiredService<SpeechToTextServiceFactory>();
+                        var sttSettings = settings.SpeechToTextSettings?.Services ?? Array.Empty<SpeechToTextServiceSettings>();
+                        return factory.CreateAll(sttSettings).ToArray();
+                });
+        }
 }

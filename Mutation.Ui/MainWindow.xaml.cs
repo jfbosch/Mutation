@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
+using Mutation.Ui.Views;
 using NAudio.Wave;
 using ScottPlot;
 using ScottPlot.Plottables;
@@ -33,13 +34,15 @@ public sealed partial class MainWindow : Window
 	private readonly ISettingsManager _settingsManager;
 	private readonly AudioDeviceManager _audioDeviceManager;
 	private readonly OcrManager _ocrManager;
-	private readonly ISpeechToTextService[] _speechServices;
+        private ISpeechToTextService[] _speechServices;
 	private readonly SpeechToTextManager _speechManager;
 	private readonly TranscriptFormatter _transcriptFormatter;
 	private readonly ITextToSpeechService _textToSpeech;
 	private readonly Settings _settings;
 	private HotkeyManager? _hotkeyManager;
-	private readonly MediaPlayer _playbackPlayer;
+        private readonly MediaPlayer _playbackPlayer;
+        private readonly SpeechToTextServiceFactory _speechServiceFactory;
+        private readonly OcrServiceFactory _ocrServiceFactory;
 	private bool _isPlayingRecording;
 	private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
 
@@ -101,27 +104,30 @@ public sealed partial class MainWindow : Window
 	public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
 	private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
 
-	public MainWindow(
-		ClipboardManager clipboard,
-		UiStateManager uiStateManager,
-		AudioDeviceManager audioDeviceManager,
-		OcrManager ocrManager,
-		ISpeechToTextService[] speechServices,
-		ITextToSpeechService textToSpeech,
-		TranscriptFormatter transcriptFormatter,
-
-		ISettingsManager settingsManager,
-		Settings settings)
-	{
-		_clipboard = clipboard;
-		_uiStateManager = uiStateManager;
-		_settingsManager = settingsManager;
-		_audioDeviceManager = audioDeviceManager;
-		_ocrManager = ocrManager;
-		_speechServices = speechServices;
-		_textToSpeech = textToSpeech;
-		_transcriptFormatter = transcriptFormatter;
-		_settings = settings;
+        public MainWindow(
+                ClipboardManager clipboard,
+                UiStateManager uiStateManager,
+                AudioDeviceManager audioDeviceManager,
+                OcrManager ocrManager,
+                ISpeechToTextService[] speechServices,
+                ITextToSpeechService textToSpeech,
+                TranscriptFormatter transcriptFormatter,
+                SpeechToTextServiceFactory speechServiceFactory,
+                OcrServiceFactory ocrServiceFactory,
+                ISettingsManager settingsManager,
+                Settings settings)
+        {
+                _clipboard = clipboard;
+                _uiStateManager = uiStateManager;
+                _settingsManager = settingsManager;
+                _audioDeviceManager = audioDeviceManager;
+                _ocrManager = ocrManager;
+                _speechServices = speechServices;
+                _textToSpeech = textToSpeech;
+                _transcriptFormatter = transcriptFormatter;
+                _settings = settings;
+                _speechServiceFactory = speechServiceFactory;
+                _ocrServiceFactory = ocrServiceFactory;
 		_speechManager = new SpeechToTextManager(settings);
 		_playbackPlayer = new MediaPlayer { AutoPlay = false };
 		_playbackPlayer.MediaEnded += PlaybackPlayer_MediaEnded;
@@ -173,10 +179,96 @@ public sealed partial class MainWindow : Window
 			BeepPlayer.Play(_audioDeviceManager.IsMuted ? BeepType.Mute : BeepType.Unmute);
 
 		InitializeHotkeyVisuals();
-		InitializeHotkeyRouter();
+                InitializeHotkeyRouter();
 
-		this.Closed += MainWindow_Closed;
-	}
+                this.Closed += MainWindow_Closed;
+        }
+
+        private async void OpenSettings_Click(object sender, RoutedEventArgs e)
+        {
+                var dialog = new SettingsDialog(_settings, this)
+                {
+                        XamlRoot = (Content as FrameworkElement)?.XamlRoot
+                };
+
+                var result = await dialog.ShowAsync();
+                if (result == ContentDialogResult.Primary && dialog.UpdatedSettings is Settings updated)
+                        await ApplySettingsAsync(updated);
+        }
+
+        private Task ApplySettingsAsync(Settings updated)
+        {
+                if (updated is null)
+                        return Task.CompletedTask;
+
+                bool wasVisualizationEnabled = VisualizationEnabled;
+
+                _settings.CopyFrom(updated);
+
+                TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
+
+                ApplyMultiLineTextBoxPreferences();
+                InitializeHotkeyVisuals();
+                InitializeHotkeyRouter();
+                RefreshHotkeyRouterRegistrations();
+
+                try
+                {
+                        var services = _speechServiceFactory.CreateAll(_settings.SpeechToTextSettings?.Services ?? Array.Empty<SpeechToTextServiceSettings>()).ToArray();
+                        _speechServices = services;
+                        CmbSpeechService.ItemsSource = _speechServices;
+                        RestorePersistedSpeechServiceSelection();
+                        UpdateRecordingActionAvailability();
+                }
+                catch (Exception ex)
+                {
+                        ShowStatus("Speech to Text", $"Unable to apply providers: {ex.Message}", InfoBarSeverity.Error);
+                }
+
+                try
+                {
+                        var ocrService = _ocrServiceFactory.Create(_settings.AzureComputerVisionSettings);
+                        _ocrManager.UpdateOcrService(ocrService);
+                }
+                catch (Exception ex)
+                {
+                        ShowStatus("OCR", ex.Message, InfoBarSeverity.Warning);
+                }
+
+                var micList = _audioDeviceManager.CaptureDevices.ToList();
+                CmbMicrophone.ItemsSource = micList;
+                RestorePersistedMicrophoneSelection(micList);
+
+                if (VisualizationEnabled)
+                {
+                        if (!wasVisualizationEnabled)
+                        {
+                                InitializeMicrophoneVisualization();
+                                StartMicrophoneVisualizationCapture();
+                        }
+                        else
+                        {
+                                RestartMicrophoneVisualizationCapture();
+                        }
+                }
+                else
+                {
+                        DisposeMicrophoneVisualization();
+                        if (MicWaveformOffLabel != null)
+                                MicWaveformOffLabel.Visibility = Visibility.Visible;
+                }
+
+                BeepPlayer.Initialize(_settings);
+                if (BeepPlayer.LastInitializationIssues.Count > 0)
+                {
+                        ShowStatus("Custom audio", string.Join("; ", BeepPlayer.LastInitializationIssues), InfoBarSeverity.Warning);
+                }
+
+                _settingsManager.SaveSettingsToFile(_settings);
+                ShowStatus("Settings", "Preferences saved.", InfoBarSeverity.Success);
+
+                return Task.CompletedTask;
+        }
 
 	private void ApplyMultiLineTextBoxPreferences()
 	{
