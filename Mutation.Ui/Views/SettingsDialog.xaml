@@ -236,7 +236,7 @@
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Spacing="6">
                                                     <TextBlock Text="Provider" />
-                                                    <ComboBox ItemsSource="{x:Bind SettingsRoot.ViewModel.ProviderOptions, Mode=OneWay}" SelectedItem="{x:Bind Provider, Mode=TwoWay}"  SelectionChanged="OnSelectionChanged" />
+                                                    <ComboBox ItemsSource="{x:Bind ProviderOptions, Mode=OneWay}" SelectedItem="{x:Bind Provider, Mode=TwoWay}"  SelectionChanged="OnSelectionChanged" />
                                                 </StackPanel>
                                             </Grid>
 
@@ -275,7 +275,7 @@
                                                 <TextBox Text="{x:Bind Prompt, Mode=TwoWay}" PlaceholderText="Optional prompt" AcceptsReturn="True"  TextChanged="OnFormChanged" />
                                             </StackPanel>
 
-                                            <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind SettingsRoot.ViewModel.RemoveSpeechServiceCommand}" CommandParameter="{Binding}" />
+                                            <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind RemoveCommand}" CommandParameter="{x:Bind Mode=OneWay}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -331,7 +331,7 @@
                                                 <TextBlock Text="Deployment" />
                                                 <TextBox Text="{x:Bind DeploymentId, Mode=TwoWay}" PlaceholderText="mutation-format"  TextChanged="OnFormChanged" />
                                             </StackPanel>
-                                            <Button Grid.Column="2" Content="Remove" Command="{x:Bind SettingsRoot.ViewModel.RemoveDeploymentCommand}" CommandParameter="{Binding}" />
+                                            <Button Grid.Column="2" Content="Remove" Command="{x:Bind RemoveCommand}" CommandParameter="{x:Bind Mode=OneWay}" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -374,11 +374,11 @@
                                             </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Spacing="6">
                                                     <TextBlock Text="Match type" />
-                                                    <ComboBox ItemsSource="{x:Bind SettingsRoot.ViewModel.MatchTypeOptions, Mode=OneWay}" SelectedItem="{x:Bind MatchType, Mode=TwoWay}"  SelectionChanged="OnSelectionChanged" />
+                                                    <ComboBox ItemsSource="{x:Bind MatchTypeOptions, Mode=OneWay}" SelectedItem="{x:Bind MatchType, Mode=TwoWay}"  SelectionChanged="OnSelectionChanged" />
                                                 </StackPanel>
                                                 <ToggleSwitch Grid.Column="1" Header="Case sensitive" IsOn="{x:Bind CaseSensitive, Mode=TwoWay}"  Toggled="OnToggleChanged" />
                                             </Grid>
-                                            <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind SettingsRoot.ViewModel.RemoveRuleCommand}" CommandParameter="{Binding}" />
+                                            <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind RemoveCommand}" CommandParameter="{x:Bind Mode=OneWay}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -490,7 +490,7 @@
                                             <TextBlock Text="To" />
                                             <TextBox Text="{x:Bind ToHotkey, Mode=TwoWay}" PlaceholderText="CTRL+ALT+N"  TextChanged="OnFormChanged" />
                                         </StackPanel>
-                                        <Button Grid.Column="2" Content="Remove" Command="{x:Bind SettingsRoot.ViewModel.RemoveHotkeyRouteCommand}" CommandParameter="{Binding}" />
+                                        <Button Grid.Column="2" Content="Remove" Command="{x:Bind RemoveCommand}" CommandParameter="{x:Bind Mode=OneWay}" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>

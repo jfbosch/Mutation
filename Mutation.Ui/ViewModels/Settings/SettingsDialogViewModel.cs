@@ -80,10 +80,10 @@ internal sealed class SettingsDialogViewModel : ObservableObject
 
                 SelectedSectionItem = Sections.FirstOrDefault();
 
-                SpeechServices = new ObservableCollection<SpeechServiceEntryViewModel>((WorkingCopy.SpeechToTextSettings?.Services ?? Array.Empty<SpeechToTextServiceSettings>()).Select(s => new SpeechServiceEntryViewModel(s)));
-                ModelDeploymentMaps = new ObservableCollection<ModelDeploymentMapViewModel>((WorkingCopy.LlmSettings?.ModelDeploymentIdMaps ?? new List<LlmSettings.ModelDeploymentIdMap>()).Select(m => new ModelDeploymentMapViewModel(m)));
-                TranscriptRules = new ObservableCollection<TranscriptFormatRuleViewModel>((WorkingCopy.LlmSettings?.TranscriptFormatRules ?? new List<LlmSettings.TranscriptFormatRule>()).Select(r => new TranscriptFormatRuleViewModel(r)));
-                HotkeyRoutes = new ObservableCollection<HotkeyRouteViewModel>((WorkingCopy.HotKeyRouterSettings?.Mappings ?? new List<HotKeyRouterSettings.HotKeyRouterMap>()).Select(m => new HotkeyRouteViewModel(m)));
+                SpeechServices = new ObservableCollection<SpeechServiceEntryViewModel>((WorkingCopy.SpeechToTextSettings?.Services ?? Array.Empty<SpeechToTextServiceSettings>()).Select(s => new SpeechServiceEntryViewModel(this, s)));
+                ModelDeploymentMaps = new ObservableCollection<ModelDeploymentMapViewModel>((WorkingCopy.LlmSettings?.ModelDeploymentIdMaps ?? new List<LlmSettings.ModelDeploymentIdMap>()).Select(m => new ModelDeploymentMapViewModel(this, m)));
+                TranscriptRules = new ObservableCollection<TranscriptFormatRuleViewModel>((WorkingCopy.LlmSettings?.TranscriptFormatRules ?? new List<LlmSettings.TranscriptFormatRule>()).Select(r => new TranscriptFormatRuleViewModel(this, r)));
+                HotkeyRoutes = new ObservableCollection<HotkeyRouteViewModel>((WorkingCopy.HotKeyRouterSettings?.Mappings ?? new List<HotKeyRouterSettings.HotKeyRouterMap>()).Select(m => new HotkeyRouteViewModel(this, m)));
 
                 foreach (var route in HotkeyRoutes)
                         AttachChangeTracking(route);
@@ -101,7 +101,7 @@ internal sealed class SettingsDialogViewModel : ObservableObject
 
                 _addSpeechServiceCommand = new RelayCommand(() =>
                 {
-                        var entry = new SpeechServiceEntryViewModel(new SpeechToTextServiceSettings { Provider = SpeechToTextProviders.OpenAi, TimeoutSeconds = 10 });
+                        var entry = new SpeechServiceEntryViewModel(this, new SpeechToTextServiceSettings { Provider = SpeechToTextProviders.OpenAi, TimeoutSeconds = 10 });
                         AttachChangeTracking(entry);
                         SpeechServices.Add(entry);
                 });
@@ -114,7 +114,7 @@ internal sealed class SettingsDialogViewModel : ObservableObject
 
                 _addDeploymentCommand = new RelayCommand(() =>
                 {
-                        var vm = new ModelDeploymentMapViewModel(new LlmSettings.ModelDeploymentIdMap());
+                        var vm = new ModelDeploymentMapViewModel(this, new LlmSettings.ModelDeploymentIdMap());
                         AttachChangeTracking(vm);
                         ModelDeploymentMaps.Add(vm);
                 });
@@ -127,7 +127,7 @@ internal sealed class SettingsDialogViewModel : ObservableObject
 
                 _addRuleCommand = new RelayCommand(() =>
                 {
-                        var rule = new TranscriptFormatRuleViewModel(new LlmSettings.TranscriptFormatRule { MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Plain });
+                        var rule = new TranscriptFormatRuleViewModel(this, new LlmSettings.TranscriptFormatRule { MatchType = LlmSettings.TranscriptFormatRule.MatchTypeEnum.Plain });
                         AttachChangeTracking(rule);
                         TranscriptRules.Add(rule);
                 });
@@ -140,7 +140,7 @@ internal sealed class SettingsDialogViewModel : ObservableObject
 
                 _addHotkeyRouteCommand = new RelayCommand(() =>
                 {
-                        var route = new HotkeyRouteViewModel(new HotKeyRouterSettings.HotKeyRouterMap(string.Empty, string.Empty));
+                        var route = new HotkeyRouteViewModel(this, new HotKeyRouterSettings.HotKeyRouterMap(string.Empty, string.Empty));
                         AttachChangeTracking(route);
                         HotkeyRoutes.Add(route);
                 });
@@ -379,6 +379,7 @@ internal sealed class SettingsDialogViewModel : ObservableObject
 
 internal sealed class SpeechServiceEntryViewModel : ObservableObject
 {
+        private readonly SettingsDialogViewModel _owner;
         private string? _name;
         private SpeechToTextProviders _provider;
         private string? _apiKey;
@@ -387,8 +388,9 @@ internal sealed class SpeechServiceEntryViewModel : ObservableObject
         private string? _prompt;
         private int _timeoutSeconds;
 
-        public SpeechServiceEntryViewModel(SpeechToTextServiceSettings settings)
+        public SpeechServiceEntryViewModel(SettingsDialogViewModel owner, SpeechToTextServiceSettings settings)
         {
+                _owner = owner ?? throw new ArgumentNullException(nameof(owner));
                 _name = settings.Name;
                 _provider = settings.Provider;
                 _apiKey = settings.ApiKey;
@@ -397,6 +399,10 @@ internal sealed class SpeechServiceEntryViewModel : ObservableObject
                 _prompt = settings.SpeechToTextPrompt;
                 _timeoutSeconds = settings.TimeoutSeconds <= 0 ? 10 : settings.TimeoutSeconds;
         }
+
+        public IReadOnlyList<SpeechToTextProviders> ProviderOptions => _owner.ProviderOptions;
+
+        public ICommand RemoveCommand => _owner.RemoveSpeechServiceCommand;
 
         public string? Name
         {
@@ -469,14 +475,18 @@ internal sealed class SpeechServiceEntryViewModel : ObservableObject
 
 internal sealed class ModelDeploymentMapViewModel : ObservableObject
 {
+        private readonly SettingsDialogViewModel _owner;
         private string? _modelName;
         private string? _deploymentId;
 
-        public ModelDeploymentMapViewModel(LlmSettings.ModelDeploymentIdMap model)
+        public ModelDeploymentMapViewModel(SettingsDialogViewModel owner, LlmSettings.ModelDeploymentIdMap model)
         {
+                _owner = owner ?? throw new ArgumentNullException(nameof(owner));
                 _modelName = model.ModelName;
                 _deploymentId = model.DeploymentId;
         }
+
+        public ICommand RemoveCommand => _owner.RemoveDeploymentCommand;
 
         public string? ModelName
         {
@@ -504,18 +514,24 @@ internal sealed class ModelDeploymentMapViewModel : ObservableObject
 
 internal sealed class TranscriptFormatRuleViewModel : ObservableObject
 {
+        private readonly SettingsDialogViewModel _owner;
         private string? _find;
         private string? _replaceWith;
         private bool _caseSensitive;
         private LlmSettings.TranscriptFormatRule.MatchTypeEnum _matchType;
 
-        public TranscriptFormatRuleViewModel(LlmSettings.TranscriptFormatRule rule)
+        public TranscriptFormatRuleViewModel(SettingsDialogViewModel owner, LlmSettings.TranscriptFormatRule rule)
         {
+                _owner = owner ?? throw new ArgumentNullException(nameof(owner));
                 _find = rule.Find;
                 _replaceWith = rule.ReplaceWith;
                 _caseSensitive = rule.CaseSensitive;
                 _matchType = rule.MatchType;
         }
+
+        public IReadOnlyList<LlmSettings.TranscriptFormatRule.MatchTypeEnum> MatchTypeOptions => _owner.MatchTypeOptions;
+
+        public ICommand RemoveCommand => _owner.RemoveRuleCommand;
 
         public string? Find
         {
@@ -561,14 +577,18 @@ internal sealed class TranscriptFormatRuleViewModel : ObservableObject
 
 internal sealed class HotkeyRouteViewModel : ObservableObject
 {
+        private readonly SettingsDialogViewModel _owner;
         private string? _fromHotkey;
         private string? _toHotkey;
 
-        public HotkeyRouteViewModel(HotKeyRouterSettings.HotKeyRouterMap map)
+        public HotkeyRouteViewModel(SettingsDialogViewModel owner, HotKeyRouterSettings.HotKeyRouterMap map)
         {
+                _owner = owner ?? throw new ArgumentNullException(nameof(owner));
                 _fromHotkey = map.FromHotKey;
                 _toHotkey = map.ToHotKey;
         }
+
+        public ICommand RemoveCommand => _owner.RemoveHotkeyRouteCommand;
 
         public string? FromHotkey
         {
