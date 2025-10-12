@@ -75,7 +75,8 @@
                         TextWrapping="Wrap"
                         PlaceholderText="Enter your persistent workspace notes"
                         Height="160"
-                        Text="{x:Bind ViewModel.WorkingCopy.UserInstructions, Mode=TwoWay}" />
+                        Text="{x:Bind ViewModel.WorkingCopy.UserInstructions, Mode=TwoWay}" 
+                        TextChanged="OnFormChanged" />
                 </StackPanel>
 
                 <StackPanel
@@ -101,7 +102,7 @@
 
                         <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Spacing="4">
                             <TextBlock Text="Mute toggle hotkey" />
-                            <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.MicrophoneToggleMuteHotKey, Mode=TwoWay}" PlaceholderText="CTRL+ALT+M" />
+                            <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.MicrophoneToggleMuteHotKey, Mode=TwoWay}" PlaceholderText="CTRL+ALT+M"  TextChanged="OnFormChanged" />
                         </StackPanel>
 
                         <ToggleSwitch
@@ -110,13 +111,15 @@
                             Header="Microphone visualization"
                             OnContent="Enabled"
                             OffContent="Disabled"
-                            IsOn="{x:Bind ViewModel.WorkingCopy.AudioSettings.EnableMicrophoneVisualization, Mode=TwoWay}" />
+                            IsOn="{x:Bind ViewModel.WorkingCopy.AudioSettings.EnableMicrophoneVisualization, Mode=TwoWay}" 
+                            Toggled="OnToggleChanged" />
 
                         <ToggleSwitch
                             Grid.Row="2"
                             Grid.ColumnSpan="2"
                             Header="Use custom beep files"
-                            IsOn="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.UseCustomBeeps, Mode=TwoWay}" />
+                            IsOn="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.UseCustomBeeps, Mode=TwoWay}" 
+                            Toggled="OnToggleChanged" />
 
                         <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Spacing="6">
                             <TextBlock Text="Custom beep files" Style="{StaticResource BodyStrongTextBlockStyle}" />
@@ -133,19 +136,19 @@
 
                                 <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
                                     <TextBlock Text="Success" Style="{StaticResource CaptionTextBlockStyle}" />
-                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepSuccessFile, Mode=TwoWay}" />
+                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepSuccessFile, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                                 </StackPanel>
                                 <Button Grid.Row="0" Grid.Column="1" Content="Browse" Click="BrowseSuccess_Click" />
 
                                 <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
                                     <TextBlock Text="Failure" Style="{StaticResource CaptionTextBlockStyle}" />
-                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepFailureFile, Mode=TwoWay}" />
+                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepFailureFile, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                                 </StackPanel>
                                 <Button Grid.Row="1" Grid.Column="1" Content="Browse" Click="BrowseFailure_Click" />
 
                                 <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
                                     <TextBlock Text="Mute" Style="{StaticResource CaptionTextBlockStyle}" />
-                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepMuteFile, Mode=TwoWay}" />
+                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepMuteFile, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                                 </StackPanel>
                                 <Button Grid.Row="2" Grid.Column="1" Content="Browse" Click="BrowseMute_Click" />
                             </Grid>
@@ -155,21 +158,21 @@
                             <StackPanel Orientation="Horizontal" Spacing="12">
                                 <StackPanel Width="260" Spacing="2">
                                     <TextBlock Text="Start" Style="{StaticResource CaptionTextBlockStyle}" />
-                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepStartFile, Mode=TwoWay}" />
+                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepStartFile, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                                 </StackPanel>
                                 <Button Content="Browse" Click="BrowseStart_Click" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="12">
                                 <StackPanel Width="260" Spacing="2">
                                     <TextBlock Text="End" Style="{StaticResource CaptionTextBlockStyle}" />
-                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepEndFile, Mode=TwoWay}" />
+                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepEndFile, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                                 </StackPanel>
                                 <Button Content="Browse" Click="BrowseEnd_Click" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="12">
                                 <StackPanel Width="260" Spacing="2">
                                     <TextBlock Text="Unmute" Style="{StaticResource CaptionTextBlockStyle}" />
-                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepUnmuteFile, Mode=TwoWay}" />
+                                    <TextBox Text="{x:Bind ViewModel.WorkingCopy.AudioSettings.CustomBeepSettings.BeepUnmuteFile, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                                 </StackPanel>
                                 <Button Content="Browse" Click="BrowseUnmute_Click" />
                             </StackPanel>
@@ -192,19 +195,19 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Text="{x:Bind ViewModel.WorkingCopy.SpeechToTextSettings.TempDirectory, Mode=TwoWay}" PlaceholderText="C:\\Users\\You\\AppData\\Local\\Temp" />
+                            <TextBox Grid.Column="0" Text="{x:Bind ViewModel.WorkingCopy.SpeechToTextSettings.TempDirectory, Mode=TwoWay}" PlaceholderText="C:\\Users\\You\\AppData\\Local\\Temp"  TextChanged="OnFormChanged" />
                             <Button Grid.Column="1" Content="Choose" Click="BrowseTempFolder_Click" />
                         </Grid>
                     </StackPanel>
 
                     <StackPanel Spacing="8">
                         <TextBlock Text="Start / stop recording hotkey" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.SpeechToTextSettings.SpeechToTextHotKey, Mode=TwoWay}" PlaceholderText="CTRL+SHIFT+Space" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.SpeechToTextSettings.SpeechToTextHotKey, Mode=TwoWay}" PlaceholderText="CTRL+SHIFT+Space"  TextChanged="OnFormChanged" />
                     </StackPanel>
 
                     <StackPanel Spacing="8">
                         <TextBlock Text="Hotkey after transcription" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.SpeechToTextSettings.SendHotkeyAfterTranscriptionOperation, Mode=TwoWay}" PlaceholderText="Optional" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.SpeechToTextSettings.SendHotkeyAfterTranscriptionOperation, Mode=TwoWay}" PlaceholderText="Optional"  TextChanged="OnFormChanged" />
                     </StackPanel>
 
                     <StackPanel Spacing="12">
@@ -229,11 +232,11 @@
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Spacing="6">
                                                     <TextBlock Text="Display name" />
-                                                    <TextBox Text="{x:Bind Name, Mode=TwoWay}" PlaceholderText="Production" />
+                                                    <TextBox Text="{x:Bind Name, Mode=TwoWay}" PlaceholderText="Production"  TextChanged="OnFormChanged" />
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Spacing="6">
                                                     <TextBlock Text="Provider" />
-                                                    <ComboBox ItemsSource="{x:Bind SettingsRoot.ViewModel.ProviderOptions, Mode=OneWay}" SelectedItem="{x:Bind Provider, Mode=TwoWay}" />
+                                                    <ComboBox ItemsSource="{x:Bind SettingsRoot.ViewModel.ProviderOptions, Mode=OneWay}" SelectedItem="{x:Bind Provider, Mode=TwoWay}"  SelectionChanged="OnSelectionChanged" />
                                                 </StackPanel>
                                             </Grid>
 
@@ -244,11 +247,11 @@
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Spacing="6">
                                                     <TextBlock Text="API key" />
-                                                    <TextBox Text="{x:Bind ApiKey, Mode=TwoWay}" PlaceholderText="Key" />
+                                                    <TextBox Text="{x:Bind ApiKey, Mode=TwoWay}" PlaceholderText="Key"  TextChanged="OnFormChanged" />
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Spacing="6">
                                                     <TextBlock Text="Base domain" />
-                                                    <TextBox Text="{x:Bind BaseDomain, Mode=TwoWay}" PlaceholderText="api.openai.com" />
+                                                    <TextBox Text="{x:Bind BaseDomain, Mode=TwoWay}" PlaceholderText="api.openai.com"  TextChanged="OnFormChanged" />
                                                 </StackPanel>
                                             </Grid>
 
@@ -259,17 +262,17 @@
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Spacing="6">
                                                     <TextBlock Text="Model" />
-                                                    <TextBox Text="{x:Bind ModelId, Mode=TwoWay}" PlaceholderText="whisper-1" />
+                                                    <TextBox Text="{x:Bind ModelId, Mode=TwoWay}" PlaceholderText="whisper-1"  TextChanged="OnFormChanged" />
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Spacing="6">
                                                     <TextBlock Text="Timeout (seconds)" />
-                                                    <NumberBox Value="{x:Bind TimeoutSeconds, Mode=TwoWay}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Inline" />
+                                                    <NumberBox Value="{x:Bind TimeoutSeconds, Mode=TwoWay}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Inline"  ValueChanged="OnNumberBoxChanged" />
                                                 </StackPanel>
                                             </Grid>
 
                                             <StackPanel Spacing="6">
                                                 <TextBlock Text="Prompt" />
-                                                <TextBox Text="{x:Bind Prompt, Mode=TwoWay}" PlaceholderText="Optional prompt" AcceptsReturn="True" />
+                                                <TextBox Text="{x:Bind Prompt, Mode=TwoWay}" PlaceholderText="Optional prompt" AcceptsReturn="True"  TextChanged="OnFormChanged" />
                                             </StackPanel>
 
                                             <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind SettingsRoot.ViewModel.RemoveSpeechServiceCommand}" CommandParameter="{Binding}" />
@@ -290,15 +293,15 @@
                     <TextBlock Text="Large language model" Style="{StaticResource SectionTitleStyle}" />
                     <StackPanel Spacing="8">
                         <TextBlock Text="API key" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.LlmSettings.ApiKey, Mode=TwoWay}" PlaceholderText="Key" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.LlmSettings.ApiKey, Mode=TwoWay}" PlaceholderText="Key"  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="8">
                         <TextBlock Text="Resource name" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.LlmSettings.ResourceName, Mode=TwoWay}" PlaceholderText="Optional" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.LlmSettings.ResourceName, Mode=TwoWay}" PlaceholderText="Optional"  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="8">
                         <TextBlock Text="Formatting prompt" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.LlmSettings.FormatTranscriptPrompt, Mode=TwoWay}" AcceptsReturn="True" PlaceholderText="Describe how transcripts should be formatted" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.LlmSettings.FormatTranscriptPrompt, Mode=TwoWay}" AcceptsReturn="True" PlaceholderText="Describe how transcripts should be formatted"  TextChanged="OnFormChanged" />
                     </StackPanel>
 
                     <StackPanel Spacing="12">
@@ -322,11 +325,11 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" Spacing="6">
                                                 <TextBlock Text="Model" />
-                                                <TextBox Text="{x:Bind ModelName, Mode=TwoWay}" PlaceholderText="gpt-4o" />
+                                                <TextBox Text="{x:Bind ModelName, Mode=TwoWay}" PlaceholderText="gpt-4o"  TextChanged="OnFormChanged" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Spacing="6">
                                                 <TextBlock Text="Deployment" />
-                                                <TextBox Text="{x:Bind DeploymentId, Mode=TwoWay}" PlaceholderText="mutation-format" />
+                                                <TextBox Text="{x:Bind DeploymentId, Mode=TwoWay}" PlaceholderText="mutation-format"  TextChanged="OnFormChanged" />
                                             </StackPanel>
                                             <Button Grid.Column="2" Content="Remove" Command="{x:Bind SettingsRoot.ViewModel.RemoveDeploymentCommand}" CommandParameter="{Binding}" />
                                         </Grid>
@@ -357,11 +360,11 @@
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Spacing="6">
                                                     <TextBlock Text="Find" />
-                                                    <TextBox Text="{x:Bind Find, Mode=TwoWay}" PlaceholderText="Original" />
+                                                    <TextBox Text="{x:Bind Find, Mode=TwoWay}" PlaceholderText="Original"  TextChanged="OnFormChanged" />
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Spacing="6">
                                                     <TextBlock Text="Replace with" />
-                                                    <TextBox Text="{x:Bind ReplaceWith, Mode=TwoWay}" PlaceholderText="Replacement" />
+                                                    <TextBox Text="{x:Bind ReplaceWith, Mode=TwoWay}" PlaceholderText="Replacement"  TextChanged="OnFormChanged" />
                                                 </StackPanel>
                                             </Grid>
                                             <Grid ColumnSpacing="12">
@@ -371,9 +374,9 @@
                                             </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Spacing="6">
                                                     <TextBlock Text="Match type" />
-                                                    <ComboBox ItemsSource="{x:Bind SettingsRoot.ViewModel.MatchTypeOptions, Mode=OneWay}" SelectedItem="{x:Bind MatchType, Mode=TwoWay}" />
+                                                    <ComboBox ItemsSource="{x:Bind SettingsRoot.ViewModel.MatchTypeOptions, Mode=OneWay}" SelectedItem="{x:Bind MatchType, Mode=TwoWay}"  SelectionChanged="OnSelectionChanged" />
                                                 </StackPanel>
-                                                <ToggleSwitch Grid.Column="1" Header="Case sensitive" IsOn="{x:Bind CaseSensitive, Mode=TwoWay}" />
+                                                <ToggleSwitch Grid.Column="1" Header="Case sensitive" IsOn="{x:Bind CaseSensitive, Mode=TwoWay}"  Toggled="OnToggleChanged" />
                                             </Grid>
                                             <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind SettingsRoot.ViewModel.RemoveRuleCommand}" CommandParameter="{Binding}" />
                                         </StackPanel>
@@ -393,39 +396,39 @@
                     <TextBlock Text="OCR" Style="{StaticResource SectionTitleStyle}" />
                     <StackPanel Spacing="8">
                         <TextBlock Text="API key" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.ApiKey, Mode=TwoWay}" PlaceholderText="Key" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.ApiKey, Mode=TwoWay}" PlaceholderText="Key"  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="8">
                         <TextBlock Text="Endpoint" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.Endpoint, Mode=TwoWay}" PlaceholderText="https://..." />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.Endpoint, Mode=TwoWay}" PlaceholderText="https://..."  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="8">
                         <TextBlock Text="Timeout (seconds)" />
-                        <NumberBox Value="{x:Bind ViewModel.OcrTimeoutSeconds, Mode=TwoWay}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Inline" />
+                        <NumberBox Value="{x:Bind ViewModel.OcrTimeoutSeconds, Mode=TwoWay}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Inline"  ValueChanged="OnNumberBoxChanged" />
                     </StackPanel>
                     <StackPanel Spacing="6">
                         <TextBlock Text="Screenshot hotkey" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.ScreenshotHotKey, Mode=TwoWay}" PlaceholderText="CTRL+SHIFT+S" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.ScreenshotHotKey, Mode=TwoWay}" PlaceholderText="CTRL+SHIFT+S"  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="6">
                         <TextBlock Text="Screenshot + OCR hotkey" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.ScreenshotOcrHotKey, Mode=TwoWay}" PlaceholderText="CTRL+SHIFT+O" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.ScreenshotOcrHotKey, Mode=TwoWay}" PlaceholderText="CTRL+SHIFT+O"  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="6">
                         <TextBlock Text="Screenshot (LRTB) hotkey" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey, Mode=TwoWay}" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.ScreenshotLeftToRightTopToBottomOcrHotKey, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="6">
                         <TextBlock Text="OCR from clipboard" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.OcrHotKey, Mode=TwoWay}" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.OcrHotKey, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="6">
                         <TextBlock Text="OCR from clipboard (LRTB)" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey, Mode=TwoWay}" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.OcrLeftToRightTopToBottomHotKey, Mode=TwoWay}"  TextChanged="OnFormChanged" />
                     </StackPanel>
                     <StackPanel Spacing="6">
                         <TextBlock Text="Hotkey to send after OCR" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.SendHotkeyAfterOcrOperation, Mode=TwoWay}" PlaceholderText="Optional" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.AzureComputerVisionSettings.SendHotkeyAfterOcrOperation, Mode=TwoWay}" PlaceholderText="Optional"  TextChanged="OnFormChanged" />
                     </StackPanel>
                 </StackPanel>
 
@@ -438,7 +441,7 @@
                     <TextBlock Text="Text to speech" Style="{StaticResource SectionTitleStyle}" />
                     <StackPanel Spacing="8">
                         <TextBlock Text="Hotkey" />
-                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.TextToSpeechSettings.TextToSpeechHotKey, Mode=TwoWay}" PlaceholderText="CTRL+SHIFT+T" />
+                        <TextBox Text="{x:Bind ViewModel.WorkingCopy.TextToSpeechSettings.TextToSpeechHotKey, Mode=TwoWay}" PlaceholderText="CTRL+SHIFT+T"  TextChanged="OnFormChanged" />
                     </StackPanel>
                 </StackPanel>
 
@@ -451,7 +454,7 @@
                     <TextBlock Text="Interface" Style="{StaticResource SectionTitleStyle}" />
                     <StackPanel Spacing="8">
                         <TextBlock Text="Max lines for text areas" />
-                        <NumberBox Value="{x:Bind ViewModel.MaxTextAreaLines, Mode=TwoWay}" Minimum="1" Maximum="30" SpinButtonPlacementMode="Inline" />
+                        <NumberBox Value="{x:Bind ViewModel.MaxTextAreaLines, Mode=TwoWay}" Minimum="1" Maximum="30" SpinButtonPlacementMode="Inline"  ValueChanged="OnNumberBoxChanged" />
                     </StackPanel>
                 </StackPanel>
 
@@ -481,11 +484,11 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Spacing="6">
                                             <TextBlock Text="From" />
-                                            <TextBox Text="{x:Bind FromHotkey, Mode=TwoWay}" PlaceholderText="CTRL+ALT+F" />
+                                            <TextBox Text="{x:Bind FromHotkey, Mode=TwoWay}" PlaceholderText="CTRL+ALT+F"  TextChanged="OnFormChanged" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Spacing="6">
                                             <TextBlock Text="To" />
-                                            <TextBox Text="{x:Bind ToHotkey, Mode=TwoWay}" PlaceholderText="CTRL+ALT+N" />
+                                            <TextBox Text="{x:Bind ToHotkey, Mode=TwoWay}" PlaceholderText="CTRL+ALT+N"  TextChanged="OnFormChanged" />
                                         </StackPanel>
                                         <Button Grid.Column="2" Content="Remove" Command="{x:Bind SettingsRoot.ViewModel.RemoveHotkeyRouteCommand}" CommandParameter="{Binding}" />
                                     </Grid>

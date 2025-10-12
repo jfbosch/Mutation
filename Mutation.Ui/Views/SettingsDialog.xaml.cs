@@ -1,7 +1,6 @@
 using CognitiveSupport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Mutation.Ui.ViewModels.Settings;
 using System;
@@ -23,11 +22,6 @@ public sealed partial class SettingsDialog : ContentDialog
                 ViewModel = new SettingsDialogViewModel(settings ?? throw new ArgumentNullException(nameof(settings)));
                 this.InitializeComponent();
                 this.DataContext = ViewModel;
-
-                this.AddHandler(TextBox.TextChangedEvent, new TextChangedEventHandler(OnFormChanged), true);
-                this.AddHandler(ToggleSwitch.ToggledEvent, new RoutedEventHandler(OnToggleChanged), true);
-                this.AddHandler(ComboBox.SelectionChangedEvent, new SelectionChangedEventHandler(OnSelectionChanged), true);
-                this.AddHandler(NumberBox.ValueChangedEvent, new NumberBoxValueChangedEventHandler(OnNumberBoxChanged), true);
 
                 this.Loaded += (_, __) =>
                 {
