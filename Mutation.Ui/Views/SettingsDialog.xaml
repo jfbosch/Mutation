@@ -63,6 +63,7 @@
                     </ItemsControl>
                 </InfoBar>
                 <StackPanel
+                    x:Name="GeneralSectionPanel"
                     Margin="{StaticResource SectionMargin}"
                     Visibility="{x:Bind ViewModel.GeneralSectionVisibility, Mode=OneWay}"
                     x:Load="{x:Bind ViewModel.IsGeneralSectionVisible}">
@@ -78,6 +79,7 @@
                 </StackPanel>
 
                 <StackPanel
+                    x:Name="AudioSectionPanel"
                     Margin="{StaticResource SectionMargin}"
                     Spacing="12"
                     Visibility="{x:Bind ViewModel.AudioSectionVisibility, Mode=OneWay}"
@@ -176,6 +178,7 @@
                 </StackPanel>
 
                 <StackPanel
+                    x:Name="SpeechToTextSectionPanel"
                     Margin="{StaticResource SectionMargin}"
                     Spacing="16"
                     Visibility="{x:Bind ViewModel.SpeechToTextSectionVisibility, Mode=OneWay}"
@@ -230,7 +233,7 @@
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Spacing="6">
                                                     <TextBlock Text="Provider" />
-                                                    <ComboBox ItemsSource="{x:Bind ElementName=SettingsRoot, Path=ViewModel.ProviderOptions, Mode=OneWay}" SelectedItem="{x:Bind Provider, Mode=TwoWay}" />
+                                                    <ComboBox ItemsSource="{x:Bind SettingsRoot.ViewModel.ProviderOptions, Mode=OneWay}" SelectedItem="{x:Bind Provider, Mode=TwoWay}" />
                                                 </StackPanel>
                                             </Grid>
 
@@ -269,7 +272,7 @@
                                                 <TextBox Text="{x:Bind Prompt, Mode=TwoWay}" PlaceholderText="Optional prompt" AcceptsReturn="True" />
                                             </StackPanel>
 
-                                            <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind ElementName=SettingsRoot, Path=ViewModel.RemoveSpeechServiceCommand}" CommandParameter="{Binding}" />
+                                            <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind SettingsRoot.ViewModel.RemoveSpeechServiceCommand}" CommandParameter="{Binding}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -279,6 +282,7 @@
                 </StackPanel>
 
                 <StackPanel
+                    x:Name="LlmSectionPanel"
                     Margin="{StaticResource SectionMargin}"
                     Spacing="16"
                     Visibility="{x:Bind ViewModel.LlmSectionVisibility, Mode=OneWay}"
@@ -324,7 +328,7 @@
                                                 <TextBlock Text="Deployment" />
                                                 <TextBox Text="{x:Bind DeploymentId, Mode=TwoWay}" PlaceholderText="mutation-format" />
                                             </StackPanel>
-                                            <Button Grid.Column="2" Content="Remove" Command="{x:Bind ElementName=SettingsRoot, Path=ViewModel.RemoveDeploymentCommand}" CommandParameter="{Binding}" />
+                                            <Button Grid.Column="2" Content="Remove" Command="{x:Bind SettingsRoot.ViewModel.RemoveDeploymentCommand}" CommandParameter="{Binding}" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -367,11 +371,11 @@
                                             </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0" Spacing="6">
                                                     <TextBlock Text="Match type" />
-                                                    <ComboBox ItemsSource="{x:Bind ElementName=SettingsRoot, Path=ViewModel.MatchTypeOptions, Mode=OneWay}" SelectedItem="{x:Bind MatchType, Mode=TwoWay}" />
+                                                    <ComboBox ItemsSource="{x:Bind SettingsRoot.ViewModel.MatchTypeOptions, Mode=OneWay}" SelectedItem="{x:Bind MatchType, Mode=TwoWay}" />
                                                 </StackPanel>
                                                 <ToggleSwitch Grid.Column="1" Header="Case sensitive" IsOn="{x:Bind CaseSensitive, Mode=TwoWay}" />
                                             </Grid>
-                                            <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind ElementName=SettingsRoot, Path=ViewModel.RemoveRuleCommand}" CommandParameter="{Binding}" />
+                                            <Button Content="Remove" HorizontalAlignment="Left" Command="{x:Bind SettingsRoot.ViewModel.RemoveRuleCommand}" CommandParameter="{Binding}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -381,6 +385,7 @@
                 </StackPanel>
 
                 <StackPanel
+                    x:Name="OcrSectionPanel"
                     Margin="{StaticResource SectionMargin}"
                     Spacing="16"
                     Visibility="{x:Bind ViewModel.OcrSectionVisibility, Mode=OneWay}"
@@ -425,6 +430,7 @@
                 </StackPanel>
 
                 <StackPanel
+                    x:Name="TextToSpeechSectionPanel"
                     Margin="{StaticResource SectionMargin}"
                     Spacing="16"
                     Visibility="{x:Bind ViewModel.TextToSpeechSectionVisibility, Mode=OneWay}"
@@ -437,6 +443,7 @@
                 </StackPanel>
 
                 <StackPanel
+                    x:Name="InterfaceSectionPanel"
                     Margin="{StaticResource SectionMargin}"
                     Spacing="16"
                     Visibility="{x:Bind ViewModel.InterfaceSectionVisibility, Mode=OneWay}"
@@ -449,6 +456,7 @@
                 </StackPanel>
 
                 <StackPanel
+                    x:Name="HotkeyRouterSectionPanel"
                     Margin="{StaticResource SectionMargin}"
                     Spacing="16"
                     Visibility="{x:Bind ViewModel.HotkeyRouterSectionVisibility, Mode=OneWay}"
@@ -479,7 +487,7 @@
                                             <TextBlock Text="To" />
                                             <TextBox Text="{x:Bind ToHotkey, Mode=TwoWay}" PlaceholderText="CTRL+ALT+N" />
                                         </StackPanel>
-                                        <Button Grid.Column="2" Content="Remove" Command="{x:Bind ElementName=SettingsRoot, Path=ViewModel.RemoveHotkeyRouteCommand}" CommandParameter="{Binding}" />
+                                        <Button Grid.Column="2" Content="Remove" Command="{x:Bind SettingsRoot.ViewModel.RemoveHotkeyRouteCommand}" CommandParameter="{Binding}" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>
