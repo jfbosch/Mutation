@@ -19,7 +19,7 @@ public record OcrResult(bool Success, string Message);
 public class OcrManager
 {
     private readonly Settings _settings;
-    private readonly IOcrService _ocrService;
+    private IOcrService _ocrService;
     private readonly ClipboardManager _clipboard;
     private Window? _window;
     private RegionSelectionWindow? _activeOverlay;
@@ -28,8 +28,19 @@ public class OcrManager
     public OcrManager(Settings settings, IOcrService ocrService, ClipboardManager clipboard)
     {
         _settings = settings;
-        _ocrService = ocrService;
+        _ocrService = ocrService ?? throw new ArgumentNullException(nameof(ocrService));
         _clipboard = clipboard;
+    }
+
+    public void UpdateOcrService(IOcrService ocrService)
+    {
+        if (ocrService is null)
+            throw new ArgumentNullException(nameof(ocrService));
+
+        if (!ReferenceEquals(_ocrService, ocrService) && _ocrService is IDisposable disposable)
+            disposable.Dispose();
+
+        _ocrService = ocrService;
     }
 
     public void InitializeWindow(Window window)

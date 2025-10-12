@@ -27,6 +27,20 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
+            <Button
+                Grid.Column="0"
+                Width="44"
+                Height="44"
+                Margin="24,24,0,12"
+                Padding="0"
+                Background="{ThemeResource ControlFillColorTransparentBrush}"
+                CornerRadius="8"
+                Click="OpenSettings_Click"
+                ToolTipService.ToolTip="Settings"
+                AutomationProperties.Name="Open settings">
+                <FontIcon Glyph="&#xE700;" FontSize="18" />
+            </Button>
+
             <StackPanel Grid.Column="1" Margin="32,24,32,12" Spacing="4">
                 <TextBlock Text="Mutation Workspace" Style="{StaticResource TitleTextStyle}" AutomationProperties.Name="Application Title" />
                 <TextBlock Text="Capture ideas, format transcripts, and automate workflows from one polished surface." Style="{StaticResource SubtitleTextStyle}" />
