@@ -36,7 +36,7 @@ public sealed partial class SettingsDialog : ContentDialog
                 };
         }
 
-        public SettingsDialogViewModel ViewModel { get; }
+        internal SettingsDialogViewModel ViewModel { get; }
 
         public Settings? UpdatedSettings { get; private set; }
 

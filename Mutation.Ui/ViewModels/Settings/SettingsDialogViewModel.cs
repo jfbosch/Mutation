@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows.Input;
 using Microsoft.UI.Xaml;
+using SettingsModel = CognitiveSupport.Settings;
 
 namespace Mutation.Ui.ViewModels.Settings;
 
@@ -37,7 +38,7 @@ internal sealed class SettingsSectionItem
 
 internal sealed class SettingsDialogViewModel : ObservableObject
 {
-        private readonly Settings _original;
+        private readonly SettingsModel _original;
         private SettingsSectionItem? _selectedSection;
         private readonly RelayCommand _addSpeechServiceCommand;
         private readonly RelayCommand<SpeechServiceEntryViewModel> _removeSpeechServiceCommand;
@@ -50,7 +51,7 @@ internal sealed class SettingsDialogViewModel : ObservableObject
         private bool _isDirty;
         private readonly ObservableCollection<string> _validationErrors = new();
 
-        public SettingsDialogViewModel(Settings settings)
+        public SettingsDialogViewModel(SettingsModel settings)
         {
                 _original = settings ?? throw new ArgumentNullException(nameof(settings));
                 WorkingCopy = settings.DeepClone();
@@ -153,7 +154,7 @@ internal sealed class SettingsDialogViewModel : ObservableObject
                 RecalculateValidation();
         }
 
-        public Settings WorkingCopy { get; }
+        public SettingsModel WorkingCopy { get; }
 
         public ObservableCollection<SettingsSectionItem> Sections { get; }
 
@@ -268,7 +269,7 @@ internal sealed class SettingsDialogViewModel : ObservableObject
                 RecalculateValidation();
         }
 
-        public Settings BuildUpdatedSettings()
+        public SettingsModel BuildUpdatedSettings()
         {
                 var clone = WorkingCopy.DeepClone();
 
