@@ -1636,4 +1636,8 @@ public sealed partial class MainWindow : Window
 		TxtOcr.Text = message;
 	}
 
+	private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+	{
+
+	}
 }
