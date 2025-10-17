@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
+using Mutation.Ui.Views;
 using NAudio.Wave;
 using ScottPlot;
 using ScottPlot.Plottables;
@@ -1636,8 +1637,19 @@ public sealed partial class MainWindow : Window
 		TxtOcr.Text = message;
 	}
 
-	private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+	private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
 	{
+		if (Content is not FrameworkElement rootElement)
+		{
+			return;
+		}
 
+		var settingsDialog = new SettingsDialog
+		{
+			XamlRoot = rootElement.XamlRoot,
+			RequestedTheme = rootElement.ActualTheme
+		};
+
+		await settingsDialog.ShowAsync();
 	}
 }
