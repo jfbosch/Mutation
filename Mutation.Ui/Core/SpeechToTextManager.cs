@@ -1,8 +1,10 @@
 ﻿using CognitiveSupport;
 using NAudio.Lame;
+using NAudio.Vorbis;
 using NAudio.Wave;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -127,20 +129,21 @@ internal class SpeechToTextManager
 			if (string.Equals(sourceFullPath, destinationFullPath, StringComparison.OrdinalIgnoreCase))
 				return destination;
 
-			try
-			{
-				if (string.Equals(Path.GetExtension(sourceFilePath), ".mp3", StringComparison.OrdinalIgnoreCase))
-				{
-					File.Copy(sourceFilePath, destination, overwrite: true);
-				}
-				else
-				{
-					using var reader = new AudioFileReader(sourceFilePath);
-					using var writer = new LameMP3FileWriter(destination, reader.WaveFormat, LAMEPreset.STANDARD);
-					reader.CopyTo(writer);
-				}
-			}
-			catch
+                        try
+                        {
+                                if (string.Equals(Path.GetExtension(sourceFilePath), ".mp3", StringComparison.OrdinalIgnoreCase))
+                                {
+                                        File.Copy(sourceFilePath, destination, overwrite: true);
+                                }
+                                else
+                                {
+                                        using var reader = CreateWaveReaderForUpload(sourceFilePath);
+                                        using var pcmStream = WaveFormatConversionStream.CreatePcmStream(reader);
+                                        using var writer = new LameMP3FileWriter(destination, pcmStream.WaveFormat, LAMEPreset.STANDARD);
+                                        pcmStream.CopyTo(writer);
+                                }
+                        }
+                        catch
 			{
 				try
 				{
@@ -194,6 +197,28 @@ internal class SpeechToTextManager
                 {
                         _state.AudioRecorderLock.Release();
                 }
+        }
+
+        private static WaveStream CreateWaveReaderForUpload(string sourceFilePath)
+        {
+                try
+                {
+                        return new AudioFileReader(sourceFilePath);
+                }
+                catch (COMException ex) when (ex.HResult == unchecked((int)0xC00D36C4) && IsOggFamily(sourceFilePath))
+                {
+                        return new VorbisWaveReader(sourceFilePath);
+                }
+        }
+
+        private static bool IsOggFamily(string sourceFilePath)
+        {
+                string extension = Path.GetExtension(sourceFilePath);
+                if (string.IsNullOrEmpty(extension))
+                        return false;
+
+                return extension.Equals(".ogg", StringComparison.OrdinalIgnoreCase) ||
+                        extension.Equals(".oga", StringComparison.OrdinalIgnoreCase);
         }
 
         public void CancelTranscription()
