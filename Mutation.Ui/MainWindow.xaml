@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Settings hamburger menu implemented -->
 <Window
     x:Class="Mutation.Ui.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -26,6 +27,30 @@
                 <ColumnDefinition Width="6*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
+
+            <!-- Hamburger Menu Button (Top Left) -->
+            <Button 
+                x:Name="HamburgerButton"
+                Grid.Column="0"
+                Style="{StaticResource IconButtonStyle}"
+                Margin="16,24,0,12"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                ToolTipService.ToolTip="Menu">
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                        <MenuFlyoutItem 
+                            x:Name="SettingsMenuItem"
+                            Text="Settings" 
+                            Click="SettingsMenuItem_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xE713;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+                <FontIcon Glyph="&#xE700;" FontFamily="Segoe Fluent Icons"/>
+            </Button>
 
             <StackPanel Grid.Column="1" Margin="32,24,32,12" Spacing="4">
                 <TextBlock Text="Mutation Workspace" Style="{StaticResource TitleTextStyle}" AutomationProperties.Name="Application Title" />
