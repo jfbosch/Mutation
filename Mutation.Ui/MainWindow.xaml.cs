@@ -1065,22 +1065,24 @@ public sealed partial class MainWindow : Window
 		if (file is null)
 			return;
 
-		try
-		{
-			StopPlayback();
+                try
+                {
+                        StopPlayback();
 
-			_suppressAutoActions = true;
-			TxtSpeechToText.IsReadOnly = true;
-			TxtSpeechToText.Text = "Transcribing...";
-			UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
-			UpdateRecordingActionAvailability();
-			ShowStatus("Speech to Text", $"Transcribing {file.Name}...", InfoBarSeverity.Informational);
+                        string savedPath = await _speechManager.SaveUploadedAudioAsync(file.Path, CancellationToken.None);
 
-			string text = await _activeSpeechService.ConvertAudioToText(string.Empty, file.Path, CancellationToken.None);
+                        _suppressAutoActions = true;
+                        TxtSpeechToText.IsReadOnly = true;
+                        TxtSpeechToText.Text = "Transcribing...";
+                        UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
+                        UpdateRecordingActionAvailability();
+                        ShowStatus("Speech to Text", $"Transcribing {file.Name}...", InfoBarSeverity.Informational);
 
-			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-			FinalizeTranscript(text, $"Transcript generated from {file.Name}.");
-		}
+                        string text = await _activeSpeechService.ConvertAudioToText(string.Empty, savedPath, CancellationToken.None);
+
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        FinalizeTranscript(text, $"Transcript generated from {file.Name}.");
+                }
 		catch (OperationCanceledException)
 		{
 			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
