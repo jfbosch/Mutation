@@ -63,6 +63,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Concentus.Oggfile" Version="1.0.6" />
 		<PackageReference Include="CoreAudio" Version="1.40.0" />
 		<PackageReference Include="Deepgram" Version="6.6.0" />
                 <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />

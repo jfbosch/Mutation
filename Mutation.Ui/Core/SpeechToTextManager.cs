@@ -2,9 +2,12 @@
 using NAudio.Lame;
 using NAudio.Vorbis;
 using NAudio.Wave;
+using Concentus.Oggfile;
+using Concentus.Structs;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +18,7 @@ internal class SpeechToTextManager
 	private readonly Settings _settings;
 	private readonly SpeechToTextState _state;
 	private CognitiveSupport.AudioRecorder? _audioRecorder;
+	private static readonly byte[] OpusHeadSignature = Encoding.ASCII.GetBytes("OpusHead");
 
 	public SpeechToTextManager(Settings settings)
 	{
@@ -207,7 +211,175 @@ internal class SpeechToTextManager
                 }
                 catch (COMException ex) when (ex.HResult == unchecked((int)0xC00D36C4) && IsOggFamily(sourceFilePath))
                 {
+                        return CreateOggWaveReader(sourceFilePath);
+                }
+        }
+
+        private static WaveStream CreateOggWaveReader(string sourceFilePath)
+        {
+                try
+                {
                         return new VorbisWaveReader(sourceFilePath);
+                }
+                catch (Exception ex) when (IsVorbisInitializationFailure(ex))
+                {
+                        if (TryCreateOpusWaveStream(sourceFilePath, out var opusStream))
+                                return opusStream;
+
+                        throw;
+                }
+        }
+
+        private static bool IsVorbisInitializationFailure(Exception ex) => ex is ArgumentException or InvalidDataException;
+
+        private static bool TryCreateOpusWaveStream(string sourceFilePath, out WaveStream waveStream)
+        {
+                waveStream = null!;
+
+                int sampleRate;
+                int channelCount;
+
+                try
+                {
+                        if (!TryReadOpusHeader(sourceFilePath, out sampleRate, out channelCount))
+                                return false;
+                }
+                catch (IOException)
+                {
+                        return false;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                        return false;
+                }
+                catch (NotSupportedException)
+                {
+                        return false;
+                }
+
+                sampleRate = sampleRate <= 0 ? 48000 : sampleRate;
+                channelCount = Math.Clamp(channelCount, 1, 2);
+
+                Span<int> candidateRates = stackalloc int[sampleRate == 48000 ? 1 : 2];
+                candidateRates[0] = sampleRate;
+                if (candidateRates.Length == 2)
+                        candidateRates[1] = 48000;
+
+                Span<int> candidateChannels = stackalloc int[2];
+                candidateChannels[0] = channelCount;
+                candidateChannels[1] = channelCount == 1 ? 2 : 1;
+
+                int lastChannelTried = -1;
+
+                foreach (int channelCandidate in candidateChannels)
+                {
+                        int normalizedChannel = Math.Clamp(channelCandidate, 1, 2);
+                        if (normalizedChannel == lastChannelTried)
+                                continue;
+
+                        lastChannelTried = normalizedChannel;
+
+                        foreach (int candidateRate in candidateRates)
+                        {
+                                try
+                                {
+                                        waveStream = CreateOpusWaveStream(sourceFilePath, candidateRate, normalizedChannel);
+                                        return true;
+                                }
+                                catch (ArgumentOutOfRangeException)
+                                {
+                                        continue;
+                                }
+                                catch (InvalidDataException)
+                                {
+                                        continue;
+                                }
+                        }
+                }
+
+                waveStream = null!;
+                return false;
+        }
+
+        private static bool TryReadOpusHeader(string sourceFilePath, out int sampleRate, out int channelCount)
+        {
+                sampleRate = 0;
+                channelCount = 0;
+
+                byte[] headerBuffer = new byte[256];
+
+                using FileStream stream = File.OpenRead(sourceFilePath);
+                int bytesRead = stream.Read(headerBuffer, 0, headerBuffer.Length);
+                if (bytesRead < 19)
+                        return false;
+
+                ReadOnlySpan<byte> signature = OpusHeadSignature;
+                for (int index = 0; index <= bytesRead - signature.Length - 11; index++)
+                {
+                        if (!MatchesSignature(headerBuffer.AsSpan(index), signature))
+                                continue;
+
+                        int channelIndex = index + signature.Length + 1;
+                        int sampleRateIndex = channelIndex + 3;
+
+                        if (channelIndex >= bytesRead || sampleRateIndex + 3 >= bytesRead)
+                                return false;
+
+                        channelCount = headerBuffer[channelIndex];
+                        sampleRate = BitConverter.ToInt32(headerBuffer, sampleRateIndex);
+                        return channelCount > 0;
+                }
+
+                return false;
+        }
+
+        private static bool MatchesSignature(ReadOnlySpan<byte> source, ReadOnlySpan<byte> signature)
+        {
+                if (source.Length < signature.Length)
+                        return false;
+
+                for (int i = 0; i < signature.Length; i++)
+                {
+                        if (source[i] != signature[i])
+                                return false;
+                }
+
+                return true;
+        }
+
+        private static WaveStream CreateOpusWaveStream(string sourceFilePath, int sampleRate, int channelCount)
+        {
+                MemoryStream pcmBuffer = new MemoryStream();
+                WaveFormat waveFormat = new WaveFormat(sampleRate, 16, channelCount);
+
+                try
+                {
+                        using FileStream fileStream = File.OpenRead(sourceFilePath);
+                        using OpusOggReadStream opusStream = new OpusOggReadStream(OpusDecoder.Create(sampleRate, channelCount), fileStream);
+                        using BinaryWriter writer = new BinaryWriter(pcmBuffer, Encoding.UTF8, leaveOpen: true);
+
+                        while (opusStream.HasNextPacket)
+                        {
+                                short[]? packet = opusStream.DecodeNextPacket();
+                                if (packet is null || packet.Length == 0)
+                                        continue;
+
+                                foreach (short sample in packet)
+                                        writer.Write(sample);
+                        }
+
+                        writer.Flush();
+
+                        if (pcmBuffer.Length == 0)
+                                throw new InvalidDataException("Opus stream contained no decodable packets.");
+
+                        pcmBuffer.Position = 0;
+                        return new RawSourceWaveStream(pcmBuffer, waveFormat);
+                }
+                catch
+                {
+                        pcmBuffer.Dispose();
+                        throw;
                 }
         }
 
