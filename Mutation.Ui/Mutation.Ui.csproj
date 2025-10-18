@@ -119,4 +119,10 @@
 	<ItemGroup>
 		<Page Include="Views/RegionSelectionWindow.xaml" />
 	</ItemGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' != 'Debug'">
+		<!-- Re-enable COM interop when trimming is on -->
+		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+	</PropertyGroup>
+
 </Project>
