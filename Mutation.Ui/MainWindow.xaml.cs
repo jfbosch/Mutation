@@ -150,7 +150,7 @@ public sealed partial class MainWindow : Window
 		_audioDeviceManager.EnsureDefaultMicrophoneSelected();
 
 		UpdateMicrophoneToggleVisuals();
-		UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+		UpdateSpeechButtonVisuals("Record", RecordGlyph);
 		var micList = _audioDeviceManager.CaptureDevices.ToList();
 		CmbMicrophone.ItemsSource = micList;
 		// DisplayMemberPath replaced by using custom CaptureDeviceComboItem if needed; keep for compatibility
@@ -1082,12 +1082,12 @@ public sealed partial class MainWindow : Window
 
                         string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService!, sessionToRetry, string.Empty, CancellationToken.None);
 
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
                         FinalizeTranscript(text, "Transcript refreshed from the selected session.");
                 }
                 catch (OperationCanceledException)
                 {
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
                         TxtSpeechToText.IsReadOnly = false;
 			_suppressAutoActions = false;
 			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
@@ -1095,7 +1095,7 @@ public sealed partial class MainWindow : Window
 		}
 		catch (Exception ex)
 		{
-			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+			UpdateSpeechButtonVisuals("Record", RecordGlyph);
 			TxtSpeechToText.IsReadOnly = false;
 			_suppressAutoActions = false;
 			UpdateRecordingActionAvailability();
@@ -1157,12 +1157,12 @@ public sealed partial class MainWindow : Window
 
                         string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, session, string.Empty, CancellationToken.None);
 
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
                         FinalizeTranscript(text, $"Transcript generated from {session.FileName}.");
                 }
                 catch (OperationCanceledException)
                 {
-                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
                         TxtSpeechToText.IsReadOnly = false;
 			_suppressAutoActions = false;
 			UpdateRecordingActionAvailability();
@@ -1170,7 +1170,7 @@ public sealed partial class MainWindow : Window
 		}
 		catch (Exception ex)
 		{
-			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+			UpdateSpeechButtonVisuals("Record", RecordGlyph);
 			TxtSpeechToText.IsReadOnly = false;
 			_suppressAutoActions = false;
 			UpdateRecordingActionAvailability();
@@ -1205,7 +1205,7 @@ public sealed partial class MainWindow : Window
 			if (_speechManager.Transcribing)
 			{
 				_speechManager.CancelTranscription();
-				UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+				UpdateSpeechButtonVisuals("Record", RecordGlyph);
 				BtnSpeechToText.IsEnabled = true;
 				TxtSpeechToText.IsReadOnly = false;
 				_suppressAutoActions = false;
@@ -1236,7 +1236,7 @@ public sealed partial class MainWindow : Window
                         _suppressAutoActions = true;
                         TxtSpeechToText.IsReadOnly = true;
                         TxtSpeechToText.Text = "Recording...";
-                        UpdateSpeechButtonVisuals("Stop recording", StopGlyph);
+                        UpdateSpeechButtonVisuals("Stop", StopGlyph);
                         ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
                         BeepPlayer.Play(BeepType.Start);
                         StopPlayback();
@@ -1259,13 +1259,13 @@ public sealed partial class MainWindow : Window
                                 {
                                         string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
 
-                                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
                                         BtnSpeechToText.IsEnabled = true;
                                         FinalizeTranscript(text, "Transcript ready and copied.");
                                 }
 				catch (OperationCanceledException)
 				{
-					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+					UpdateSpeechButtonVisuals("Record", RecordGlyph);
 					BtnSpeechToText.IsEnabled = true;
 					TxtSpeechToText.IsReadOnly = false;
 					_suppressAutoActions = false;
