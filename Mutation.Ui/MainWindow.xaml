@@ -294,8 +294,8 @@
                                         x:Name="BtnPlayLatestRecording"
                                         Style="{StaticResource OutlinedButtonStyle}"
                                         Click="BtnPlayLatestRecording_Click"
-                                        AutomationProperties.Name="Play latest recording"
-                                        ToolTipService.ToolTip="Play the most recent speech recording">
+                                        AutomationProperties.Name="Play selected session"
+                                        ToolTipService.ToolTip="Play the selected session">
                                         <FontIcon
                                             x:Name="BtnPlayLatestRecordingIcon"
                                             Glyph="&#xE768;"
@@ -303,11 +303,29 @@
                                     </Button>
 
                                     <Button
+                                        x:Name="BtnSessionOlder"
+                                        Style="{StaticResource OutlinedButtonStyle}"
+                                        Click="BtnSessionOlder_Click"
+                                        AutomationProperties.Name="Go to older session"
+                                        ToolTipService.ToolTip="Switch to an older session">
+                                        <FontIcon Glyph="&#xE76B;" FontFamily="Segoe Fluent Icons" />
+                                    </Button>
+
+                                    <Button
+                                        x:Name="BtnSessionNewer"
+                                        Style="{StaticResource OutlinedButtonStyle}"
+                                        Click="BtnSessionNewer_Click"
+                                        AutomationProperties.Name="Go to newer session"
+                                        ToolTipService.ToolTip="Switch to a newer session">
+                                        <FontIcon Glyph="&#xE76C;" FontFamily="Segoe Fluent Icons" />
+                                    </Button>
+
+                                    <Button
                                         x:Name="BtnRetrySpeechToText"
                                         Style="{StaticResource OutlinedButtonStyle}"
                                         Click="BtnRetrySpeechToText_Click"
                                         AutomationProperties.Name="Retry transcription"
-                                        ToolTipService.ToolTip="Transcribe the latest recording again">
+                                        ToolTipService.ToolTip="Transcribe the selected session again">
                                         <FontIcon Glyph="&#xE72C;" FontFamily="Segoe Fluent Icons" />
                                     </Button>
 
