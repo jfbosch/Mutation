@@ -10,7 +10,9 @@
 	Title="Settings"
 	PrimaryButtonText="Save"
 	SecondaryButtonText="Cancel"
-	DefaultButton="Primary">
+	DefaultButton="Primary"
+	Width="1200"
+	Height="800">
 
 	<ContentDialog.Resources>
 		<DataTemplate x:Key="SettingsCategoryTemplate" x:DataType="local:SettingsCategoryItem">
@@ -31,15 +33,10 @@
 			<ColumnDefinition Width="*" />
 		</Grid.ColumnDefinitions>
 
-		<StackPanel Grid.Row="0" Grid.ColumnSpan="2" Spacing="4">
+	<StackPanel Grid.Row="0" Grid.ColumnSpan="2" Spacing="4">
 			<TextBlock
 				Text="Settings"
 				Style="{StaticResource TitleTextBlockStyle}" />
-			<TextBlock
-				Text="Configure your application preferences here. More settings will be added soon."
-				TextWrapping="Wrap"
-				Style="{StaticResource BodyTextBlockStyle}"
-				Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 		</StackPanel>
 
 		<Border
