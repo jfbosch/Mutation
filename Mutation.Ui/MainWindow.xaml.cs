@@ -1080,11 +1080,7 @@ public sealed partial class MainWindow : Window
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
 
-                        var newSession = await _speechManager.DuplicateSessionAsync(sessionToRetry, CancellationToken.None);
-                        RefreshSessions(newSession);
-                        UpdateRecordingActionAvailability();
-
-                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, newSession, string.Empty, CancellationToken.None);
+                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService!, sessionToRetry, string.Empty, CancellationToken.None);
 
                         UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
                         FinalizeTranscript(text, "Transcript refreshed from the selected session.");
