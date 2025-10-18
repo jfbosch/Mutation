@@ -40,9 +40,12 @@ public sealed partial class MainWindow : Window
 	private readonly ITextToSpeechService _textToSpeech;
 	private readonly Settings _settings;
 	private HotkeyManager? _hotkeyManager;
-	private readonly MediaPlayer _playbackPlayer;
-	private bool _isPlayingRecording;
-	private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
+        private readonly MediaPlayer _playbackPlayer;
+        private bool _isPlayingRecording;
+        private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
+        private readonly List<SpeechSession> _sessionHistory = new();
+        private string? _selectedSessionPath;
+        private SpeechSession? _playingSession;
 
 	private WaveInEvent? _waveformCapture;
 	private DispatcherQueueTimer? _waveformTimer;
@@ -126,14 +129,17 @@ public sealed partial class MainWindow : Window
 		_speechManager = new SpeechToTextManager(settings);
 		_playbackPlayer = new MediaPlayer { AutoPlay = false };
 		_playbackPlayer.MediaEnded += PlaybackPlayer_MediaEnded;
-		_playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
+                _playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
 
-		InitializeComponent();
-		InitializeMicrophoneVisualization();
+                InitializeComponent();
+                InitializeMicrophoneVisualization();
 
-		UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
-		AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the latest recording again.");
-		AutomationProperties.SetHelpText(BtnUploadSpeechAudio, "Upload an audio file for transcription.");
+                RefreshSessions();
+                UpdatePlaybackButtonVisuals("Play selected session", PlayGlyph);
+                AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the selected session again.");
+                AutomationProperties.SetHelpText(BtnUploadSpeechAudio, "Upload an audio file for transcription.");
+                AutomationProperties.SetHelpText(BtnSessionNewer, "Switch to a newer session.");
+                AutomationProperties.SetHelpText(BtnSessionOlder, "Switch to an older session.");
 
 		ApplyMultiLineTextBoxPreferences();
 
@@ -954,28 +960,96 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	private async void BtnPlayLatestRecording_Click(object? sender, RoutedEventArgs? e)
-	{
-		try
-		{
-			if (_isPlayingRecording)
-				StopPlayback();
-			else
-				await StartPlayback();
-		}
-		catch (Exception ex)
-		{
-			StopPlayback();
-			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-			await ShowErrorDialog("Playback Error", ex);
-		}
-	}
+        private async void BtnPlayLatestRecording_Click(object? sender, RoutedEventArgs? e)
+        {
+                try
+                {
+                        var session = GetSelectedSession();
+                        if (session is null)
+                        {
+                                ShowStatus("Speech to Text", "No session is available for playback.", InfoBarSeverity.Warning);
+                                UpdateRecordingActionAvailability();
+                                return;
+                        }
 
-	private async void BtnRetrySpeechToText_Click(object? sender, RoutedEventArgs? e)
-	{
-		if (_speechManager.Recording || _speechManager.Transcribing)
-		{
-			ShowStatus("Speech to Text", "Finish the current operation before retrying.", InfoBarSeverity.Warning);
+                        if (_isPlayingRecording && _playingSession != null && PathsEqual(_playingSession.FilePath, session.FilePath))
+                        {
+                                StopPlayback();
+                        }
+                        else
+                        {
+                                await StartPlaybackAsync(session);
+                        }
+                }
+                catch (Exception ex)
+                {
+                        StopPlayback();
+                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Playback Error", ex);
+                }
+        }
+
+        private async void BtnSessionNewer_Click(object? sender, RoutedEventArgs? e)
+        {
+                try
+                {
+                        await NavigateSessionsAsync(-1);
+                }
+                catch (Exception ex)
+                {
+                        StopPlayback();
+                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Playback Error", ex);
+                }
+        }
+
+        private async void BtnSessionOlder_Click(object? sender, RoutedEventArgs? e)
+        {
+                try
+                {
+                        await NavigateSessionsAsync(1);
+                }
+                catch (Exception ex)
+                {
+                        StopPlayback();
+                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Playback Error", ex);
+                }
+        }
+
+        private async Task NavigateSessionsAsync(int direction)
+        {
+                if (_speechManager.Recording || _speechManager.Transcribing)
+                        return;
+
+                RefreshSessions(preferredPath: _selectedSessionPath);
+
+                if (_sessionHistory.Count == 0)
+                        return;
+
+                int currentIndex = GetSelectedSessionIndex();
+                if (currentIndex < 0)
+                        currentIndex = 0;
+
+                int targetIndex = direction < 0 ? currentIndex - 1 : currentIndex + 1;
+                if (targetIndex < 0 || targetIndex >= _sessionHistory.Count)
+                        return;
+
+                var targetSession = _sessionHistory[targetIndex];
+
+                StopPlayback();
+                _selectedSessionPath = targetSession.FilePath;
+                UpdateSessionNavigationAvailability();
+                UpdateRecordingActionAvailability();
+
+                await StartPlaybackAsync(targetSession);
+        }
+
+        private async void BtnRetrySpeechToText_Click(object? sender, RoutedEventArgs? e)
+        {
+                if (_speechManager.Recording || _speechManager.Transcribing)
+                {
+                        ShowStatus("Speech to Text", "Finish the current operation before retrying.", InfoBarSeverity.Warning);
 			UpdateRecordingActionAvailability();
 			return;
 		}
@@ -987,33 +1061,38 @@ public sealed partial class MainWindow : Window
 			return;
 		}
 
-		if (!_speechManager.HasRecordedAudio())
-		{
-			ShowStatus("Speech to Text", "No recording available to transcribe again.", InfoBarSeverity.Warning);
-			UpdateRecordingActionAvailability();
-			return;
-		}
+                var sessionToRetry = GetSelectedSession();
+                if (sessionToRetry is null)
+                {
+                        ShowStatus("Speech to Text", "No session available to retry.", InfoBarSeverity.Warning);
+                        UpdateRecordingActionAvailability();
+                        return;
+                }
 
-		try
-		{
-			StopPlayback();
+                try
+                {
+                        StopPlayback();
 
-			_suppressAutoActions = true;
+                        _suppressAutoActions = true;
 			TxtSpeechToText.IsReadOnly = true;
 			TxtSpeechToText.Text = "Transcribing...";
 			UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
 
-			string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+                        var newSession = await _speechManager.DuplicateSessionAsync(sessionToRetry, CancellationToken.None);
+                        RefreshSessions(newSession);
+                        UpdateRecordingActionAvailability();
 
-			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-			FinalizeTranscript(text, "Transcript refreshed from the latest recording.");
-		}
-		catch (OperationCanceledException)
-		{
-			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-			TxtSpeechToText.IsReadOnly = false;
+                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, newSession, string.Empty, CancellationToken.None);
+
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        FinalizeTranscript(text, "Transcript refreshed from the selected session.");
+                }
+                catch (OperationCanceledException)
+                {
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        TxtSpeechToText.IsReadOnly = false;
 			_suppressAutoActions = false;
 			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
 			UpdateRecordingActionAvailability();
@@ -1076,15 +1155,19 @@ public sealed partial class MainWindow : Window
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", $"Transcribing {file.Name}...", InfoBarSeverity.Informational);
 
-			string text = await _activeSpeechService.ConvertAudioToText(string.Empty, file.Path, CancellationToken.None);
+                        var session = await _speechManager.ImportUploadedAudioAsync(file.Path, CancellationToken.None);
+                        RefreshSessions(session);
+                        UpdateRecordingActionAvailability();
 
-			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-			FinalizeTranscript(text, $"Transcript generated from {file.Name}.");
-		}
-		catch (OperationCanceledException)
-		{
-			UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-			TxtSpeechToText.IsReadOnly = false;
+                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, session, string.Empty, CancellationToken.None);
+
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        FinalizeTranscript(text, $"Transcript generated from {session.FileName}.");
+                }
+                catch (OperationCanceledException)
+                {
+                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                        TxtSpeechToText.IsReadOnly = false;
 			_suppressAutoActions = false;
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
@@ -1154,19 +1237,20 @@ public sealed partial class MainWindow : Window
 
 			if (!_speechManager.Recording)
 			{
-				_suppressAutoActions = true;
-				TxtSpeechToText.IsReadOnly = true;
-				TxtSpeechToText.Text = "Recording...";
-				UpdateSpeechButtonVisuals("Stop recording", StopGlyph);
-				ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
-				BeepPlayer.Play(BeepType.Start);
-				StopPlayback();
-				await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
-				_suppressAutoActions = false;
-				UpdateRecordingActionAvailability();
-			}
-			else
-			{
+                        _suppressAutoActions = true;
+                        TxtSpeechToText.IsReadOnly = true;
+                        TxtSpeechToText.Text = "Recording...";
+                        UpdateSpeechButtonVisuals("Stop recording", StopGlyph);
+                        ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
+                        BeepPlayer.Play(BeepType.Start);
+                        StopPlayback();
+                        var session = await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+                        RefreshSessions(session);
+                        _suppressAutoActions = false;
+                        UpdateRecordingActionAvailability();
+                }
+                else
+                {
 				BtnSpeechToText.IsEnabled = false;
 				_suppressAutoActions = true;
 				TxtSpeechToText.Text = "Transcribing...";
@@ -1175,14 +1259,14 @@ public sealed partial class MainWindow : Window
 				StopPlayback();
 				UpdateRecordingActionAvailability();
 
-				try
-				{
-					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+                                try
+                                {
+                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
 
-					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
-					BtnSpeechToText.IsEnabled = true;
-					FinalizeTranscript(text, "Transcript ready and copied.");
-				}
+                                        UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
+                                        BtnSpeechToText.IsEnabled = true;
+                                        FinalizeTranscript(text, "Transcript ready and copied.");
+                                }
 				catch (OperationCanceledException)
 				{
 					UpdateSpeechButtonVisuals("Start recording", RecordGlyph);
@@ -1292,38 +1376,141 @@ public sealed partial class MainWindow : Window
 		ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
 	}
 
-	private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
-	{
-		BtnPlayLatestRecordingIcon.Glyph = glyph;
-		string tooltip = automationName == "Play latest recording"
-				  ? "Play the most recent speech recording"
-				  : "Stop playing the most recent speech recording";
-		ToolTipService.SetToolTip(BtnPlayLatestRecording, tooltip);
-		AutomationProperties.SetName(BtnPlayLatestRecording, automationName);
-		AutomationProperties.SetHelpText(BtnPlayLatestRecording, tooltip);
-	}
+        private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
+        {
+                BtnPlayLatestRecordingIcon.Glyph = glyph;
+                string tooltip = automationName == "Play selected session"
+                                  ? "Play the selected session"
+                                  : "Stop playing the selected session";
+                ToolTipService.SetToolTip(BtnPlayLatestRecording, tooltip);
+                AutomationProperties.SetName(BtnPlayLatestRecording, automationName);
+                AutomationProperties.SetHelpText(BtnPlayLatestRecording, tooltip);
+        }
 
-	private void UpdateRecordingActionAvailability()
-	{
-		bool hasRecording = _speechManager.HasRecordedAudio();
-		bool busy = _speechManager.Recording || _speechManager.Transcribing;
+        private void RefreshSessions(SpeechSession? preferredSelection = null, string? preferredPath = null)
+        {
+                var snapshot = _speechManager.GetSessions();
+                _sessionHistory.Clear();
+                _sessionHistory.AddRange(snapshot);
 
-		// The play button remains enabled during playback (_isPlayingRecording) so the user can stop playback,
-		// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
-		BtnPlayLatestRecording.IsEnabled = ShouldEnablePlayLatestRecordingButton(hasRecording, busy);
-		BtnRetrySpeechToText.IsEnabled = hasRecording && _activeSpeechService != null && !busy && !_isPlayingRecording;
-		BtnUploadSpeechAudio.IsEnabled = !busy && !_isPlayingRecording;
-	}
+                if (preferredSelection != null)
+                {
+                        _selectedSessionPath = preferredSelection.FilePath;
+                }
+                else if (!string.IsNullOrWhiteSpace(preferredPath))
+                {
+                        _selectedSessionPath = preferredPath;
+                }
+                else if (!string.IsNullOrWhiteSpace(_selectedSessionPath) && !_sessionHistory.Any(s => PathsEqual(s.FilePath, _selectedSessionPath)))
+                {
+                        _selectedSessionPath = _sessionHistory.FirstOrDefault()?.FilePath;
+                }
+                else if (string.IsNullOrWhiteSpace(_selectedSessionPath))
+                {
+                        _selectedSessionPath = _sessionHistory.FirstOrDefault()?.FilePath;
+                }
 
-	/// <summary>
-	/// Determines whether the Play Latest Recording button should be enabled.
-	/// The button remains enabled during playback so the user can stop playback,
-	/// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
-	/// </summary>
-	private bool ShouldEnablePlayLatestRecordingButton(bool hasRecording, bool busy)
-	{
-		return _isPlayingRecording || (hasRecording && !busy);
-	}
+                UpdateSessionNavigationAvailability();
+        }
+
+        private int GetSelectedSessionIndex()
+        {
+                if (string.IsNullOrWhiteSpace(_selectedSessionPath))
+                        return -1;
+
+                return _sessionHistory.FindIndex(s => PathsEqual(s.FilePath, _selectedSessionPath));
+        }
+
+        private SpeechSession? GetSelectedSession()
+        {
+                int index = GetSelectedSessionIndex();
+                if (index < 0 || index >= _sessionHistory.Count)
+                        return null;
+
+                var session = _sessionHistory[index];
+                if (!File.Exists(session.FilePath))
+                {
+                        RefreshSessions(preferredPath: _selectedSessionPath);
+                        index = GetSelectedSessionIndex();
+                        if (index < 0 || index >= _sessionHistory.Count)
+                                return null;
+
+                        session = _sessionHistory[index];
+                        if (!File.Exists(session.FilePath))
+                                return null;
+                }
+
+                return session;
+        }
+
+        private void UpdateSessionNavigationAvailability()
+        {
+                int index = GetSelectedSessionIndex();
+                bool hasSessions = _sessionHistory.Count > 0;
+                bool canMoveNewer = hasSessions && index > 0;
+                bool canMoveOlder = hasSessions && index >= 0 && index < _sessionHistory.Count - 1;
+                bool busy = _speechManager.Recording || _speechManager.Transcribing;
+
+                BtnSessionNewer.IsEnabled = canMoveNewer && !busy;
+                BtnSessionOlder.IsEnabled = canMoveOlder && !busy;
+
+                string newerTooltip = canMoveNewer ? "Switch to a newer session" : "No newer sessions available";
+                string olderTooltip = canMoveOlder ? "Switch to an older session" : "No older sessions available";
+                ToolTipService.SetToolTip(BtnSessionNewer, newerTooltip);
+                ToolTipService.SetToolTip(BtnSessionOlder, olderTooltip);
+                AutomationProperties.SetHelpText(BtnSessionNewer, newerTooltip);
+                AutomationProperties.SetHelpText(BtnSessionOlder, olderTooltip);
+        }
+
+        private void UpdateRecordingActionAvailability()
+        {
+                var session = GetSelectedSession();
+                bool hasRecording = session != null && File.Exists(session.FilePath);
+                bool busy = _speechManager.Recording || _speechManager.Transcribing;
+
+                // The play button remains enabled during playback (_isPlayingRecording) so the user can stop playback,
+                // but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+                BtnPlayLatestRecording.IsEnabled = ShouldEnablePlaySelectedSessionButton(hasRecording, busy);
+                BtnRetrySpeechToText.IsEnabled = session != null && _activeSpeechService != null && !busy && !_isPlayingRecording;
+                BtnUploadSpeechAudio.IsEnabled = !busy && !_isPlayingRecording;
+                UpdateSessionNavigationAvailability();
+        }
+
+        /// <summary>
+        /// Determines whether the Play Latest Recording button should be enabled.
+        /// The button remains enabled during playback so the user can stop playback,
+        /// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+        /// </summary>
+        private bool ShouldEnablePlaySelectedSessionButton(bool hasRecording, bool busy)
+        {
+                return _isPlayingRecording || (hasRecording && !busy);
+        }
+
+        private void ScheduleSessionCleanup()
+        {
+                var exclusions = new List<string>();
+                var selected = GetSelectedSession();
+                string? selectedPath = selected?.FilePath;
+                if (!string.IsNullOrWhiteSpace(selectedPath))
+                        exclusions.Add(selectedPath);
+
+                if (_playingSession != null)
+                        exclusions.Add(_playingSession.FilePath);
+
+                var recording = _speechManager.CurrentRecordingSession;
+                if (recording != null)
+                        exclusions.Add(recording.FilePath);
+
+                var cleanupTask = _speechManager.CleanupSessionsAsync(exclusions);
+                cleanupTask.ContinueWith(_ =>
+                {
+                        RunOnDispatcher(() =>
+                        {
+                                RefreshSessions(preferredPath: selectedPath);
+                                UpdateRecordingActionAvailability();
+                        });
+                }, TaskScheduler.Default);
+        }
 
 	private void FinalizeTranscript(string rawText, string successMessage)
 	{
@@ -1335,14 +1522,15 @@ public sealed partial class MainWindow : Window
 		_clipboard.SetText(formatted);
 		InsertIntoActiveApplication(formatted);
 
-		BeepPlayer.Play(BeepType.Success);
-		TxtSpeechToText.IsReadOnly = false;
-		_suppressAutoActions = false;
+                BeepPlayer.Play(BeepType.Success);
+                TxtSpeechToText.IsReadOnly = false;
+                _suppressAutoActions = false;
 
-		ShowStatus("Speech to Text", successMessage, InfoBarSeverity.Success);
-		HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
-		UpdateRecordingActionAvailability();
-	}
+                ShowStatus("Speech to Text", successMessage, InfoBarSeverity.Success);
+                HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
+                UpdateRecordingActionAvailability();
+                ScheduleSessionCleanup();
+        }
 
 	private void StopPlayback()
 	{
@@ -1352,52 +1540,63 @@ public sealed partial class MainWindow : Window
 		_playbackPlayer.Pause();
 		if (_playbackPlayer.PlaybackSession != null)
 			_playbackPlayer.PlaybackSession.Position = TimeSpan.Zero;
-		_playbackPlayer.Source = null;
-		_playbackStream?.Dispose();
-		_playbackStream = null;
-		_isPlayingRecording = false;
-		UpdatePlaybackButtonVisuals("Play latest recording", PlayGlyph);
-		UpdateRecordingActionAvailability();
-	}
+                _playbackPlayer.Source = null;
+                _playbackStream?.Dispose();
+                _playbackStream = null;
+                _isPlayingRecording = false;
+                _playingSession = null;
+                UpdatePlaybackButtonVisuals("Play selected session", PlayGlyph);
+                UpdateRecordingActionAvailability();
+        }
 
-	private async Task StartPlayback()
-	{
-		if (!_speechManager.TryGetLatestRecording(out var path))
-		{
-			UpdateRecordingActionAvailability();
-			ShowStatus("Speech to Text", "Record speech before attempting playback.", InfoBarSeverity.Warning);
-			return;
-		}
+        private async Task<bool> StartPlaybackAsync(SpeechSession session)
+        {
+                if (session is null)
+                        return false;
 
-		StopPlayback();
-		// Load file fully into memory to prevent file locking during/after playback.
-		try
-		{
-			byte[] bytes = File.ReadAllBytes(path);
-			_playbackStream?.Dispose();
-			_playbackStream = new InMemoryRandomAccessStream();
-			using (var writer = new DataWriter(_playbackStream.GetOutputStreamAt(0)))
-			{
-				writer.WriteBytes(bytes);
-				await writer.StoreAsync();
-			}
-			_playbackStream.Seek(0);
-			var contentType = await DetermineContentTypeAsync(path);
-			_playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, contentType);
-		}
-		catch (Exception ex)
-		{
-			_playbackStream?.Dispose();
-			_playbackStream = null;
-			ShowStatus("Speech to Text", $"Unable to play recording: {ex.Message}", InfoBarSeverity.Error);
-			return;
-		}
-		_isPlayingRecording = true;
-		UpdatePlaybackButtonVisuals("Stop playback", StopGlyph);
-		UpdateRecordingActionAvailability();
-		ShowStatus("Speech to Text", "Playing the latest recording...", InfoBarSeverity.Informational);
-		_playbackPlayer.Play();
-	}
+                if (!File.Exists(session.FilePath))
+                {
+                        RefreshSessions(preferredPath: _selectedSessionPath);
+                        if (!File.Exists(session.FilePath))
+                        {
+                                ShowStatus("Speech to Text", "The selected session file is missing.", InfoBarSeverity.Warning);
+                                UpdateRecordingActionAvailability();
+                                return false;
+                        }
+                }
+
+                StopPlayback();
+
+                try
+                {
+                        byte[] bytes = File.ReadAllBytes(session.FilePath);
+                        _playbackStream?.Dispose();
+                        _playbackStream = new InMemoryRandomAccessStream();
+                        using (var writer = new DataWriter(_playbackStream.GetOutputStreamAt(0)))
+                        {
+                                writer.WriteBytes(bytes);
+                                await writer.StoreAsync();
+                        }
+                        _playbackStream.Seek(0);
+                        var contentType = await DetermineContentTypeAsync(session.FilePath);
+                        _playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, contentType);
+                }
+                catch (Exception ex)
+                {
+                        _playbackStream?.Dispose();
+                        _playbackStream = null;
+                        ShowStatus("Speech to Text", $"Unable to play {session.FileName}: {ex.Message}", InfoBarSeverity.Error);
+                        return false;
+                }
+
+                _playingSession = session;
+                _isPlayingRecording = true;
+                UpdatePlaybackButtonVisuals("Stop playback", StopGlyph);
+                UpdateRecordingActionAvailability();
+                ShowStatus("Speech to Text", $"Playing {session.FileName}...", InfoBarSeverity.Informational);
+                _playbackPlayer.Play();
+                return true;
+        }
 
 	private void PlaybackPlayer_MediaEnded(MediaPlayer sender, object args)
 	{
@@ -1440,11 +1639,12 @@ public sealed partial class MainWindow : Window
 			action();
 	}
 
-	private void HandlePlaybackFailed(string errorMessage)
-	{
-		StopPlayback();
-		ShowStatus("Speech to Text", $"Playback failed: {errorMessage}", InfoBarSeverity.Error);
-	}
+        private void HandlePlaybackFailed(string errorMessage)
+        {
+                string sessionName = _playingSession?.FileName ?? "session";
+                StopPlayback();
+                ShowStatus("Speech to Text", $"Playback failed for {sessionName}: {errorMessage}", InfoBarSeverity.Error);
+        }
 
 	private void ConfigureButtonHotkey(Button button, TextBlock? hotkeyTextBlock, string? hotkey, string baseTooltip)
 	{
@@ -1470,13 +1670,16 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	private static string ComposeTooltip(string baseTooltip, string? hotkey) =>
-			  string.IsNullOrWhiteSpace(hotkey) ? baseTooltip : $"{baseTooltip} (Hotkey: {hotkey})";
+        private static string ComposeTooltip(string baseTooltip, string? hotkey) =>
+                          string.IsNullOrWhiteSpace(hotkey) ? baseTooltip : $"{baseTooltip} (Hotkey: {hotkey})";
 
-	private void ShowStatus(string title, string message, InfoBarSeverity severity)
-	{
-		void Update()
-		{
+        private static bool PathsEqual(string? left, string? right) =>
+                string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+        private void ShowStatus(string title, string message, InfoBarSeverity severity)
+        {
+                void Update()
+                {
 			StatusInfoBar.Title = title;
 			StatusInfoBar.Message = message;
 			StatusInfoBar.Severity = severity;
