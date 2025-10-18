@@ -332,7 +332,7 @@ internal class SpeechToTextManager
                                         File.Delete(session.FilePath);
                                         currentCount--;
                                 }
-                                catch (IOException)
+                                catch (DirectoryNotFoundException)
                                 {
                                         continue;
                                 }
@@ -344,15 +344,14 @@ internal class SpeechToTextManager
                                 {
                                         continue;
                                 }
-                                catch (DirectoryNotFoundException)
+                                catch (IOException)
                                 {
                                         continue;
                                 }
                         }
                 }
-                catch (IOException)
+                catch (DirectoryNotFoundException)
                 {
-                        // Best-effort cleanup.
                 }
                 catch (UnauthorizedAccessException)
                 {
@@ -360,8 +359,9 @@ internal class SpeechToTextManager
                 catch (PathTooLongException)
                 {
                 }
-                catch (DirectoryNotFoundException)
+                catch (IOException)
                 {
+                        // Best-effort cleanup.
                 }
         }
 
@@ -439,7 +439,7 @@ internal class SpeechToTextManager
 
         private static string NormalizeExtension(string extension)
         {
-                return extension.StartsWith('.', StringComparison.Ordinal) ? extension : $".{extension}";
+                return extension.StartsWith(".", StringComparison.Ordinal) ? extension : $".{extension}";
         }
 
         private static bool TryGetFileLength(string path, out long length)
