@@ -993,7 +993,7 @@ public sealed partial class MainWindow : Window
         {
                 try
                 {
-                        await NavigateSessionsAsync(1);
+                        await NavigateSessionsAsync(-1);
                 }
                 catch (Exception ex)
                 {
@@ -1007,7 +1007,7 @@ public sealed partial class MainWindow : Window
         {
                 try
                 {
-                        await NavigateSessionsAsync(-1);
+                        await NavigateSessionsAsync(1);
                 }
                 catch (Exception ex)
                 {
@@ -1447,15 +1447,15 @@ public sealed partial class MainWindow : Window
                 bool canMoveOlder = hasSessions && index >= 0 && index < _sessionHistory.Count - 1;
                 bool busy = _speechManager.Recording || _speechManager.Transcribing;
 
-                BtnSessionNewer.IsEnabled = canMoveOlder && !busy;
-                BtnSessionOlder.IsEnabled = canMoveNewer && !busy;
+                BtnSessionNewer.IsEnabled = canMoveNewer && !busy;
+                BtnSessionOlder.IsEnabled = canMoveOlder && !busy;
 
                 string newerTooltip = canMoveNewer ? "Switch to a newer session" : "No newer sessions available";
                 string olderTooltip = canMoveOlder ? "Switch to an older session" : "No older sessions available";
-                ToolTipService.SetToolTip(BtnSessionNewer, olderTooltip);
-                ToolTipService.SetToolTip(BtnSessionOlder, newerTooltip);
-                AutomationProperties.SetHelpText(BtnSessionNewer, olderTooltip);
-                AutomationProperties.SetHelpText(BtnSessionOlder, newerTooltip);
+                ToolTipService.SetToolTip(BtnSessionNewer, newerTooltip);
+                ToolTipService.SetToolTip(BtnSessionOlder, olderTooltip);
+                AutomationProperties.SetHelpText(BtnSessionNewer, newerTooltip);
+                AutomationProperties.SetHelpText(BtnSessionOlder, olderTooltip);
         }
 
         private void UpdateRecordingActionAvailability()
