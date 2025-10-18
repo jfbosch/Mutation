@@ -308,7 +308,7 @@
                                         Click="BtnSessionOlder_Click"
                                         AutomationProperties.Name="Go to older session"
                                         ToolTipService.ToolTip="Switch to an older session">
-                                        <FontIcon Glyph="&#xE76C;" FontFamily="Segoe Fluent Icons" />
+                                        <FontIcon Glyph="&#xE76B;" FontFamily="Segoe Fluent Icons" />
                                     </Button>
 
                                     <Button
@@ -317,7 +317,7 @@
                                         Click="BtnSessionNewer_Click"
                                         AutomationProperties.Name="Go to newer session"
                                         ToolTipService.ToolTip="Switch to a newer session">
-                                        <FontIcon Glyph="&#xE76B;" FontFamily="Segoe Fluent Icons" />
+                                        <FontIcon Glyph="&#xE76C;" FontFamily="Segoe Fluent Icons" />
                                     </Button>
 
                                     <Button
