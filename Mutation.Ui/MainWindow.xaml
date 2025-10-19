@@ -50,7 +50,7 @@
                     </MenuFlyout>
                 </Button.Flyout>
                 <Button.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="Alt" Key="F" Invoked="HamburgerButtonAccelerator_Invoked" />
+                    <KeyboardAccelerator Modifiers="Menu" Key="F" Invoked="HamburgerButtonAccelerator_Invoked" />
                 </Button.KeyboardAccelerators>
                 <FontIcon Glyph="&#xE700;" FontFamily="Segoe Fluent Icons"/>
             </Button>

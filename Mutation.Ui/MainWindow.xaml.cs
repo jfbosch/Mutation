@@ -1837,13 +1837,13 @@ public sealed partial class MainWindow : Window
 		TxtOcr.Text = message;
 	}
 
-       private void HamburgerButtonAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
-       {
-               HamburgerButton.Flyout?.ShowAt(HamburgerButton);
-               args.Handled = true;
-       }
+	private void HamburgerButtonAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+	{
+		HamburgerButton.Flyout?.ShowAt(HamburgerButton);
+		args.Handled = true;
+	}
 
-       private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+	private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
 	{
 		if (Content is not FrameworkElement rootElement)
 		{
