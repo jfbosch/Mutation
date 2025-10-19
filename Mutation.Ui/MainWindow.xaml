@@ -270,7 +270,7 @@
                                     Style="{StaticResource AccentButtonStyle}"
                                     Click="BtnSpeechToText_Click"
                                     AccessKey="R"
-                                    AutomationProperties.Name="Start recording"
+                                    AutomationProperties.Name="Record"
                                     ToolTipService.ToolTip="Start or stop speech capture">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                                         <FontIcon
@@ -279,7 +279,7 @@
                                             FontFamily="Segoe Fluent Icons"
                                         />
                                         <StackPanel Spacing="2">
-                                            <TextBlock x:Name="BtnSpeechToTextLabel" Text="Start recording" />
+                                            <TextBlock x:Name="BtnSpeechToTextLabel" Text="Record" />
                                             <TextBlock
                                                 x:Name="BtnSpeechToTextHotkey"
                                                 Text="Hotkey: SHIFT+ALT+U"
