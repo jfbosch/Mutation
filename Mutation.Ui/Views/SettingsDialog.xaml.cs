@@ -75,13 +75,13 @@ public sealed partial class SettingsDialog : ContentDialog
 
 			var bounds = XamlRoot.Size;
 
-			var maxWidth = Math.Min(bounds.Width * 0.95, 1440);
-			var maxHeight = Math.Min(bounds.Height * 0.9, 960);
+				var maxWidth = Math.Min(bounds.Width * 0.97, 1680);
+				var maxHeight = Math.Min(bounds.Height * 0.9, 960);
 
 			MaxWidth = maxWidth;
 			MaxHeight = maxHeight;
 
-			MinWidth = Math.Min(maxWidth, 1120);
+				MinWidth = Math.Min(maxWidth, 1280);
 			MinHeight = Math.Min(maxHeight, 720);
 		};
 }

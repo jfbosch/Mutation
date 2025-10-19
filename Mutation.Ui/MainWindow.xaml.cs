@@ -24,7 +24,8 @@ using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
-using Windows.System;
+using DispatcherQueueHandler = Microsoft.UI.Dispatching.DispatcherQueueHandler;
+using DispatcherQueueTimer = Microsoft.UI.Dispatching.DispatcherQueueTimer;
 using WinRT.Interop;
 
 
@@ -187,13 +188,13 @@ public sealed partial class MainWindow : Window
 
 		this.Closed += MainWindow_Closed;
 
-		var altFAccelerator = new KeyboardAccelerator
-		{
-			Key = VirtualKey.F,
-			Modifiers = VirtualKeyModifiers.Menu
-		};
-		altFAccelerator.Invoked += HamburgerButtonAccelerator_Invoked;
-		KeyboardAccelerators.Add(altFAccelerator);
+                var altFAccelerator = new KeyboardAccelerator
+                {
+                        Key = Windows.System.VirtualKey.F,
+                        Modifiers = Windows.System.VirtualKeyModifiers.Menu
+                };
+                altFAccelerator.Invoked += HamburgerButtonAccelerator_Invoked;
+                this.KeyboardAccelerators.Add(altFAccelerator);
 	}
 
 	private void ApplyMultiLineTextBoxPreferences()

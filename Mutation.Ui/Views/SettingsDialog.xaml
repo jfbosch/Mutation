@@ -11,7 +11,7 @@
 	PrimaryButtonText="Save"
 	SecondaryButtonText="Cancel"
 	DefaultButton="Primary"
-	Width="1320"
+	Width="1480"
 	Height="820">
 
 	<ContentDialog.Resources>
