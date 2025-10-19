@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -72,9 +73,16 @@ public sealed partial class SettingsDialog : ContentDialog
 			if (XamlRoot is null)
 				return;
 
-			var bounds = XamlRoot.Size;
-			MaxWidth = bounds.Width * 0.5;
-			MaxHeight = bounds.Height * 0.5;
-		};
-	}
+                        var bounds = XamlRoot.Size;
+
+                        var maxWidth = Math.Min(bounds.Width * 0.9, 1280);
+                        var maxHeight = Math.Min(bounds.Height * 0.9, 960);
+
+                        MaxWidth = maxWidth;
+                        MaxHeight = maxHeight;
+
+                        MinWidth = Math.Min(maxWidth, 960);
+                        MinHeight = Math.Min(maxHeight, 700);
+                };
+        }
 }

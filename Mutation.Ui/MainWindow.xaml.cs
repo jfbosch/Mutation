@@ -3,6 +3,8 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
 using Mutation.Ui.Views;
@@ -1836,19 +1838,29 @@ public sealed partial class MainWindow : Window
 		TxtOcr.Text = message;
 	}
 
-	private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
-	{
-		if (Content is not FrameworkElement rootElement)
-		{
-			return;
-		}
+        private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+                if (Content is not FrameworkElement rootElement)
+                {
+                        return;
+                }
 
-		var settingsDialog = new SettingsDialog
-		{
-			XamlRoot = rootElement.XamlRoot,
-			RequestedTheme = rootElement.ActualTheme
-		};
+                var settingsDialog = new SettingsDialog
+                {
+                        XamlRoot = rootElement.XamlRoot,
+                        RequestedTheme = rootElement.ActualTheme
+                };
 
-		await settingsDialog.ShowAsync();
-	}
+                await settingsDialog.ShowAsync();
+        }
+
+        private void HamburgerButtonAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+        {
+                args.Handled = true;
+
+                if (HamburgerButton.Flyout is FlyoutBase flyout)
+                {
+                        flyout.ShowAt(HamburgerButton);
+                }
+        }
 }
