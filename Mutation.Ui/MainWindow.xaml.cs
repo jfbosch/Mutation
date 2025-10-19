@@ -24,6 +24,7 @@ using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
+using Windows.System;
 using WinRT.Interop;
 
 
@@ -185,6 +186,14 @@ public sealed partial class MainWindow : Window
 		InitializeHotkeyRouter();
 
 		this.Closed += MainWindow_Closed;
+
+		var altFAccelerator = new KeyboardAccelerator
+		{
+			Key = VirtualKey.F,
+			Modifiers = VirtualKeyModifiers.Menu
+		};
+		altFAccelerator.Invoked += HamburgerButtonAccelerator_Invoked;
+		KeyboardAccelerators.Add(altFAccelerator);
 	}
 
 	private void ApplyMultiLineTextBoxPreferences()
