@@ -3,6 +3,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Mutation.Ui.Services;
 using Mutation.Ui.Views;
@@ -1836,7 +1837,13 @@ public sealed partial class MainWindow : Window
 		TxtOcr.Text = message;
 	}
 
-	private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+       private void HamburgerButtonAccelerator_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+       {
+               HamburgerButton.Flyout?.ShowAt(HamburgerButton);
+               args.Handled = true;
+       }
+
+       private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
 	{
 		if (Content is not FrameworkElement rootElement)
 		{
