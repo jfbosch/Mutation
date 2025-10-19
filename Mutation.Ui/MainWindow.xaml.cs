@@ -194,7 +194,7 @@ public sealed partial class MainWindow : Window
                         Modifiers = Windows.System.VirtualKeyModifiers.Menu
                 };
                 altFAccelerator.Invoked += HamburgerButtonAccelerator_Invoked;
-                this.KeyboardAccelerators.Add(altFAccelerator);
+                ((UIElement)this.Content).KeyboardAccelerators.Add(altFAccelerator);
 	}
 
 	private void ApplyMultiLineTextBoxPreferences()
