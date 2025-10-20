@@ -79,16 +79,18 @@ public class MainWindowUiSettings
         public Point WindowLocation { get; set; }
         public Size WindowSize { get; set; }
         public int MaxTextBoxLineCount { get; set; } = 5;
+        public string? DictationInsertPreference { get; set; } = "Paste";
 
         public MainWindowUiSettings()
         {
         }
 
-        public MainWindowUiSettings(Point windowLocation, Size windowSize, int maxTextBoxLineCount = 5)
+        public MainWindowUiSettings(Point windowLocation, Size windowSize, int maxTextBoxLineCount = 5, string? dictationInsertPreference = "Paste")
         {
                 WindowLocation = windowLocation;
                 WindowSize = windowSize;
                 MaxTextBoxLineCount = maxTextBoxLineCount;
+                DictationInsertPreference = dictationInsertPreference;
         }
 }
 

@@ -57,13 +57,19 @@ internal class SettingsManager : ISettingsManager
                         somethingWasMissing = true;
                 }
 
-                if (settings.MainWindowUiSettings.MaxTextBoxLineCount <= 0)
-                {
-                        settings.MainWindowUiSettings.MaxTextBoxLineCount = 5;
-                        somethingWasMissing = true;
-                }
+		if (settings.MainWindowUiSettings.MaxTextBoxLineCount <= 0)
+		{
+			settings.MainWindowUiSettings.MaxTextBoxLineCount = 5;
+			somethingWasMissing = true;
+		}
 
-                if (settings.AzureComputerVisionSettings is null)
+		if (string.IsNullOrWhiteSpace(settings.MainWindowUiSettings.DictationInsertPreference))
+		{
+			settings.MainWindowUiSettings.DictationInsertPreference = "Paste";
+			somethingWasMissing = true;
+		}
+
+		if (settings.AzureComputerVisionSettings is null)
                 {
                         settings.AzureComputerVisionSettings = new AzureComputerVisionSettings();
                         somethingWasMissing = true;

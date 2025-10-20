@@ -17,6 +17,7 @@ using System.Linq;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage;
@@ -102,6 +103,9 @@ public sealed partial class MainWindow : Window
 	private const double ApproximateLineHeightMultiplier = 1.35;
 	private const double MinimumLineHeightInDips = 1.0;
 
+	[DllImport("user32.dll")]
+	private static extern IntPtr GetForegroundWindow();
+
 	public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
 	private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
 
@@ -170,9 +174,19 @@ public sealed partial class MainWindow : Window
 		var tooltipManager = new TooltipManager(_settings);
 		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
 
-		CmbInsertOption.ItemsSource = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
-		CmbInsertOption.SelectedItem = DictationInsertOption.Paste;
-		UpdateThirdPartyExplanation(DictationInsertOption.Paste);
+		var insertOptions = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
+		CmbInsertOption.ItemsSource = insertOptions;
+		var persistedInsertPreference = _settings.MainWindowUiSettings?.DictationInsertPreference;
+		if (!string.IsNullOrWhiteSpace(persistedInsertPreference) && Enum.TryParse(persistedInsertPreference, true, out DictationInsertOption persistedOption))
+		{
+			_insertOption = persistedOption;
+		}
+		else
+		{
+			_insertOption = DictationInsertOption.Paste;
+		}
+		CmbInsertOption.SelectedItem = _insertOption;
+		UpdateThirdPartyExplanation(_insertOption);
 
 		// After initializing and restoring the active microphone, play a sound
 		// representing the current state (mute/unmute) to reflect actual status.
@@ -1773,8 +1787,15 @@ public sealed partial class MainWindow : Window
 		{
 			_insertOption = opt;
 			UpdateThirdPartyExplanation(opt);
+			var persistedValue = opt.ToString();
+			if (_settings.MainWindowUiSettings != null && _settings.MainWindowUiSettings.DictationInsertPreference != persistedValue)
+			{
+				_settings.MainWindowUiSettings.DictationInsertPreference = persistedValue;
+				_settingsManager.SaveSettingsToFile(_settings);
+			}
 		}
 	}
+
 
 	private void UpdateThirdPartyExplanation(DictationInsertOption option)
 	{
@@ -1793,6 +1814,14 @@ public sealed partial class MainWindow : Window
 	{
 		if (string.IsNullOrWhiteSpace(text))
 			return;
+
+		var windowHandle = WindowNative.GetWindowHandle(this);
+		if (windowHandle != IntPtr.Zero)
+		{
+			var foregroundWindow = GetForegroundWindow();
+			if (foregroundWindow == windowHandle)
+				return;
+		}
 
 		switch (_insertOption)
 		{
