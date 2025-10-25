@@ -1,5 +1,4 @@
 ﻿using CognitiveSupport;
-using CognitiveSupport.ComputerVision;
 using CoreAudio;
 using Deepgram;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +6,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Mutation.Ui.Services;
-using Mutation.Ui.Services.DocumentOcr;
 using OpenAI;
 using OpenAI.Managers;
 using System;
@@ -19,19 +17,19 @@ namespace Mutation.Ui;
 
 public partial class App : Application
 {
-	private Window? _window;
+        private Window? _window;
 	private IHost? _host;
 	private const string OpenAiHttpClientName = "openai-http-client";
 	private bool _isShuttingDown = false;
 
-	public App()
-	{
+        public App()
+        {
 
-	}
+        }
 
-	protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
-	{
-		try
+        protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        {
+                try
 		{
 			HostApplicationBuilder builder = Host.CreateApplicationBuilder();
 
@@ -57,20 +55,6 @@ public partial class App : Application
 					  new OcrManager(settings,
 									  sp.GetRequiredService<IOcrService>(),
 									  sp.GetRequiredService<ClipboardManager>()));
-			builder.Services.AddSingleton<ApiRateLimiter>();
-			builder.Services.AddSingleton<DocumentFilePreprocessor>();
-			builder.Services.AddSingleton<IDocumentOcrClient>(sp =>
-			{
-				try
-				{
-					return new ComputerVisionOcrClient(sp.GetRequiredService<Settings>().AzureComputerVisionSettings);
-				}
-				catch
-				{
-					return new DisabledDocumentOcrClient();
-				}
-			});
-			builder.Services.AddSingleton<DocumentOcrWorkflowService>();
 			builder.Services.AddSingleton<HotkeyManager>(sp =>
 					  new HotkeyManager(sp.GetRequiredService<MainWindow>(), sp.GetRequiredService<Settings>()));
 			builder.Services.AddSingleton<ILlmService>(
@@ -79,7 +63,7 @@ public partial class App : Application
 							 settings.LlmSettings?.ResourceName ?? string.Empty,
 							 settings.LlmSettings?.ModelDeploymentIdMaps ?? new List<LlmSettings.ModelDeploymentIdMap>()));
 			builder.Services.AddSingleton<TranscriptFormatter>();
-			builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
+                        builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 			builder.Services.AddHttpClient(OpenAiHttpClientName);
 			AddSpeechToTextServices(builder, settings);
 			builder.Services.AddSingleton<MainWindow>();
@@ -92,7 +76,7 @@ public partial class App : Application
 
 			_window.Activate();
 
-			var preflight = ScreenCapturePreflight.TryCaptureProbe();
+                        var preflight = ScreenCapturePreflight.TryCaptureProbe();
 			if (!preflight.ok)
 			{
 				string title = "Screen Capture Disabled";
@@ -151,14 +135,14 @@ public partial class App : Application
 			var ocrMgr = _host.Services.GetRequiredService<OcrManager>();
 			ocrMgr.InitializeWindow(_window);
 
-			var hkManager = _host.Services.GetRequiredService<HotkeyManager>();
-			if (_window is MainWindow main)
-				main.AttachHotkeyManager(hkManager);
-			var settingsSvc = _host.Services.GetRequiredService<Settings>();
+                        var hkManager = _host.Services.GetRequiredService<HotkeyManager>();
+                        if (_window is MainWindow main)
+                                main.AttachHotkeyManager(hkManager);
+                        var settingsSvc = _host.Services.GetRequiredService<Settings>();
 
-			if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotHotKey))
-			{
-				hkManager.RegisterHotkey(
+                        if (!string.IsNullOrWhiteSpace(settingsSvc.AzureComputerVisionSettings?.ScreenshotHotKey))
+                        {
+                                hkManager.RegisterHotkey(
 						  Hotkey.Parse(settingsSvc.AzureComputerVisionSettings.ScreenshotHotKey!),
 						  async () =>
 						  {
@@ -181,7 +165,7 @@ public partial class App : Application
 								  var result = await ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.TopToBottomColumnAware);
 								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
 								  mainWindow.SetOcrText(result.Message);
-							      HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                                                              HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot + OCR Error", ex); }
 						  });
@@ -198,7 +182,7 @@ public partial class App : Application
 								  var result = await ocrMgr.TakeScreenshotAndExtractTextAsync(OcrReadingOrder.LeftToRightTopToBottom);
 								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
 								  mainWindow.SetOcrText(result.Message);
-							      HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                                                              HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("Screenshot + OCR (LRTB) Error", ex); }
 						  });
@@ -215,7 +199,7 @@ public partial class App : Application
 								  var result = await ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.TopToBottomColumnAware);
 								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
 								  mainWindow.SetOcrText(result.Message);
-							      HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                                                              HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("OCR Clipboard Error", ex); }
 						  });
@@ -232,7 +216,7 @@ public partial class App : Application
 								  var result = await ocrMgr.ExtractTextFromClipboardImageAsync(OcrReadingOrder.LeftToRightTopToBottom);
 								  var mainWindow = _host.Services.GetRequiredService<MainWindow>();
 								  mainWindow.SetOcrText(result.Message);
-							      HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
+                                                              HotkeyManager.SendHotkeyAfterDelay(settingsSvc.AzureComputerVisionSettings?.SendHotkeyAfterOcrOperation, result.Success ? Constants.SendHotkeyDelay : Constants.FailureSendHotkeyDelay);
 							  }
 							  catch (Exception ex) { await ((MainWindow)_window).ShowErrorDialog("OCR Clipboard (LRTB) Error", ex); }
 						  });
@@ -271,7 +255,7 @@ public partial class App : Application
 						  });
 			}
 
-			_ = hkManager.RegisterRouterHotkeys();
+                        _ = hkManager.RegisterRouterHotkeys();
 
 			if (hkManager.FailedRegistrations.Count > 0)
 			{
