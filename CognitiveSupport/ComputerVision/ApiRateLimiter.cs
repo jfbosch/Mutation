@@ -26,57 +26,67 @@ public sealed class ApiRateLimiter
 		Func<DateTimeOffset>? clock = null,
 		Func<TimeSpan, CancellationToken, Task>? delay = null)
 	{
-	if (maxCalls <= 0)
-	throw new ArgumentOutOfRangeException(nameof(maxCalls));
+		if (maxCalls <= 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(maxCalls));
+		}
 
-	_window = window ?? TimeSpan.FromSeconds(60);
-	if (_window <= TimeSpan.Zero)
-	throw new ArgumentOutOfRangeException(nameof(window));
+		_window = window ?? TimeSpan.FromSeconds(60);
+		if (_window <= TimeSpan.Zero)
+		{
+			throw new ArgumentOutOfRangeException(nameof(window));
+		}
 
-	_maxCalls = maxCalls;
-	_clock = clock ?? (() => DateTimeOffset.UtcNow);
-	_delay = delay ?? ((wait, token) => Task.Delay(wait, token));
+		_maxCalls = maxCalls;
+		_clock = clock ?? (() => DateTimeOffset.UtcNow);
+		_delay = delay ?? ((wait, token) => Task.Delay(wait, token));
 	}
 
 	public async Task<IDisposable> AcquireAsync(CancellationToken cancellationToken = default)
 	{
-	while (true)
-	{
-	cancellationToken.ThrowIfCancellationRequested();
-	TimeSpan wait;
-	lock (_sync)
-	{
-	var now = _clock();
-	CleanupExpired(now);
+		while (true)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			TimeSpan wait;
+			lock (_sync)
+			{
+				var now = _clock();
+				CleanupExpired(now);
 
-	if (_timestamps.Count < _maxCalls)
-	{
-	_timestamps.Enqueue(now);
-	return new Releaser();
-	}
+				if (_timestamps.Count < _maxCalls)
+				{
+					_timestamps.Enqueue(now);
+					return new Releaser();
+				}
 
-	var oldest = _timestamps.Peek();
-	wait = oldest + _window - now;
-	if (wait < TimeSpan.Zero)
-	wait = TimeSpan.Zero;
-	}
+				var oldest = _timestamps.Peek();
+				wait = oldest + _window - now;
+				if (wait < TimeSpan.Zero)
+				{
+					wait = TimeSpan.Zero;
+				}
+			}
 
-	if (wait > TimeSpan.Zero)
-	await _delay(wait, cancellationToken).ConfigureAwait(false);
-	}
+			if (wait > TimeSpan.Zero)
+			{
+				await _delay(wait, cancellationToken).ConfigureAwait(false);
+			}
+		}
 	}
 
 	private void CleanupExpired(DateTimeOffset now)
 	{
-	while (_timestamps.Count > 0 && now - _timestamps.Peek() >= _window)
-	_timestamps.Dequeue();
+		while (_timestamps.Count > 0 && now - _timestamps.Peek() >= _window)
+		{
+			_timestamps.Dequeue();
+		}
 	}
 
 	private sealed class Releaser : IDisposable
 	{
-	public void Dispose()
-	{
-	// Entries age out automatically; disposing is a semantic marker only.
-	}
+		public void Dispose()
+		{
+			// Entries age out automatically; disposing is a semantic marker only.
+		}
 	}
 }
