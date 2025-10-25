@@ -184,21 +184,27 @@ public class OcrService : IOcrService, IDisposable
                                                                 cancellationToken: cancellationToken)
                                                   .ConfigureAwait(false);
 
-		string operationId = headers.OperationLocation[^operationIdLength..];
+                string operationId = headers.OperationLocation[^operationIdLength..];
+                TimeSpan initialDelay = headers.RetryAfter?.Delta ?? TimeSpan.Zero;
 
-		var results = await GetReadOperationResultAsync(operationId, cancellationToken).ConfigureAwait(false);
+                var results = await GetReadOperationResultAsync(operationId, initialDelay, cancellationToken).ConfigureAwait(false);
 
 		return ExtractTextFromResults(results);
 	}
 
-	private async Task<ReadOperationResult> GetReadOperationResultAsync(
-		string operationId,
-		CancellationToken cancellationToken)
-	{
-		TimeSpan defaultDelay = TimeSpan.FromMilliseconds(150);
+        private async Task<ReadOperationResult> GetReadOperationResultAsync(
+                string operationId,
+                TimeSpan initialDelay,
+                CancellationToken cancellationToken)
+        {
+                TimeSpan defaultDelay = TimeSpan.FromMilliseconds(150);
 
-		while (true)
-		{
+                TimeSpan delayBeforeFirstPoll = initialDelay > TimeSpan.Zero ? initialDelay : defaultDelay;
+                if (delayBeforeFirstPoll > TimeSpan.Zero)
+                        await Task.Delay(delayBeforeFirstPoll, cancellationToken).ConfigureAwait(false);
+
+                while (true)
+                {
                         await _rateLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
 
                         var response = await ComputerVisionClient
@@ -210,10 +216,13 @@ public class OcrService : IOcrService, IDisposable
 			if (result.Status is OperationStatusCodes.Succeeded or OperationStatusCodes.Failed)
 				return result;
 
-			TimeSpan wait = response.Response.Headers.RetryAfter?.Delta ?? defaultDelay;
-			await Task.Delay(wait, cancellationToken).ConfigureAwait(false);
-		}
-	}
+                        TimeSpan wait = response.Response.Headers.RetryAfter?.Delta ?? defaultDelay;
+                        if (wait <= TimeSpan.Zero)
+                                wait = defaultDelay;
+
+                        await Task.Delay(wait, cancellationToken).ConfigureAwait(false);
+                }
+        }
 
         private static string ExtractTextFromResults(ReadOperationResult results)
         {
