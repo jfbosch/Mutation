@@ -1002,7 +1002,7 @@ public sealed partial class MainWindow : Window
 				string failureSummary = BuildFailureSummary(result.Failures);
 				string message = string.IsNullOrWhiteSpace(failureSummary)
 					? $"Processed {result.SuccessCount} of {result.TotalCount} document(s)."
-					: $"Processed {result.SuccessCount} of {result.TotalCount} document(s). Issues: {failuresummary}";
+					: $"Processed {result.SuccessCount} of {result.TotalCount} document(s). Issues: {BuildFailureSummary}";
 				ShowStatus("OCR documents", message, InfoBarSeverity.Warning);
 			}
 		}
