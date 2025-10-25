@@ -8,6 +8,7 @@ public class Settings
 
 	public AudioSettings? AudioSettings { get; set; }
 	public AzureComputerVisionSettings? AzureComputerVisionSettings { get; set; }
+	public AzureDocumentIntelligenceSettings? AzureDocumentIntelligenceSettings { get; set; }
         public SpeechToTextSettings? SpeechToTextSettings { get; set; }
 	public LlmSettings? LlmSettings { get; set; }
 	public TextToSpeechSettings? TextToSpeechSettings { get; set; }
@@ -20,11 +21,12 @@ public class Settings
 	{
 	}
 
-        public Settings(string? userInstructions, AudioSettings? audioSettings, AzureComputerVisionSettings? azureComputerVisionSettings, SpeechToTextSettings? speechToTextSettings, LlmSettings? llmSettings, TextToSpeechSettings? textToSpeechSettings, MainWindowUiSettings mainWindowUiSettings, HotKeyRouterSettings hotKeyRouterSettings)
+        public Settings(string? userInstructions, AudioSettings? audioSettings, AzureComputerVisionSettings? azureComputerVisionSettings, AzureDocumentIntelligenceSettings? azureDocumentIntelligenceSettings, SpeechToTextSettings? speechToTextSettings, LlmSettings? llmSettings, TextToSpeechSettings? textToSpeechSettings, MainWindowUiSettings mainWindowUiSettings, HotKeyRouterSettings hotKeyRouterSettings)
         {
                 UserInstructions = userInstructions;
                 AudioSettings = audioSettings;
                 AzureComputerVisionSettings = azureComputerVisionSettings;
+                AzureDocumentIntelligenceSettings = azureDocumentIntelligenceSettings;
                 SpeechToTextSettings = speechToTextSettings;
                 LlmSettings = llmSettings;
                 TextToSpeechSettings = textToSpeechSettings;
@@ -112,6 +114,22 @@ public class AzureComputerVisionSettings
 
 	public AzureComputerVisionSettings()
 	{
+	}
+}
+
+
+public class AzureDocumentIntelligenceSettings
+{
+	public string? Endpoint { get; set; }
+	public string? ApiKey { get; set; }
+	public bool UseFreeTier { get; set; } = true;
+	public int FreeTierPageLimit { get; set; } = 2;
+	public int MaxParallelDocuments { get; set; } = 2;
+	public int MaxParallelRequestsPerMinute { get; set; } = 20;
+	public long? MaxDocumentBytes { get; set; }
+	{
+		get;
+		set;
 	}
 }
 

@@ -121,6 +121,45 @@ internal class SettingsManager : ISettingsManager
 		}
 
 
+		if (settings.AzureDocumentIntelligenceSettings is null)
+		{
+			settings.AzureDocumentIntelligenceSettings = new AzureDocumentIntelligenceSettings();
+			somethingWasMissing = true;
+		}
+		var azureDocumentIntelligenceSettings = settings.AzureDocumentIntelligenceSettings;
+
+		if (string.IsNullOrWhiteSpace(azureDocumentIntelligenceSettings.Endpoint))
+		{
+			azureDocumentIntelligenceSettings.Endpoint = PlaceholderUrl;
+			somethingWasMissing = true;
+		}
+		if (string.IsNullOrWhiteSpace(azureDocumentIntelligenceSettings.ApiKey))
+		{
+			azureDocumentIntelligenceSettings.ApiKey = PlaceholderValue;
+			somethingWasMissing = true;
+		}
+		if (azureDocumentIntelligenceSettings.FreeTierPageLimit <= 0)
+		{
+			azureDocumentIntelligenceSettings.FreeTierPageLimit = 2;
+			somethingWasMissing = true;
+		}
+		if (azureDocumentIntelligenceSettings.MaxParallelDocuments <= 0)
+		{
+			azureDocumentIntelligenceSettings.MaxParallelDocuments = 2;
+			somethingWasMissing = true;
+		}
+		if (azureDocumentIntelligenceSettings.MaxParallelRequestsPerMinute <= 0)
+		{
+			azureDocumentIntelligenceSettings.MaxParallelRequestsPerMinute = 20;
+			somethingWasMissing = true;
+		}
+		if (azureDocumentIntelligenceSettings.MaxDocumentBytes.HasValue && azureDocumentIntelligenceSettings.MaxDocumentBytes.Value <= 0)
+		{
+			azureDocumentIntelligenceSettings.MaxDocumentBytes = null;
+			somethingWasMissing = true;
+		}
+
+
 		if (settings.AudioSettings is null)
 		{
 			settings.AudioSettings = new AudioSettings();
