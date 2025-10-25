@@ -15,15 +15,20 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
+using System.Runtime.InteropServices.WindowsRuntime;
 using WinRT.Interop;
+using Mutation.Ui.Services.DocumentOcr;
+using Mutation.Ui.Core.DocumentOcr;
 
 
 namespace Mutation.Ui;
@@ -37,16 +42,17 @@ public sealed partial class MainWindow : Window
 	private readonly OcrManager _ocrManager;
 	private readonly ISpeechToTextService[] _speechServices;
 	private readonly SpeechToTextManager _speechManager;
-	private readonly TranscriptFormatter _transcriptFormatter;
-	private readonly ITextToSpeechService _textToSpeech;
-	private readonly Settings _settings;
-	private HotkeyManager? _hotkeyManager;
-        private readonly MediaPlayer _playbackPlayer;
-        private bool _isPlayingRecording;
-        private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
-        private readonly List<SpeechSession> _sessionHistory = new();
-        private string? _selectedSessionPath;
-        private SpeechSession? _playingSession;
+private readonly TranscriptFormatter _transcriptFormatter;
+private readonly ITextToSpeechService _textToSpeech;
+private readonly Settings _settings;
+private readonly DocumentOcrWorkflowService _documentOcrWorkflow;
+private HotkeyManager? _hotkeyManager;
+private readonly MediaPlayer _playbackPlayer;
+private bool _isPlayingRecording;
+	private InMemoryRandomAccessStream? _playbackStream; // holds in-memory audio during playback to avoid locking the file
+	private readonly List<SpeechSession> _sessionHistory = new();
+	private string? _selectedSessionPath;
+	private SpeechSession? _playingSession;
 
 	private WaveInEvent? _waveformCapture;
 	private DispatcherQueueTimer? _waveformTimer;
@@ -71,17 +77,28 @@ public sealed partial class MainWindow : Window
 	private readonly DispatcherTimer _statusDismissTimer;
 	private bool _hotkeyRouterInitialized;
 
-	private static readonly IReadOnlyDictionary<string, string> AudioMimeTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-	{
-		[".aac"] = "audio/aac",
-		[".flac"] = "audio/flac",
-		[".m4a"] = "audio/mp4",
-		[".mp3"] = "audio/mpeg",
-		[".ogg"] = "audio/ogg",
-		[".opus"] = "audio/opus",
-		[".wav"] = "audio/wav",
-		[".wma"] = "audio/x-ms-wma",
-	};
+private static readonly IReadOnlyDictionary<string, string> AudioMimeTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+{
+[".aac"] = "audio/aac",
+[".flac"] = "audio/flac",
+[".m4a"] = "audio/mp4",
+[".mp3"] = "audio/mpeg",
+[".ogg"] = "audio/ogg",
+[".opus"] = "audio/opus",
+[".wav"] = "audio/wav",
+[".wma"] = "audio/x-ms-wma",
+};
+
+private static readonly HashSet<string> DocumentFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+{
+".pdf",
+".png",
+".jpg",
+".jpeg",
+".tif",
+".tiff",
+".bmp"
+};
 
 	private const string MicOnGlyph = "\uE720";
 	// '\uE7C8' is the Segoe MDL2 Assets glyph for a circular record icon, chosen for its clear visual representation.
@@ -106,44 +123,51 @@ public sealed partial class MainWindow : Window
 	[DllImport("user32.dll")]
 	private static extern IntPtr GetForegroundWindow();
 
-	public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
-	private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
+public ObservableCollection<HotkeyRouterEntry> HotkeyRouterEntries { get; } = new();
+private readonly List<(string From, string To)> _hotkeyRouterPersistedSnapshot = new();
+public ObservableCollection<DocumentOcrBatchViewModel> DocumentOcrBatches { get; } = new();
+private readonly Dictionary<Guid, DocumentOcrBatchViewModel> _documentOcrBatchLookup = new();
+private readonly Dictionary<Guid, DocumentOcrBatchResult> _documentOcrResults = new();
+private readonly DocumentOcrSummaryViewModel _documentOcrSummary = new();
+private bool _documentOcrEnabled;
 
-	public MainWindow(
-		ClipboardManager clipboard,
-		UiStateManager uiStateManager,
-		AudioDeviceManager audioDeviceManager,
-		OcrManager ocrManager,
-		ISpeechToTextService[] speechServices,
-		ITextToSpeechService textToSpeech,
-		TranscriptFormatter transcriptFormatter,
+public MainWindow(
+ClipboardManager clipboard,
+UiStateManager uiStateManager,
+AudioDeviceManager audioDeviceManager,
+OcrManager ocrManager,
+ISpeechToTextService[] speechServices,
+ITextToSpeechService textToSpeech,
+TranscriptFormatter transcriptFormatter,
+DocumentOcrWorkflowService documentOcrWorkflowService,
 
-		ISettingsManager settingsManager,
-		Settings settings)
-	{
-		_clipboard = clipboard;
-		_uiStateManager = uiStateManager;
-		_settingsManager = settingsManager;
-		_audioDeviceManager = audioDeviceManager;
-		_ocrManager = ocrManager;
-		_speechServices = speechServices;
-		_textToSpeech = textToSpeech;
-		_transcriptFormatter = transcriptFormatter;
-		_settings = settings;
+ISettingsManager settingsManager,
+Settings settings)
+{
+_clipboard = clipboard;
+_uiStateManager = uiStateManager;
+_settingsManager = settingsManager;
+_audioDeviceManager = audioDeviceManager;
+_ocrManager = ocrManager;
+_speechServices = speechServices;
+_textToSpeech = textToSpeech;
+_transcriptFormatter = transcriptFormatter;
+_documentOcrWorkflow = documentOcrWorkflowService;
+_settings = settings;
 		_speechManager = new SpeechToTextManager(settings);
 		_playbackPlayer = new MediaPlayer { AutoPlay = false };
 		_playbackPlayer.MediaEnded += PlaybackPlayer_MediaEnded;
-                _playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
+		_playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
 
-                InitializeComponent();
-                InitializeMicrophoneVisualization();
+		InitializeComponent();
+		InitializeMicrophoneVisualization();
 
-                RefreshSessions();
-                UpdatePlaybackButtonVisuals("Play selected session", PlayGlyph);
-                AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the selected session again.");
-                AutomationProperties.SetHelpText(BtnUploadSpeechAudio, "Upload an audio file for transcription.");
-                AutomationProperties.SetHelpText(BtnSessionNewer, "Switch to a newer session.");
-                AutomationProperties.SetHelpText(BtnSessionOlder, "Switch to an older session.");
+		RefreshSessions();
+		UpdatePlaybackButtonVisuals("Play selected session", PlayGlyph);
+		AutomationProperties.SetHelpText(BtnRetrySpeechToText, "Transcribe the selected session again.");
+		AutomationProperties.SetHelpText(BtnUploadSpeechAudio, "Upload an audio file for transcription.");
+		AutomationProperties.SetHelpText(BtnSessionNewer, "Switch to a newer session.");
+		AutomationProperties.SetHelpText(BtnSessionOlder, "Switch to an older session.");
 
 		ApplyMultiLineTextBoxPreferences();
 
@@ -171,8 +195,10 @@ public sealed partial class MainWindow : Window
 
 		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
 
-		var tooltipManager = new TooltipManager(_settings);
-		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
+var tooltipManager = new TooltipManager(_settings);
+tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
+
+InitializeDocumentOcrUi();
 
 		var insertOptions = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
 		CmbInsertOption.ItemsSource = insertOptions;
@@ -224,14 +250,40 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	private IEnumerable<TextBox> GetMultiLineTextBoxes()
+private IEnumerable<TextBox> GetMultiLineTextBoxes()
+{
+yield return TxtSpeechToText;
+yield return TxtFormatPrompt;
+yield return TxtFormatTranscript;
+yield return TxtOcr;
+yield return TxtClipboard;
+}
+
+private void InitializeDocumentOcrUi()
+{
+	_documentOcrEnabled = !string.IsNullOrWhiteSpace(_settings.AzureComputerVisionSettings?.ApiKey)
+		&& !string.IsNullOrWhiteSpace(_settings.AzureComputerVisionSettings?.Endpoint);
+	BtnOcrDocuments.IsEnabled = _documentOcrEnabled;
+	DocumentOcrDropZone.AllowDrop = _documentOcrEnabled;
+
+	string hint;
+	if (!_documentOcrEnabled)
 	{
-		yield return TxtSpeechToText;
-		yield return TxtFormatPrompt;
-		yield return TxtFormatTranscript;
-		yield return TxtOcr;
-		yield return TxtClipboard;
+		hint = "Configure Azure Computer Vision under Settings to enable OCR.";
 	}
+	else
+	{
+		var cvSettings = _settings.AzureComputerVisionSettings!;
+		hint = cvSettings.UseFreeTier
+			? $"Free tier: first {Math.Max(1, cvSettings.FreeTierPageLimit)} PDF pages per file."
+			: $"Paid tier: up to {Math.Max(1, cvSettings.MaxParallelDocuments)} documents in parallel.";
+	}
+
+	LblOcrDocumentsHint.Text = hint;
+	ToolTipService.SetToolTip(BtnOcrDocuments, hint);
+	AutomationProperties.SetHelpText(BtnOcrDocuments, hint);
+	UpdateDocumentOcrSummary();
+}
 
 	public void AttachHotkeyManager(HotkeyManager hotkeyManager)
 	{
@@ -384,22 +436,22 @@ public sealed partial class MainWindow : Window
 
 		int validSamples = PopulateWaveformRenderBuffer();
 
-                double peak = 0;
-                double sumSquares = 0;
-                if (validSamples > 0)
-                {
-                        int samplesToProcess = Math.Min(validSamples, _waveformRenderBuffer.Length);
-                        int startIndex = _waveformRenderBuffer.Length - samplesToProcess;
-                        for (int i = startIndex; i < _waveformRenderBuffer.Length; i++)
-                        {
-                                double value = _waveformRenderBuffer[i];
-                                double abs = Math.Abs(value);
-                                if (abs > peak)
-                                        peak = abs;
-                                sumSquares += value * value;
-                        }
-                        _waveformRms = Math.Sqrt(sumSquares / Math.Max(1, samplesToProcess));
-                }
+		double peak = 0;
+		double sumSquares = 0;
+		if (validSamples > 0)
+		{
+			int samplesToProcess = Math.Min(validSamples, _waveformRenderBuffer.Length);
+			int startIndex = _waveformRenderBuffer.Length - samplesToProcess;
+			for (int i = startIndex; i < _waveformRenderBuffer.Length; i++)
+			{
+				double value = _waveformRenderBuffer[i];
+				double abs = Math.Abs(value);
+				if (abs > peak)
+					peak = abs;
+				sumSquares += value * value;
+			}
+			_waveformRms = Math.Sqrt(sumSquares / Math.Max(1, samplesToProcess));
+		}
 		else
 		{
 			_waveformRms = 0;
@@ -432,19 +484,19 @@ public sealed partial class MainWindow : Window
 				return 0;
 			}
 
-                        if (_waveformBufferFilled)
-                        {
-                                int bufferLen = _waveformRenderBuffer.Length;
-                                int index = _waveformBufferIndex;
-                                if (index > bufferLen)
-                                        index = bufferLen;
-                                int tailLength = bufferLen - index;
-                                if (tailLength > 0)
-                                        Array.Copy(_waveformBuffer, index, _waveformRenderBuffer, 0, tailLength);
-                                if (index > 0)
-                                        Array.Copy(_waveformBuffer, 0, _waveformRenderBuffer, tailLength, index);
-                                return bufferLen;
-                        }
+			if (_waveformBufferFilled)
+			{
+				int bufferLen = _waveformRenderBuffer.Length;
+				int index = _waveformBufferIndex;
+				if (index > bufferLen)
+					index = bufferLen;
+				int tailLength = bufferLen - index;
+				if (tailLength > 0)
+					Array.Copy(_waveformBuffer, index, _waveformRenderBuffer, 0, tailLength);
+				if (index > 0)
+					Array.Copy(_waveformBuffer, 0, _waveformRenderBuffer, tailLength, index);
+				return bufferLen;
+			}
 
 			int validCount = _waveformBufferIndex;
 			int leadingZeros = _waveformRenderBuffer.Length - validCount;
@@ -467,7 +519,7 @@ public sealed partial class MainWindow : Window
 		if (MicLevelMeter is not null && waveformHeight > 0)
 			MicLevelMeter.Height = waveformHeight;
 
-                double levelValue = rms;
+		double levelValue = rms;
 		levelValue = Math.Min(1.0, Math.Max(0, levelValue));
 
 		RmsLevelBar.Height = waveformHeight * levelValue;
@@ -974,96 +1026,96 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-        private async void BtnPlayLatestRecording_Click(object? sender, RoutedEventArgs? e)
-        {
-                try
-                {
-                        var session = GetSelectedSession();
-                        if (session is null)
-                        {
-                                ShowStatus("Speech to Text", "No session is available for playback.", InfoBarSeverity.Warning);
-                                UpdateRecordingActionAvailability();
-                                return;
-                        }
+	private async void BtnPlayLatestRecording_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
+		{
+			var session = GetSelectedSession();
+			if (session is null)
+			{
+				ShowStatus("Speech to Text", "No session is available for playback.", InfoBarSeverity.Warning);
+				UpdateRecordingActionAvailability();
+				return;
+			}
 
-                        if (_isPlayingRecording && _playingSession != null && PathsEqual(_playingSession.FilePath, session.FilePath))
-                        {
-                                StopPlayback();
-                        }
-                        else
-                        {
-                                await StartPlaybackAsync(session);
-                        }
-                }
-                catch (Exception ex)
-                {
-                        StopPlayback();
-                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			if (_isPlayingRecording && _playingSession != null && PathsEqual(_playingSession.FilePath, session.FilePath))
+			{
+				StopPlayback();
+			}
+			else
+			{
+				await StartPlaybackAsync(session);
+			}
+		}
+		catch (Exception ex)
+		{
+			StopPlayback();
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("Playback Error", ex);
-                }
-        }
+		}
+	}
 
-        private async void BtnSessionNewer_Click(object? sender, RoutedEventArgs? e)
-        {
-                try
-                {
-                        await NavigateSessionsAsync(-1);
-                }
-                catch (Exception ex)
-                {
-                        StopPlayback();
-                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("Playback Error", ex);
-                }
-        }
+	private async void BtnSessionNewer_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
+		{
+			await NavigateSessionsAsync(-1);
+		}
+		catch (Exception ex)
+		{
+			StopPlayback();
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Playback Error", ex);
+		}
+	}
 
-        private async void BtnSessionOlder_Click(object? sender, RoutedEventArgs? e)
-        {
-                try
-                {
-                        await NavigateSessionsAsync(1);
-                }
-                catch (Exception ex)
-                {
-                        StopPlayback();
-                        ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
-                        await ShowErrorDialog("Playback Error", ex);
-                }
-        }
+	private async void BtnSessionOlder_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
+		{
+			await NavigateSessionsAsync(1);
+		}
+		catch (Exception ex)
+		{
+			StopPlayback();
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Playback Error", ex);
+		}
+	}
 
-        private async Task NavigateSessionsAsync(int direction)
-        {
-                if (_speechManager.Recording || _speechManager.Transcribing)
-                        return;
+	private async Task NavigateSessionsAsync(int direction)
+	{
+		if (_speechManager.Recording || _speechManager.Transcribing)
+			return;
 
-                RefreshSessions(preferredPath: _selectedSessionPath);
+		RefreshSessions(preferredPath: _selectedSessionPath);
 
-                if (_sessionHistory.Count == 0)
-                        return;
+		if (_sessionHistory.Count == 0)
+			return;
 
-                int currentIndex = GetSelectedSessionIndex();
-                if (currentIndex < 0)
-                        currentIndex = 0;
+		int currentIndex = GetSelectedSessionIndex();
+		if (currentIndex < 0)
+			currentIndex = 0;
 
-                int targetIndex = direction < 0 ? currentIndex - 1 : currentIndex + 1;
-                if (targetIndex < 0 || targetIndex >= _sessionHistory.Count)
-                        return;
+		int targetIndex = direction < 0 ? currentIndex - 1 : currentIndex + 1;
+		if (targetIndex < 0 || targetIndex >= _sessionHistory.Count)
+			return;
 
-                var targetSession = _sessionHistory[targetIndex];
+		var targetSession = _sessionHistory[targetIndex];
 
-                StopPlayback();
-                _selectedSessionPath = targetSession.FilePath;
-                UpdateSessionNavigationAvailability();
-                UpdateRecordingActionAvailability();
+		StopPlayback();
+		_selectedSessionPath = targetSession.FilePath;
+		UpdateSessionNavigationAvailability();
+		UpdateRecordingActionAvailability();
 
-                await StartPlaybackAsync(targetSession);
-        }
+		await StartPlaybackAsync(targetSession);
+	}
 
-        private async void BtnRetrySpeechToText_Click(object? sender, RoutedEventArgs? e)
-        {
-                if (_speechManager.Recording || _speechManager.Transcribing)
-                {
-                        ShowStatus("Speech to Text", "Finish the current operation before retrying.", InfoBarSeverity.Warning);
+	private async void BtnRetrySpeechToText_Click(object? sender, RoutedEventArgs? e)
+	{
+		if (_speechManager.Recording || _speechManager.Transcribing)
+		{
+			ShowStatus("Speech to Text", "Finish the current operation before retrying.", InfoBarSeverity.Warning);
 			UpdateRecordingActionAvailability();
 			return;
 		}
@@ -1075,34 +1127,34 @@ public sealed partial class MainWindow : Window
 			return;
 		}
 
-                var sessionToRetry = GetSelectedSession();
-                if (sessionToRetry is null)
-                {
-                        ShowStatus("Speech to Text", "No session available to retry.", InfoBarSeverity.Warning);
-                        UpdateRecordingActionAvailability();
-                        return;
-                }
+		var sessionToRetry = GetSelectedSession();
+		if (sessionToRetry is null)
+		{
+			ShowStatus("Speech to Text", "No session available to retry.", InfoBarSeverity.Warning);
+			UpdateRecordingActionAvailability();
+			return;
+		}
 
-                try
-                {
-                        StopPlayback();
+		try
+		{
+			StopPlayback();
 
-                        _suppressAutoActions = true;
+			_suppressAutoActions = true;
 			TxtSpeechToText.IsReadOnly = true;
 			TxtSpeechToText.Text = "Transcribing...";
 			UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
 
-                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService!, sessionToRetry, string.Empty, CancellationToken.None);
+			string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService!, sessionToRetry, string.Empty, CancellationToken.None);
 
-                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
-                        FinalizeTranscript(text, "Transcript refreshed from the selected session.");
-                }
-                catch (OperationCanceledException)
-                {
-                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
-                        TxtSpeechToText.IsReadOnly = false;
+			UpdateSpeechButtonVisuals("Record", RecordGlyph);
+			FinalizeTranscript(text, "Transcript refreshed from the selected session.");
+		}
+		catch (OperationCanceledException)
+		{
+			UpdateSpeechButtonVisuals("Record", RecordGlyph);
+			TxtSpeechToText.IsReadOnly = false;
 			_suppressAutoActions = false;
 			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
 			UpdateRecordingActionAvailability();
@@ -1165,19 +1217,19 @@ public sealed partial class MainWindow : Window
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", $"Transcribing {file.Name}...", InfoBarSeverity.Informational);
 
-                        var session = await _speechManager.ImportUploadedAudioAsync(file.Path, CancellationToken.None);
-                        RefreshSessions(session);
-                        UpdateRecordingActionAvailability();
+			var session = await _speechManager.ImportUploadedAudioAsync(file.Path, CancellationToken.None);
+			RefreshSessions(session);
+			UpdateRecordingActionAvailability();
 
-                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, session, string.Empty, CancellationToken.None);
+			string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, session, string.Empty, CancellationToken.None);
 
-                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
-                        FinalizeTranscript(text, $"Transcript generated from {session.FileName}.");
-                }
-                catch (OperationCanceledException)
-                {
-                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
-                        TxtSpeechToText.IsReadOnly = false;
+			UpdateSpeechButtonVisuals("Record", RecordGlyph);
+			FinalizeTranscript(text, $"Transcript generated from {session.FileName}.");
+		}
+		catch (OperationCanceledException)
+		{
+			UpdateSpeechButtonVisuals("Record", RecordGlyph);
+			TxtSpeechToText.IsReadOnly = false;
 			_suppressAutoActions = false;
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
@@ -1247,20 +1299,20 @@ public sealed partial class MainWindow : Window
 
 			if (!_speechManager.Recording)
 			{
-                        _suppressAutoActions = true;
-                        TxtSpeechToText.IsReadOnly = true;
-                        TxtSpeechToText.Text = "Recording...";
-                        UpdateSpeechButtonVisuals("Stop", StopGlyph);
-                        ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
-                        BeepPlayer.Play(BeepType.Start);
-                        StopPlayback();
-                        var session = await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
-                        RefreshSessions(session);
-                        _suppressAutoActions = false;
-                        UpdateRecordingActionAvailability();
-                }
-                else
-                {
+			_suppressAutoActions = true;
+			TxtSpeechToText.IsReadOnly = true;
+			TxtSpeechToText.Text = "Recording...";
+			UpdateSpeechButtonVisuals("Stop", StopGlyph);
+			ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
+			BeepPlayer.Play(BeepType.Start);
+			StopPlayback();
+			var session = await _speechManager.StartRecordingAsync(_audioDeviceManager.MicrophoneDeviceIndex);
+			RefreshSessions(session);
+			_suppressAutoActions = false;
+			UpdateRecordingActionAvailability();
+		}
+		else
+		{
 				BtnSpeechToText.IsEnabled = false;
 				_suppressAutoActions = true;
 				TxtSpeechToText.Text = "Transcribing...";
@@ -1269,14 +1321,14 @@ public sealed partial class MainWindow : Window
 				StopPlayback();
 				UpdateRecordingActionAvailability();
 
-                                try
-                                {
-                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+				try
+				{
+					string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
 
-                                        UpdateSpeechButtonVisuals("Record", RecordGlyph);
-                                        BtnSpeechToText.IsEnabled = true;
-                                        FinalizeTranscript(text, "Transcript ready and copied.");
-                                }
+					UpdateSpeechButtonVisuals("Record", RecordGlyph);
+					BtnSpeechToText.IsEnabled = true;
+					FinalizeTranscript(text, "Transcript ready and copied.");
+				}
 				catch (OperationCanceledException)
 				{
 					UpdateSpeechButtonVisuals("Record", RecordGlyph);
@@ -1386,141 +1438,141 @@ public sealed partial class MainWindow : Window
 		ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
 	}
 
-        private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
-        {
-                BtnPlayLatestRecordingIcon.Glyph = glyph;
-                string tooltip = automationName == "Play selected session"
-                                  ? "Play the selected session"
-                                  : "Stop playing the selected session";
-                ToolTipService.SetToolTip(BtnPlayLatestRecording, tooltip);
-                AutomationProperties.SetName(BtnPlayLatestRecording, automationName);
-                AutomationProperties.SetHelpText(BtnPlayLatestRecording, tooltip);
-        }
+	private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
+	{
+		BtnPlayLatestRecordingIcon.Glyph = glyph;
+		string tooltip = automationName == "Play selected session"
+				  ? "Play the selected session"
+				  : "Stop playing the selected session";
+		ToolTipService.SetToolTip(BtnPlayLatestRecording, tooltip);
+		AutomationProperties.SetName(BtnPlayLatestRecording, automationName);
+		AutomationProperties.SetHelpText(BtnPlayLatestRecording, tooltip);
+	}
 
-        private void RefreshSessions(SpeechSession? preferredSelection = null, string? preferredPath = null)
-        {
-                var snapshot = _speechManager.GetSessions();
-                _sessionHistory.Clear();
-                _sessionHistory.AddRange(snapshot);
+	private void RefreshSessions(SpeechSession? preferredSelection = null, string? preferredPath = null)
+	{
+		var snapshot = _speechManager.GetSessions();
+		_sessionHistory.Clear();
+		_sessionHistory.AddRange(snapshot);
 
-                if (preferredSelection != null)
-                {
-                        _selectedSessionPath = preferredSelection.FilePath;
-                }
-                else if (!string.IsNullOrWhiteSpace(preferredPath))
-                {
-                        _selectedSessionPath = preferredPath;
-                }
-                else if (!string.IsNullOrWhiteSpace(_selectedSessionPath) && !_sessionHistory.Any(s => PathsEqual(s.FilePath, _selectedSessionPath)))
-                {
-                        _selectedSessionPath = _sessionHistory.FirstOrDefault()?.FilePath;
-                }
-                else if (string.IsNullOrWhiteSpace(_selectedSessionPath))
-                {
-                        _selectedSessionPath = _sessionHistory.FirstOrDefault()?.FilePath;
-                }
+		if (preferredSelection != null)
+		{
+			_selectedSessionPath = preferredSelection.FilePath;
+		}
+		else if (!string.IsNullOrWhiteSpace(preferredPath))
+		{
+			_selectedSessionPath = preferredPath;
+		}
+		else if (!string.IsNullOrWhiteSpace(_selectedSessionPath) && !_sessionHistory.Any(s => PathsEqual(s.FilePath, _selectedSessionPath)))
+		{
+			_selectedSessionPath = _sessionHistory.FirstOrDefault()?.FilePath;
+		}
+		else if (string.IsNullOrWhiteSpace(_selectedSessionPath))
+		{
+			_selectedSessionPath = _sessionHistory.FirstOrDefault()?.FilePath;
+		}
 
-                UpdateSessionNavigationAvailability();
-        }
+		UpdateSessionNavigationAvailability();
+	}
 
-        private int GetSelectedSessionIndex()
-        {
-                if (string.IsNullOrWhiteSpace(_selectedSessionPath))
-                        return -1;
+	private int GetSelectedSessionIndex()
+	{
+		if (string.IsNullOrWhiteSpace(_selectedSessionPath))
+			return -1;
 
-                return _sessionHistory.FindIndex(s => PathsEqual(s.FilePath, _selectedSessionPath));
-        }
+		return _sessionHistory.FindIndex(s => PathsEqual(s.FilePath, _selectedSessionPath));
+	}
 
-        private SpeechSession? GetSelectedSession()
-        {
-                int index = GetSelectedSessionIndex();
-                if (index < 0 || index >= _sessionHistory.Count)
-                        return null;
+	private SpeechSession? GetSelectedSession()
+	{
+		int index = GetSelectedSessionIndex();
+		if (index < 0 || index >= _sessionHistory.Count)
+			return null;
 
-                var session = _sessionHistory[index];
-                if (!File.Exists(session.FilePath))
-                {
-                        RefreshSessions(preferredPath: _selectedSessionPath);
-                        index = GetSelectedSessionIndex();
-                        if (index < 0 || index >= _sessionHistory.Count)
-                                return null;
+		var session = _sessionHistory[index];
+		if (!File.Exists(session.FilePath))
+		{
+			RefreshSessions(preferredPath: _selectedSessionPath);
+			index = GetSelectedSessionIndex();
+			if (index < 0 || index >= _sessionHistory.Count)
+				return null;
 
-                        session = _sessionHistory[index];
-                        if (!File.Exists(session.FilePath))
-                                return null;
-                }
+			session = _sessionHistory[index];
+			if (!File.Exists(session.FilePath))
+				return null;
+		}
 
-                return session;
-        }
+		return session;
+	}
 
-        private void UpdateSessionNavigationAvailability()
-        {
-                int index = GetSelectedSessionIndex();
-                bool hasSessions = _sessionHistory.Count > 0;
-                bool canMoveNewer = hasSessions && index > 0;
-                bool canMoveOlder = hasSessions && index >= 0 && index < _sessionHistory.Count - 1;
-                bool busy = _speechManager.Recording || _speechManager.Transcribing;
+	private void UpdateSessionNavigationAvailability()
+	{
+		int index = GetSelectedSessionIndex();
+		bool hasSessions = _sessionHistory.Count > 0;
+		bool canMoveNewer = hasSessions && index > 0;
+		bool canMoveOlder = hasSessions && index >= 0 && index < _sessionHistory.Count - 1;
+		bool busy = _speechManager.Recording || _speechManager.Transcribing;
 
-                BtnSessionNewer.IsEnabled = canMoveNewer && !busy;
-                BtnSessionOlder.IsEnabled = canMoveOlder && !busy;
+		BtnSessionNewer.IsEnabled = canMoveNewer && !busy;
+		BtnSessionOlder.IsEnabled = canMoveOlder && !busy;
 
-                string newerTooltip = canMoveNewer ? "Switch to a newer session" : "No newer sessions available";
-                string olderTooltip = canMoveOlder ? "Switch to an older session" : "No older sessions available";
-                ToolTipService.SetToolTip(BtnSessionNewer, newerTooltip);
-                ToolTipService.SetToolTip(BtnSessionOlder, olderTooltip);
-                AutomationProperties.SetHelpText(BtnSessionNewer, newerTooltip);
-                AutomationProperties.SetHelpText(BtnSessionOlder, olderTooltip);
-        }
+		string newerTooltip = canMoveNewer ? "Switch to a newer session" : "No newer sessions available";
+		string olderTooltip = canMoveOlder ? "Switch to an older session" : "No older sessions available";
+		ToolTipService.SetToolTip(BtnSessionNewer, newerTooltip);
+		ToolTipService.SetToolTip(BtnSessionOlder, olderTooltip);
+		AutomationProperties.SetHelpText(BtnSessionNewer, newerTooltip);
+		AutomationProperties.SetHelpText(BtnSessionOlder, olderTooltip);
+	}
 
-        private void UpdateRecordingActionAvailability()
-        {
-                var session = GetSelectedSession();
-                bool hasRecording = session != null && File.Exists(session.FilePath);
-                bool busy = _speechManager.Recording || _speechManager.Transcribing;
+	private void UpdateRecordingActionAvailability()
+	{
+		var session = GetSelectedSession();
+		bool hasRecording = session != null && File.Exists(session.FilePath);
+		bool busy = _speechManager.Recording || _speechManager.Transcribing;
 
-                // The play button remains enabled during playback (_isPlayingRecording) so the user can stop playback,
-                // but is disabled during other busy states (recording/transcribing) to prevent conflicts.
-                BtnPlayLatestRecording.IsEnabled = ShouldEnablePlaySelectedSessionButton(hasRecording, busy);
-                BtnRetrySpeechToText.IsEnabled = session != null && _activeSpeechService != null && !busy && !_isPlayingRecording;
-                BtnUploadSpeechAudio.IsEnabled = !busy && !_isPlayingRecording;
-                UpdateSessionNavigationAvailability();
-        }
+		// The play button remains enabled during playback (_isPlayingRecording) so the user can stop playback,
+		// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+		BtnPlayLatestRecording.IsEnabled = ShouldEnablePlaySelectedSessionButton(hasRecording, busy);
+		BtnRetrySpeechToText.IsEnabled = session != null && _activeSpeechService != null && !busy && !_isPlayingRecording;
+		BtnUploadSpeechAudio.IsEnabled = !busy && !_isPlayingRecording;
+		UpdateSessionNavigationAvailability();
+	}
 
-        /// <summary>
-        /// Determines whether the Play Latest Recording button should be enabled.
-        /// The button remains enabled during playback so the user can stop playback,
-        /// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
-        /// </summary>
-        private bool ShouldEnablePlaySelectedSessionButton(bool hasRecording, bool busy)
-        {
-                return _isPlayingRecording || (hasRecording && !busy);
-        }
+	/// <summary>
+	/// Determines whether the Play Latest Recording button should be enabled.
+	/// The button remains enabled during playback so the user can stop playback,
+	/// but is disabled during other busy states (recording/transcribing) to prevent conflicts.
+	/// </summary>
+	private bool ShouldEnablePlaySelectedSessionButton(bool hasRecording, bool busy)
+	{
+		return _isPlayingRecording || (hasRecording && !busy);
+	}
 
-        private void ScheduleSessionCleanup()
-        {
-                var exclusions = new List<string>();
-                var selected = GetSelectedSession();
-                string? selectedPath = selected?.FilePath;
-                if (!string.IsNullOrWhiteSpace(selectedPath))
-                        exclusions.Add(selectedPath);
+	private void ScheduleSessionCleanup()
+	{
+		var exclusions = new List<string>();
+		var selected = GetSelectedSession();
+		string? selectedPath = selected?.FilePath;
+		if (!string.IsNullOrWhiteSpace(selectedPath))
+			exclusions.Add(selectedPath);
 
-                if (_playingSession != null)
-                        exclusions.Add(_playingSession.FilePath);
+		if (_playingSession != null)
+			exclusions.Add(_playingSession.FilePath);
 
-                var recording = _speechManager.CurrentRecordingSession;
-                if (recording != null)
-                        exclusions.Add(recording.FilePath);
+		var recording = _speechManager.CurrentRecordingSession;
+		if (recording != null)
+			exclusions.Add(recording.FilePath);
 
-                var cleanupTask = _speechManager.CleanupSessionsAsync(exclusions);
-                cleanupTask.ContinueWith(_ =>
-                {
-                        RunOnDispatcher(() =>
-                        {
-                                RefreshSessions(preferredPath: selectedPath);
-                                UpdateRecordingActionAvailability();
-                        });
-                }, TaskScheduler.Default);
-        }
+		var cleanupTask = _speechManager.CleanupSessionsAsync(exclusions);
+		cleanupTask.ContinueWith(_ =>
+		{
+			RunOnDispatcher(() =>
+			{
+				RefreshSessions(preferredPath: selectedPath);
+				UpdateRecordingActionAvailability();
+			});
+		}, TaskScheduler.Default);
+	}
 
 	private void FinalizeTranscript(string rawText, string successMessage)
 	{
@@ -1532,15 +1584,15 @@ public sealed partial class MainWindow : Window
 		_clipboard.SetText(formatted);
 		InsertIntoActiveApplication(formatted);
 
-                BeepPlayer.Play(BeepType.Success);
-                TxtSpeechToText.IsReadOnly = false;
-                _suppressAutoActions = false;
+		BeepPlayer.Play(BeepType.Success);
+		TxtSpeechToText.IsReadOnly = false;
+		_suppressAutoActions = false;
 
-                ShowStatus("Speech to Text", successMessage, InfoBarSeverity.Success);
-                HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
-                UpdateRecordingActionAvailability();
-                ScheduleSessionCleanup();
-        }
+		ShowStatus("Speech to Text", successMessage, InfoBarSeverity.Success);
+		HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
+		UpdateRecordingActionAvailability();
+		ScheduleSessionCleanup();
+	}
 
 	private void StopPlayback()
 	{
@@ -1550,63 +1602,63 @@ public sealed partial class MainWindow : Window
 		_playbackPlayer.Pause();
 		if (_playbackPlayer.PlaybackSession != null)
 			_playbackPlayer.PlaybackSession.Position = TimeSpan.Zero;
-                _playbackPlayer.Source = null;
-                _playbackStream?.Dispose();
-                _playbackStream = null;
-                _isPlayingRecording = false;
-                _playingSession = null;
-                UpdatePlaybackButtonVisuals("Play selected session", PlayGlyph);
-                UpdateRecordingActionAvailability();
-        }
+		_playbackPlayer.Source = null;
+		_playbackStream?.Dispose();
+		_playbackStream = null;
+		_isPlayingRecording = false;
+		_playingSession = null;
+		UpdatePlaybackButtonVisuals("Play selected session", PlayGlyph);
+		UpdateRecordingActionAvailability();
+	}
 
-        private async Task<bool> StartPlaybackAsync(SpeechSession session)
-        {
-                if (session is null)
-                        return false;
+	private async Task<bool> StartPlaybackAsync(SpeechSession session)
+	{
+		if (session is null)
+			return false;
 
-                if (!File.Exists(session.FilePath))
-                {
-                        RefreshSessions(preferredPath: _selectedSessionPath);
-                        if (!File.Exists(session.FilePath))
-                        {
-                                ShowStatus("Speech to Text", "The selected session file is missing.", InfoBarSeverity.Warning);
-                                UpdateRecordingActionAvailability();
-                                return false;
-                        }
-                }
+		if (!File.Exists(session.FilePath))
+		{
+			RefreshSessions(preferredPath: _selectedSessionPath);
+			if (!File.Exists(session.FilePath))
+			{
+				ShowStatus("Speech to Text", "The selected session file is missing.", InfoBarSeverity.Warning);
+				UpdateRecordingActionAvailability();
+				return false;
+			}
+		}
 
-                StopPlayback();
+		StopPlayback();
 
-                try
-                {
-                        byte[] bytes = File.ReadAllBytes(session.FilePath);
-                        _playbackStream?.Dispose();
-                        _playbackStream = new InMemoryRandomAccessStream();
-                        using (var writer = new DataWriter(_playbackStream.GetOutputStreamAt(0)))
-                        {
-                                writer.WriteBytes(bytes);
-                                await writer.StoreAsync();
-                        }
-                        _playbackStream.Seek(0);
-                        var contentType = await DetermineContentTypeAsync(session.FilePath);
-                        _playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, contentType);
-                }
-                catch (Exception ex)
-                {
-                        _playbackStream?.Dispose();
-                        _playbackStream = null;
-                        ShowStatus("Speech to Text", $"Unable to play {session.FileName}: {ex.Message}", InfoBarSeverity.Error);
-                        return false;
-                }
+		try
+		{
+			byte[] bytes = File.ReadAllBytes(session.FilePath);
+			_playbackStream?.Dispose();
+			_playbackStream = new InMemoryRandomAccessStream();
+			using (var writer = new DataWriter(_playbackStream.GetOutputStreamAt(0)))
+			{
+				writer.WriteBytes(bytes);
+				await writer.StoreAsync();
+			}
+			_playbackStream.Seek(0);
+			var contentType = await DetermineContentTypeAsync(session.FilePath);
+			_playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, contentType);
+		}
+		catch (Exception ex)
+		{
+			_playbackStream?.Dispose();
+			_playbackStream = null;
+			ShowStatus("Speech to Text", $"Unable to play {session.FileName}: {ex.Message}", InfoBarSeverity.Error);
+			return false;
+		}
 
-                _playingSession = session;
-                _isPlayingRecording = true;
-                UpdatePlaybackButtonVisuals("Stop playback", StopGlyph);
-                UpdateRecordingActionAvailability();
-                ShowStatus("Speech to Text", $"Playing {session.FileName}...", InfoBarSeverity.Informational);
-                _playbackPlayer.Play();
-                return true;
-        }
+		_playingSession = session;
+		_isPlayingRecording = true;
+		UpdatePlaybackButtonVisuals("Stop playback", StopGlyph);
+		UpdateRecordingActionAvailability();
+		ShowStatus("Speech to Text", $"Playing {session.FileName}...", InfoBarSeverity.Informational);
+		_playbackPlayer.Play();
+		return true;
+	}
 
 	private void PlaybackPlayer_MediaEnded(MediaPlayer sender, object args)
 	{
@@ -1649,12 +1701,12 @@ public sealed partial class MainWindow : Window
 			action();
 	}
 
-        private void HandlePlaybackFailed(string errorMessage)
-        {
-                string sessionName = _playingSession?.FileName ?? "session";
-                StopPlayback();
-                ShowStatus("Speech to Text", $"Playback failed for {sessionName}: {errorMessage}", InfoBarSeverity.Error);
-        }
+	private void HandlePlaybackFailed(string errorMessage)
+	{
+		string sessionName = _playingSession?.FileName ?? "session";
+		StopPlayback();
+		ShowStatus("Speech to Text", $"Playback failed for {sessionName}: {errorMessage}", InfoBarSeverity.Error);
+	}
 
 	private void ConfigureButtonHotkey(Button button, TextBlock? hotkeyTextBlock, string? hotkey, string baseTooltip)
 	{
@@ -1680,16 +1732,300 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-        private static string ComposeTooltip(string baseTooltip, string? hotkey) =>
-                          string.IsNullOrWhiteSpace(hotkey) ? baseTooltip : $"{baseTooltip} (Hotkey: {hotkey})";
+	private static string ComposeTooltip(string baseTooltip, string? hotkey) =>
+			  string.IsNullOrWhiteSpace(hotkey) ? baseTooltip : $"{baseTooltip} (Hotkey: {hotkey})";
 
-        private static bool PathsEqual(string? left, string? right) =>
-                string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+	private static bool PathsEqual(string? left, string? right) =>
+		string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
 
-        private void ShowStatus(string title, string message, InfoBarSeverity severity)
-        {
-                void Update()
-                {
+	
+private async void BtnOcrDocuments_Click(object sender, RoutedEventArgs e)
+	{
+		if (!_documentOcrEnabled)
+		{
+			ShowStatus("Document OCR", "Configure Azure Computer Vision under Settings to enable OCR.", InfoBarSeverity.Warning);
+			return;
+		}
+
+		var picker = new FileOpenPicker
+		{
+			ViewMode = PickerViewMode.List,
+			SuggestedStartLocation = PickerLocationId.DocumentsLibrary
+		};
+		foreach (var ext in DocumentFileExtensions)
+		{
+			picker.FileTypeFilter.Add(ext);
+		}
+		InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+		var files = await picker.PickMultipleFilesAsync();
+		if (files is null || files.Count == 0)
+		{
+			return;
+		}
+		await ProcessDocumentFilesAsync(files);
+	}
+
+private void DocumentOcrDropZone_DragOver(object sender, DragEventArgs e)
+{
+	if (!_documentOcrEnabled)
+	{
+		e.AcceptedOperation = DataPackageOperation.None;
+		e.DragUIOverride.IsCaptionVisible = true;
+		e.DragUIOverride.Caption = "Configure Azure Computer Vision to enable document OCR.";
+		return;
+	}
+
+	e.AcceptedOperation = DataPackageOperation.Copy;
+	e.DragUIOverride.IsCaptionVisible = true;
+	e.DragUIOverride.Caption = "Drop to OCR documents";
+}
+
+	private async void DocumentOcrDropZone_Drop(object sender, DragEventArgs e)
+	{
+		if (!_documentOcrEnabled)
+		{
+			ShowStatus("Document OCR", "Configure Azure Computer Vision under Settings to enable OCR.", InfoBarSeverity.Warning);
+			return;
+		}
+
+		if (!e.DataView.Contains(StandardDataFormats.StorageItems))
+		{
+			e.AcceptedOperation = DataPackageOperation.None;
+			return;
+		}
+
+		var items = await e.DataView.GetStorageItemsAsync();
+		var files = items.OfType<StorageFile>().Where(IsSupportedDocumentFile).ToList();
+		if (files.Count == 0)
+		{
+			ShowStatus("Document OCR", "No supported files were dropped.", InfoBarSeverity.Warning);
+			return;
+		}
+		await ProcessDocumentFilesAsync(files);
+	}
+
+	private static bool IsSupportedDocumentFile(StorageFile file)
+	{
+		var ext = Path.GetExtension(file.Name);
+		return !string.IsNullOrWhiteSpace(ext) && DocumentFileExtensions.Contains(ext);
+	}
+
+	private async Task ProcessDocumentFilesAsync(IReadOnlyList<StorageFile> files)
+	{
+		if (files is null || files.Count == 0)
+		{
+			return;
+		}
+
+		BtnOcrDocuments.IsEnabled = false;
+		DocumentOcrDropZone.AllowDrop = false;
+		ShowStatus("Document OCR", $"Processing {files.Count} document(s)...", InfoBarSeverity.Informational);
+
+		var progress = new Progress<DocumentOcrProgressUpdate>(update =>
+		{
+			DispatcherQueue.TryEnqueue(() => ApplyDocumentOcrProgress(update));
+		});
+
+		try
+		{
+			var results = await _documentOcrWorkflow.ProcessAsync(files, progress, CancellationToken.None).ConfigureAwait(false);
+			DispatcherQueue.TryEnqueue(() => HandleDocumentOcrCompletion(results));
+		}
+		catch (Exception ex)
+		{
+			DispatcherQueue.TryEnqueue(() => ShowStatus("Document OCR", ex.Message, InfoBarSeverity.Error));
+		}
+		finally
+		{
+			DispatcherQueue.TryEnqueue(() =>
+			{
+				BtnOcrDocuments.IsEnabled = _documentOcrEnabled;
+				DocumentOcrDropZone.AllowDrop = _documentOcrEnabled;
+			});
+		}
+	}
+
+	private void ApplyDocumentOcrProgress(DocumentOcrProgressUpdate update)
+	{
+		if (!_documentOcrBatchLookup.TryGetValue(update.BatchId, out var batchVm))
+		{
+			batchVm = new DocumentOcrBatchViewModel(update.BatchId, update.SourceName);
+			DocumentOcrBatches.Add(batchVm);
+			_documentOcrBatchLookup[update.BatchId] = batchVm;
+		}
+
+		var jobVm = batchVm.Jobs.FirstOrDefault(j => j.Id == update.JobId);
+		if (jobVm == null)
+		{
+			jobVm = new DocumentOcrJobViewModel(update.JobId, update.PageLabel);
+			batchVm.Jobs.Add(jobVm);
+		}
+
+jobVm.Status = update.Status;
+jobVm.Progress = update.Progress;
+jobVm.NextRetry = update.NextRetry;
+jobVm.Error = update.Status == DocumentOcrJobStatus.Failed ? update.Message : null;
+if (!string.IsNullOrWhiteSpace(update.AggregatedText))
+{
+batchVm.AggregatedText = update.AggregatedText;
+}
+
+		if (update.Status == DocumentOcrJobStatus.Failed && !string.IsNullOrWhiteSpace(update.Message))
+		{
+			ShowStatus("Document OCR", update.Message, InfoBarSeverity.Error);
+		}
+
+		batchVm.RecalculateSummary();
+		UpdateDocumentOcrSummary();
+	}
+
+	private void HandleDocumentOcrCompletion(IReadOnlyList<DocumentOcrBatchResult> results)
+	{
+	if (results is null || results.Count == 0)
+	{
+	UpdateDocumentOcrSummary();
+	return;
+	}
+
+	foreach (var result in results)
+	{
+	_documentOcrResults[result.BatchId] = result;
+	if (_documentOcrBatchLookup.TryGetValue(result.BatchId, out var batchVm))
+	{
+	batchVm.AggregatedText = result.AggregatedText ?? string.Empty;
+	batchVm.RecalculateSummary();
+	}
+	if (result.TruncatedByFreeTier)
+	{
+	ShowStatus("Document OCR", $"{result.SourceName} exceeded the free-tier page limit; remaining pages were skipped.", InfoBarSeverity.Warning);
+	}
+	}
+
+	var combined = string.Join(Environment.NewLine + Environment.NewLine, results
+	.Where(r => !string.IsNullOrWhiteSpace(r.AggregatedText))
+	.Select(r => r.AggregatedText));
+	if (!string.IsNullOrWhiteSpace(combined))
+	{
+	_clipboard.SetText(combined);
+	TxtOcr.Text = combined;
+	ShowStatus("Document OCR", "Document text copied to the clipboard.", InfoBarSeverity.Success);
+	}
+	UpdateDocumentOcrSummary();
+	}
+
+	private async void DownloadDocumentResult_Click(object sender, RoutedEventArgs e)
+	{
+	if (sender is not FrameworkElement element || element.Tag is not DocumentOcrBatchViewModel batchVm)
+	{
+	return;
+	}
+
+	if (!_documentOcrResults.TryGetValue(batchVm.BatchId, out var result))
+	{
+	ShowStatus("Document OCR", "The selected document is not ready for download yet.", InfoBarSeverity.Warning);
+	return;
+	}
+
+	var picker = new FileSavePicker
+	{
+	SuggestedStartLocation = PickerLocationId.DocumentsLibrary
+	};
+	picker.FileTypeChoices.Add("Text Document", new List<string> { ".txt" });
+	picker.SuggestedFileName = Path.ChangeExtension(batchVm.SourceName, ".txt");
+	InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+	var file = await picker.PickSaveFileAsync();
+	if (file is null)
+	{
+	return;
+	}
+
+	await FileIO.WriteTextAsync(file, result.AggregatedText ?? string.Empty);
+	ShowStatus("Document OCR", $"Saved {batchVm.SourceName}.", InfoBarSeverity.Success);
+	}
+
+	private async void CopyDocumentResult_Click(object sender, RoutedEventArgs e)
+	{
+	if (sender is not FrameworkElement element || element.Tag is not DocumentOcrBatchViewModel batchVm)
+	{
+	return;
+	}
+
+	if (!_documentOcrResults.TryGetValue(batchVm.BatchId, out var result))
+	{
+	ShowStatus("Document OCR", "This document is still processing.", InfoBarSeverity.Informational);
+	return;
+	}
+
+	var text = result.AggregatedText ?? string.Empty;
+	_clipboard.SetText(text);
+	TxtOcr.Text = text;
+	ShowStatus("Document OCR", $"Copied {batchVm.SourceName} to the clipboard.", InfoBarSeverity.Success);
+	}
+
+	private async void BtnDownloadAllDocumentResults_Click(object sender, RoutedEventArgs e)
+	{
+	if (_documentOcrResults.Count == 0)
+	{
+	ShowStatus("Document OCR", "Run OCR on at least one document before downloading.", InfoBarSeverity.Warning);
+	return;
+	}
+
+	var picker = new FileSavePicker
+	{
+	SuggestedStartLocation = PickerLocationId.DocumentsLibrary
+	};
+	picker.FileTypeChoices.Add("Zip Archive", new List<string> { ".zip" });
+	picker.SuggestedFileName = "Mutation-OCR-Results";
+	InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+	var file = await picker.PickSaveFileAsync();
+	if (file is null)
+	{
+	return;
+	}
+
+	using (var stream = await file.OpenStreamForWriteAsync())
+	{
+	stream.SetLength(0);
+	using var archive = new ZipArchive(stream, ZipArchiveMode.Create);
+	foreach (var kvp in _documentOcrResults)
+	{
+	if (!_documentOcrBatchLookup.TryGetValue(kvp.Key, out var batchVm))
+	{
+	continue;
+	}
+	var entryName = Path.ChangeExtension(batchVm.SourceName, ".txt");
+	if (string.IsNullOrWhiteSpace(entryName))
+	{
+	entryName = $"Document-{kvp.Key:N}.txt";
+	}
+	var entry = archive.CreateEntry(entryName);
+	using var writer = new StreamWriter(entry.Open());
+	writer.Write(kvp.Value.AggregatedText ?? string.Empty);
+	}
+	}
+
+	ShowStatus("Document OCR", "Downloaded all OCR results.", InfoBarSeverity.Success);
+	}
+
+	private void UpdateDocumentOcrSummary()
+	{
+	_documentOcrSummary.UpdateFromBatches(DocumentOcrBatches);
+	LblDocumentOcrSummary.Text = _documentOcrSummary.StatusText ?? $"Completed {_documentOcrSummary.CompletedDocuments} / {_documentOcrSummary.TotalDocuments}";
+	LblDocumentOcrFailures.Text = $"Failures: {_documentOcrSummary.FailedDocuments}";
+	LblDocumentOcrEta.Text = _documentOcrSummary.EstimatedRemaining.HasValue && _documentOcrSummary.EstimatedRemaining.Value > TimeSpan.Zero
+	? $"ETA: {_documentOcrSummary.EstimatedRemaining:hh\:mm\:ss}"
+	: "ETA: --";
+	var active = DocumentOcrBatches.FirstOrDefault(b => !b.Completed && !string.IsNullOrWhiteSpace(b.CurrentJobLabel))?.CurrentJobLabel;
+	LblDocumentOcrCurrentJob.Text = string.IsNullOrWhiteSpace(active) ? "Current job: --" : $"Current job: {active}";
+	BtnDownloadAllDocumentResults.Visibility = DocumentOcrBatches.Any(b => b.Completed && !string.IsNullOrWhiteSpace(b.AggregatedText))
+	? Visibility.Visible
+	: Visibility.Collapsed;
+	}
+
+private void ShowStatus(string title, string message, InfoBarSeverity severity)
+	{
+		void Update()
+		{
 			StatusInfoBar.Title = title;
 			StatusInfoBar.Message = message;
 			StatusInfoBar.Severity = severity;
