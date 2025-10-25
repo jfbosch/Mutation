@@ -1,17 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-	  <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
-	  <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Platforms>AnyCPU;x64</Platforms>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Betalgo.OpenAI" Version="8.7.2" />
-    <PackageReference Include="Deepgram" Version="6.6.0" />
-    <PackageReference Include="Microsoft.Azure.CognitiveServices.Vision.ComputerVision" Version="7.0.1" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
-    <PackageReference Include="NAudio.Lame" Version="2.1.0" />
-    <PackageReference Include="System.Speech" Version="9.0.9" />
-    <PackageReference Include="System.Windows.Extensions" Version="9.0.9" />
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Platforms>AnyCPU;x64</Platforms>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Betalgo.OpenAI" Version="8.7.2" />
+		<PackageReference Include="Deepgram" Version="6.6.0" />
+		<PackageReference Include="Microsoft.Azure.CognitiveServices.Vision.ComputerVision" Version="7.0.1" />
+		<PackageReference Include="PDFsharp" Version="6.2.2" />
+		<PackageReference Include="NAudio" Version="2.2.1" />
+		<PackageReference Include="NAudio.Lame" Version="2.1.0" />
+		<PackageReference Include="System.Speech" Version="9.0.9" />
+		<PackageReference Include="System.Windows.Extensions" Version="9.0.9" />
+	</ItemGroup>
 </Project>
