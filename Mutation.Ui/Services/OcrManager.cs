@@ -2,7 +2,11 @@
 using Microsoft.UI.Xaml;
 using Mutation.Ui.Views;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Graphics.Imaging;
@@ -15,6 +19,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 namespace Mutation.Ui.Services;
 
 public record OcrResult(bool Success, string Message);
+public record OcrBatchResult(bool Success, string Text, int TotalCount, int SuccessCount, IReadOnlyList<string> Failures);
 
 public class OcrManager
 {
@@ -86,6 +91,69 @@ public class OcrManager
         var result = await ExtractTextViaOcrAsync(order, bitmap);
         _ = Task.Run(() => BeepPlayer.Play(result.Success ? BeepType.Success : BeepType.Failure));
         return result;
+    }
+
+    public async Task<OcrBatchResult> ExtractTextFromFilesAsync(IEnumerable<string> filePaths, OcrReadingOrder order, CancellationToken cancellationToken)
+    {
+        if (filePaths is null)
+            throw new ArgumentNullException(nameof(filePaths));
+
+        List<string> paths = filePaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (paths.Count == 0)
+            return new(false, string.Empty, 0, 0, Array.Empty<string>());
+
+        var combinedText = new StringBuilder();
+        var failures = new List<string>();
+        int successCount = 0;
+
+        foreach (string path in paths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                using var stream = File.OpenRead(path);
+                string text = await _ocrService.ExtractText(order, stream, cancellationToken).ConfigureAwait(false);
+
+                if (combinedText.Length > 0)
+                {
+                    combinedText.AppendLine().AppendLine();
+                }
+
+                string fileName = Path.GetFileName(path);
+                combinedText.AppendLine($"[{fileName}]");
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    combinedText.AppendLine(text.TrimEnd());
+                }
+
+                successCount++;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string fileName = Path.GetFileName(path);
+                failures.Add($"{fileName}: {ex.Message}");
+            }
+        }
+
+        string resultText = combinedText.ToString();
+        if (successCount > 0 && !string.IsNullOrWhiteSpace(resultText))
+        {
+            _clipboard.SetText(resultText);
+        }
+
+        bool success = successCount > 0 && failures.Count == 0;
+        _ = Task.Run(() => BeepPlayer.Play(success ? BeepType.Success : BeepType.Failure));
+
+        return new(success, resultText, paths.Count, successCount, failures.AsReadOnly());
     }
 
     private async Task<OcrResult> ExtractTextViaOcrAsync(OcrReadingOrder order, SoftwareBitmap bitmap)

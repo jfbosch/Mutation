@@ -4,9 +4,12 @@ using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace CognitiveSupport;
 
@@ -21,6 +24,7 @@ public class OcrService : IOcrService, IDisposable
         private string Endpoint { get; }
         private ComputerVisionClient ComputerVisionClient { get; }
         private readonly int _timeoutSeconds;
+        private readonly RequestRateLimiter _rateLimiter = new(20, TimeSpan.FromMinutes(1));
 
 	public OcrService(string? subscriptionKey, string? endpoint, int timeoutSeconds = 30)
 	{
@@ -121,36 +125,47 @@ public class OcrService : IOcrService, IDisposable
 			overallCancellationToken).ConfigureAwait(false);
 	}
 
-	private Stream EnsureMinimumImageSize(Stream imageStream)
-	{
-		using var image = Image.FromStream(imageStream);
+        private Stream EnsureMinimumImageSize(Stream imageStream)
+        {
+                if (!imageStream.CanSeek)
+                        return imageStream;
 
-		if (image.Width >= MinimumImageWidth && image.Height >= MinimumImageHeight)
-		{
-			imageStream.Seek(0, SeekOrigin.Begin);
-			return imageStream;
-		}
+                imageStream.Seek(0, SeekOrigin.Begin);
 
-		int newWidth = Math.Max(MinimumImageWidth, image.Width);
-		int newHeight = Math.Max(MinimumImageHeight, image.Height);
+                try
+                {
+                        using var image = Image.FromStream(imageStream);
 
-		using var paddedImage = new Bitmap(newWidth, newHeight);
-		using (var graphics = Graphics.FromImage(paddedImage))
-		{
-			graphics.Clear(Color.White);
-			int offsetX = (newWidth - image.Width) / 2;
-			int offsetY = (newHeight - image.Height) / 2;
-			graphics.DrawImage(image, offsetX, offsetY);
-		}
+                        if (image.Width >= MinimumImageWidth && image.Height >= MinimumImageHeight)
+                        {
+                                imageStream.Seek(0, SeekOrigin.Begin);
+                                return imageStream;
+                        }
 
-		var paddedStream = new MemoryStream();
-		paddedImage.Save(paddedStream, ImageFormat.Png);
-		paddedStream.Seek(0, SeekOrigin.Begin);
+                        int newWidth = Math.Max(MinimumImageWidth, image.Width);
+                        int newHeight = Math.Max(MinimumImageHeight, image.Height);
 
-		// Do not dispose imageStream here! Let the caller manage its lifetime.
+                        using var paddedImage = new Bitmap(newWidth, newHeight);
+                        using (var graphics = Graphics.FromImage(paddedImage))
+                        {
+                                graphics.Clear(Color.White);
+                                int offsetX = (newWidth - image.Width) / 2;
+                                int offsetY = (newHeight - image.Height) / 2;
+                                graphics.DrawImage(image, offsetX, offsetY);
+                        }
 
-		return paddedStream;
-	}
+                        var paddedStream = new MemoryStream();
+                        paddedImage.Save(paddedStream, ImageFormat.Png);
+                        paddedStream.Seek(0, SeekOrigin.Begin);
+
+                        return paddedStream;
+                }
+                catch (Exception ex) when (ex is ArgumentException or ExternalException or OutOfMemoryException or InvalidOperationException)
+                {
+                        imageStream.Seek(0, SeekOrigin.Begin);
+                        return imageStream;
+                }
+        }
 
 	private async Task<string> ReadInternal(
 		OcrReadingOrder ocrReadingOrder,
@@ -161,11 +176,13 @@ public class OcrService : IOcrService, IDisposable
 
 		imageStream = EnsureMinimumImageSize(imageStream);
 
+                await _rateLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
+
                 var headers = await ComputerVisionClient.ReadInStreamAsync(
-								imageStream,
-								readingOrder: ocrReadingOrder.ToEnumMemberValue(),
-								cancellationToken: cancellationToken)
-						  .ConfigureAwait(false);
+                                                                imageStream,
+                                                                readingOrder: ocrReadingOrder.ToEnumMemberValue(),
+                                                                cancellationToken: cancellationToken)
+                                                  .ConfigureAwait(false);
 
 		string operationId = headers.OperationLocation[^operationIdLength..];
 
@@ -182,9 +199,11 @@ public class OcrService : IOcrService, IDisposable
 
 		while (true)
 		{
-			var response = await ComputerVisionClient
-								  .GetReadResultWithHttpMessagesAsync(Guid.Parse(operationId), cancellationToken: cancellationToken)
-								  .ConfigureAwait(false);
+                        await _rateLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+                        var response = await ComputerVisionClient
+                                                                  .GetReadResultWithHttpMessagesAsync(Guid.Parse(operationId), cancellationToken: cancellationToken)
+                                                                  .ConfigureAwait(false);
 
 			var result = response.Body;
 
@@ -214,5 +233,60 @@ public class OcrService : IOcrService, IDisposable
         public void Dispose()
         {
                 ComputerVisionClient?.Dispose();
+        }
+
+        private sealed class RequestRateLimiter
+        {
+                private readonly int _limit;
+                private readonly TimeSpan _window;
+                private readonly Queue<DateTime> _timestamps = new();
+                private readonly SemaphoreSlim _mutex = new(1, 1);
+
+                public RequestRateLimiter(int limit, TimeSpan window)
+                {
+                        _limit = limit;
+                        _window = window;
+                }
+
+                public async Task WaitAsync(CancellationToken token)
+                {
+                        while (true)
+                        {
+                                token.ThrowIfCancellationRequested();
+
+                                TimeSpan delay = TimeSpan.Zero;
+
+                                await _mutex.WaitAsync(token).ConfigureAwait(false);
+                                try
+                                {
+                                        var now = DateTime.UtcNow;
+
+                                        while (_timestamps.Count > 0 && now - _timestamps.Peek() >= _window)
+                                        {
+                                                _timestamps.Dequeue();
+                                        }
+
+                                        if (_timestamps.Count < _limit)
+                                        {
+                                                _timestamps.Enqueue(now);
+                                                return;
+                                        }
+
+                                        var oldest = _timestamps.Peek();
+                                        delay = _window - (now - oldest);
+                                        if (delay < TimeSpan.Zero)
+                                                delay = TimeSpan.Zero;
+                                }
+                                finally
+                                {
+                                        _mutex.Release();
+                                }
+
+                                if (delay > TimeSpan.Zero)
+                                {
+                                        await Task.Delay(delay, token).ConfigureAwait(false);
+                                }
+                        }
+                }
         }
 }
