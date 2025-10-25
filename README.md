@@ -23,6 +23,11 @@ Hotkeys:
 
 Azure Computer Vision greatly outperforms the Windows 10/11 built-in OCR engine.
 
+For document OCR workloads, Mutation can respect the Azure Computer Vision free tier by default. The `UseFreeTier` flag keeps the
+batch to the first two pages of each PDF (configurable via `FreeTierPageLimit`), while `MaxParallelDocuments` and `MaxParallelRequests`
+let you dial concurrency up or down for paid tiers. You can also cap uploads with `MaxDocumentBytes` to avoid unexpectedly large
+files.
+
 ### 3. Speech to Text Conversion  
 Press one hotkey to start recording, press it again to stop and send the audio for transcription. Supported providers:
 
@@ -50,7 +55,12 @@ All hotkeys are global and fully customisable. Below is a comprehensive example 
     "ScreenshotOcrHotKey": "Ctrl+Shift+Q",
     "OcrLeftToRightTopToBottomHotKey": "Ctrl+Shift+L",
     "ScreenshotLeftToRightTopToBottomOcrHotKey": "Ctrl+Shift+K",
-    "SendHotkeyAfterOcrOperation": "Ctrl+Alt+C"
+    "SendHotkeyAfterOcrOperation": "Ctrl+Alt+C",
+    "UseFreeTier": true,
+    "FreeTierPageLimit": 2,
+    "MaxParallelDocuments": 2,
+    "MaxParallelRequests": 4,
+    "MaxDocumentBytes": null
   },
 
   "SpeechToTextSettings": {
