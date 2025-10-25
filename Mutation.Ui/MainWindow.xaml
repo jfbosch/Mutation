@@ -621,7 +621,7 @@
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <FontIcon
-                                            Glyph="&#xE8A5;"
+                                            Glyph="&#xE898;"
                                             FontFamily="Segoe Fluent Icons"
                                             HorizontalAlignment="Left"
                                             VerticalAlignment="Center" />
@@ -634,6 +634,20 @@
                                         </StackPanel>
                                     </Grid>
                                 </Button>
+
+                                <StackPanel x:Name="OcrDocumentsProgressPanel" Spacing="4" Visibility="Collapsed">
+                                    <TextBlock
+                                        x:Name="OcrDocumentsProgressLabel"
+                                        Text="Preparing documents..."
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <ProgressBar
+                                        x:Name="OcrDocumentsProgressBar"
+                                        Minimum="0"
+                                        Maximum="1"
+                                        Value="0"
+                                        Height="4" />
+                                </StackPanel>
                             </StackPanel>
 
                             <TextBox
