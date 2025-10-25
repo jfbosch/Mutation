@@ -117,7 +117,7 @@ public class OcrManager
             try
             {
                 using var stream = File.OpenRead(path);
-                string text = await _ocrService.ExtractText(order, stream, cancellationToken).ConfigureAwait(false);
+                string text = await _ocrService.ExtractText(order, stream, cancellationToken);
 
                 if (combinedText.Length > 0)
                 {
