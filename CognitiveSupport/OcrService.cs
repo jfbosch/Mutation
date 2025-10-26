@@ -1,12 +1,16 @@
 ﻿using CognitiveSupport.Extensions;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
+using Microsoft.Rest;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Globalization;
+using System.Linq;
+using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -178,14 +182,15 @@ public class OcrService : IOcrService, IDisposable
 
                 await _rateLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                var headers = await ComputerVisionClient.ReadInStreamAsync(
-                                                                imageStream,
-                                                                readingOrder: ocrReadingOrder.ToEnumMemberValue(),
-                                                                cancellationToken: cancellationToken)
-                                                  .ConfigureAwait(false);
+                using HttpOperationHeaderResponse<ReadInStreamHeaders> response = await ComputerVisionClient
+                                                                  .ReadInStreamWithHttpMessagesAsync(
+                                                                          imageStream,
+                                                                          readingOrder: ocrReadingOrder.ToEnumMemberValue(),
+                                                                          cancellationToken: cancellationToken)
+                                                                  .ConfigureAwait(false);
 
-                string operationId = headers.OperationLocation[^operationIdLength..];
-                TimeSpan initialDelay = headers.RetryAfter?.Delta ?? TimeSpan.Zero;
+                string operationId = response.Headers.OperationLocation[^operationIdLength..];
+                TimeSpan initialDelay = TryParseRetryAfter(response.Response.Headers) ?? TimeSpan.Zero;
 
                 var results = await GetReadOperationResultAsync(operationId, initialDelay, cancellationToken).ConfigureAwait(false);
 
@@ -216,7 +221,7 @@ public class OcrService : IOcrService, IDisposable
 			if (result.Status is OperationStatusCodes.Succeeded or OperationStatusCodes.Failed)
 				return result;
 
-                        TimeSpan wait = response.Response.Headers.RetryAfter?.Delta ?? defaultDelay;
+                        TimeSpan wait = TryParseRetryAfter(response.Response.Headers) ?? defaultDelay;
                         if (wait <= TimeSpan.Zero)
                                 wait = defaultDelay;
 
@@ -238,6 +243,43 @@ public class OcrService : IOcrService, IDisposable
 
                 return sb.ToString();
         }
+
+        private static TimeSpan? TryParseRetryAfter(HttpResponseHeaders? headers)
+        {
+                if (headers is null)
+                        return null;
+
+                if (headers.RetryAfter?.Delta is TimeSpan delta)
+                        return NormalizeDelay(delta);
+
+                if (headers.RetryAfter?.Date is DateTimeOffset date)
+                        return NormalizeDelay(date - DateTimeOffset.UtcNow);
+
+                return headers.TryGetValues("Retry-After", out IEnumerable<string>? values)
+                        ? ParseRetryAfterValues(values)
+                        : null;
+        }
+
+        private static TimeSpan? ParseRetryAfterValues(IEnumerable<string>? values)
+        {
+                string? first = values?.FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(first))
+                        return null;
+
+                if (int.TryParse(first, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seconds))
+                        return NormalizeDelay(TimeSpan.FromSeconds(Math.Max(0, seconds)));
+
+                if (DateTimeOffset.TryParse(first, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTimeOffset date))
+                        return NormalizeDelay(date - DateTimeOffset.UtcNow);
+
+                return null;
+        }
+
+        private static TimeSpan? NormalizeDelay(TimeSpan delay)
+        {
+                return delay <= TimeSpan.Zero ? TimeSpan.Zero : delay;
+        }
+
 
         public void Dispose()
         {

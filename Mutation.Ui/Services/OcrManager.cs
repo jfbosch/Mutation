@@ -109,6 +109,12 @@ public class OcrManager
         if (paths.Count == 0)
             return new(false, string.Empty, 0, 0, Array.Empty<string>());
 
+        if (!IsOcrConfigured(out string configurationError))
+        {
+            PlayBeep(BeepType.Failure);
+            return new(false, string.Empty, paths.Count, 0, new[] { configurationError });
+        }
+
         var batches = ExpandFileBatches(paths);
         int totalSegments = batches.Sum(batch => batch.Items.Count);
         if (totalSegments == 0)
@@ -198,6 +204,9 @@ public class OcrManager
 
     private async Task<OcrResult> ExtractTextViaOcrAsync(OcrReadingOrder order, SoftwareBitmap bitmap)
     {
+        if (!IsOcrConfigured(out string configurationError))
+            return new(false, configurationError);
+
         using var stream = new InMemoryRandomAccessStream();
         var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
         encoder.SetSoftwareBitmap(bitmap);
@@ -215,6 +224,60 @@ public class OcrManager
         {
             return new(false, ex.Message);
         }
+    }
+
+    private bool IsOcrConfigured(out string message)
+    {
+        var settings = _settings.AzureComputerVisionSettings;
+        if (settings is null)
+        {
+            message = "Azure Computer Vision settings are missing. Update AzureComputerVisionSettings in the settings file.";
+            return false;
+        }
+
+        bool apiKeyMissing = IsPlaceholderValue(settings.ApiKey);
+        bool endpointMissing = IsPlaceholderEndpoint(settings.Endpoint);
+
+        if (!apiKeyMissing && !endpointMissing)
+        {
+            message = string.Empty;
+            return true;
+        }
+
+        if (apiKeyMissing && endpointMissing)
+        {
+            message = "Azure Computer Vision endpoint and API key are not configured. Update AzureComputerVisionSettings in the settings file.";
+        }
+        else if (apiKeyMissing)
+        {
+            message = "Azure Computer Vision API key is not configured. Update AzureComputerVisionSettings.ApiKey in the settings file.";
+        }
+        else
+        {
+            message = "Azure Computer Vision endpoint is not configured. Update AzureComputerVisionSettings.Endpoint in the settings file.";
+        }
+
+        return false;
+    }
+
+    private static bool IsPlaceholderValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return true;
+
+        string trimmed = value.Trim();
+        return string.Equals(trimmed, "<placeholder>", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPlaceholderEndpoint(string? endpoint)
+    {
+        if (IsPlaceholderValue(endpoint))
+            return true;
+
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+            return true;
+
+        return string.Equals(uri.Host, "placeholder.com", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task SetClipboardTextAsync(string text)
