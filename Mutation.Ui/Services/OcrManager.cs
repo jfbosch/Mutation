@@ -22,7 +22,7 @@ namespace Mutation.Ui.Services;
 
 public record OcrResult(bool Success, string Message);
 public record OcrBatchResult(bool Success, string Text, int TotalCount, int SuccessCount, IReadOnlyList<string> Failures);
-public record OcrProcessingProgress(int ProcessedSegments, int TotalSegments, string FileName, int PageNumber, int TotalPagesForFile);
+public record OcrProcessingProgress(int ProcessedSegments, int TotalSegments, string FileName, int BatchNumber, int TotalBatchesForFile, string BatchPages);
 
 public class OcrManager
 {
@@ -138,10 +138,12 @@ public class OcrManager
             bool fileHasSuccess = false;
             bool fileHasFailure = false;
             var fileTextBuilder = new StringBuilder();
-
+            int batchIndex = 0;
             foreach (var item in batch.Items)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
+                string batchPages = item.PageIndices.Count == 1 ? $"{item.PageIndices[0] + 1}" : $"{item.PageIndices.Min() + 1}-{item.PageIndices.Max() + 1}";
 
                 try
                 {
@@ -159,7 +161,9 @@ public class OcrManager
                         fileTextBuilder.AppendLine();
 
                     if (item.TotalPages > 1)
-                        fileTextBuilder.AppendLine($"(Page {item.PageNumber})");
+                    {
+                        fileTextBuilder.AppendLine($"({item.PageIndices.Count == 1 ? "Page" : "Pages"} {batchPages})");
+                    }
 
                     if (!string.IsNullOrWhiteSpace(text))
                         fileTextBuilder.AppendLine(text.TrimEnd());
@@ -169,17 +173,18 @@ public class OcrManager
                 catch (OperationCanceledException)
                 {
                     fileHasFailure = true;
-                    failures.Add($"{batch.FileName} (Page {item.PageNumber}): Operation was canceled.");
+                    failures.Add($"{batch.FileName} ({item.PageIndices.Count == 1 ? "Page" : "Pages"} {batchPages}): Operation was canceled.");
                 }
                 catch (Exception ex)
                 {
                     fileHasFailure = true;
-                    failures.Add($"{batch.FileName} (Page {item.PageNumber}): {ex.Message}");
+                    failures.Add($"{batch.FileName} ({item.PageIndices.Count == 1 ? "Page" : "Pages"} {batchPages}): {ex.Message}");
                 }
                 finally
                 {
                     processedSegments++;
-                    progress?.Report(new OcrProcessingProgress(processedSegments, totalSegments, batch.FileName, item.PageNumber, item.TotalPages));
+                    batchIndex++;
+                    progress?.Report(new OcrProcessingProgress(processedSegments, totalSegments, batch.FileName, batchIndex, batch.Items.Count, batchPages));
                 }
             }
 
@@ -331,11 +336,15 @@ public class OcrManager
                 else
                 {
                     int totalPages = document.PageCount;
+                    int batchSize = 2; // Process in batches of 2 pages
+                    int pagesToProcess = totalPages; // TODO: Apply free tier limit if needed
 
-                    for (int i = 0; i < totalPages; i++)
+                    for (int i = 0; i < pagesToProcess; i += batchSize)
                     {
-                        int pageNumber = i + 1;
-                        items.Add(OcrWorkItem.CreatePdf(path, pageNumber, totalPages));
+                        int startPage = i + 1; // 1-based
+                        int endPage = Math.Min(i + batchSize, pagesToProcess);
+                        var pageIndices = Enumerable.Range(startPage - 1, endPage - startPage + 1).ToList(); // 0-based indices
+                        items.Add(OcrWorkItem.CreatePdfBatch(path, pageIndices, totalPages));
                     }
                 }
             }
@@ -384,6 +393,37 @@ public class OcrManager
         return output;
     }
 
+    private static Stream CreatePdfPagesStream(string path, List<int> pageIndices)
+    {
+        var output = new MemoryStream();
+
+        using (var document = PdfReader.Open(path, PdfDocumentOpenMode.Import))
+        {
+            using var batchDocument = new PdfDocument
+            {
+                Version = document.Version
+            };
+
+            batchDocument.Info.Title = document.Info.Title;
+            batchDocument.Info.Author = document.Info.Author;
+            batchDocument.Info.Subject = document.Info.Subject;
+            batchDocument.Info.Keywords = document.Info.Keywords;
+
+            foreach (int pageIndex in pageIndices)
+            {
+                if (pageIndex < 0 || pageIndex >= document.PageCount)
+                    throw new ArgumentOutOfRangeException(nameof(pageIndices), $"Page index {pageIndex} is out of range.");
+
+                batchDocument.AddPage(document.Pages[pageIndex]);
+            }
+
+            batchDocument.Save(output, false);
+        }
+
+        output.Seek(0, SeekOrigin.Begin);
+        return output;
+    }
+
     private sealed class FileOcrBatch
     {
         public FileOcrBatch(string path, List<OcrWorkItem> items)
@@ -404,28 +444,28 @@ public class OcrManager
     {
         private readonly Func<Stream>? _streamFactory;
 
-        private OcrWorkItem(string originalPath, Func<Stream>? streamFactory, int pageNumber, int totalPages, Exception? initializationError)
+        private OcrWorkItem(string originalPath, Func<Stream>? streamFactory, List<int> pageIndices, int totalPages, Exception? initializationError)
         {
             OriginalPath = originalPath;
             _streamFactory = streamFactory;
-            PageNumber = pageNumber;
+            PageIndices = pageIndices ?? new List<int>();
             TotalPages = totalPages;
             InitializationError = initializationError;
         }
 
         public string OriginalPath { get; }
-        public int PageNumber { get; }
+        public List<int> PageIndices { get; }
         public int TotalPages { get; }
         public Exception? InitializationError { get; }
 
         public static OcrWorkItem CreateFile(string path) =>
-            new(path, () => File.OpenRead(path), 1, 1, null);
+            new(path, () => File.OpenRead(path), new List<int> { 0 }, 1, null);
 
-        public static OcrWorkItem CreatePdf(string path, int pageNumber, int totalPages) =>
-            new(path, () => CreatePdfPageStream(path, pageNumber - 1), pageNumber, totalPages, null);
+        public static OcrWorkItem CreatePdfBatch(string path, List<int> pageIndices, int totalPages) =>
+            new(path, () => CreatePdfPagesStream(path, pageIndices), pageIndices, totalPages, null);
 
         public static OcrWorkItem CreateError(string path, Exception error) =>
-            new(path, null, 1, 1, error);
+            new(path, null, new List<int>(), 1, error);
 
         public Stream OpenStream()
         {
