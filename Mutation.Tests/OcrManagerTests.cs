@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using CognitiveSupport;
 using Mutation.Ui.Services;
 
+using Windows.Graphics.Imaging;
+
 namespace Mutation.Tests;
 
 public class OcrManagerTests
@@ -156,11 +158,18 @@ public class OcrManagerTests
 	{
 		public string? LastText { get; private set; }
 		public int CallCount { get; private set; }
+		public int SetImageCallCount { get; private set; }
 
 		public override void SetText(string text)
 		{
 			CallCount++;
 			LastText = text;
+		}
+
+		public Task SetImageAsync(SoftwareBitmap bitmap)
+		{
+			SetImageCallCount++;
+			return Task.CompletedTask;
 		}
 	}
 
