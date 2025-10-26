@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -392,8 +392,8 @@ public class OcrManagerTests
 
 		public TempFile(string extension, string? contents = null)
 		{
-			var basePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-			Path = Path.ChangeExtension(basePath, extension);
+			var basePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName());
+			Path = System.IO.Path.ChangeExtension(basePath, extension);
 			File.WriteAllText(Path, contents ?? "test");
 		}
 
@@ -410,7 +410,7 @@ public class OcrManagerTests
 
 		public TempPdf(int pageCount)
 		{
-			Path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".pdf");
+			Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName() + ".pdf");
 			using var document = new PdfDocument();
 			for (var i = 0; i < pageCount; i++)
 			{
