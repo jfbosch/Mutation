@@ -119,7 +119,7 @@ public class OcrManager
         int totalSegments = batches.Sum(batch => batch.Items.Count);
         if (totalSegments == 0)
         {
-            _ = Task.Run(() => PlayBeep(BeepType.Failure));
+            PlayBeep(BeepType.Failure);
             return new(false, string.Empty, paths.Count, 0, Array.Empty<string>());
         }
 
