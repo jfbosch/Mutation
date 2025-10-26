@@ -118,7 +118,10 @@ public class OcrManager
         var batches = ExpandFileBatches(paths);
         int totalSegments = batches.Sum(batch => batch.Items.Count);
         if (totalSegments == 0)
+        {
+            _ = Task.Run(() => PlayBeep(BeepType.Failure));
             return new(false, string.Empty, paths.Count, 0, Array.Empty<string>());
+        }
 
         var combinedText = new StringBuilder();
         var failures = new List<string>();

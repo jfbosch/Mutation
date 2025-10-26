@@ -60,7 +60,7 @@ public class OcrManagerTests
 		Assert.Equal(1, result.TotalCount);
 		Assert.Equal(0, result.SuccessCount);
 		Assert.Single(result.Failures);
-		Assert.Contains("not configured", result.Failures[0], StringComparison.OrdinalIgnoreCase);
+		Assert.Contains("missing", result.Failures[0], StringComparison.OrdinalIgnoreCase);
 		Assert.Equal(0, clipboard.SetTextCalls);
 		Assert.Equal(0, service.CallCount);
 		Assert.Single(manager.Beeps);
