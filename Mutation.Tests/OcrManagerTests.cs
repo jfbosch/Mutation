@@ -1,9 +1,11 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using CognitiveSupport;
 using Mutation.Ui.Services;
+
+using Windows.Graphics.Imaging;
 
 namespace Mutation.Tests;
 
@@ -12,7 +14,14 @@ public class OcrManagerTests
 	[Fact]
 	public async Task ExtractTextFromFilesAsync_CopiesResult_WhenUiThread()
 	{
-		var settings = new Settings();
+		var settings = new Settings
+		{
+			AzureComputerVisionSettings = new AzureComputerVisionSettings
+			{
+				ApiKey = "dummy",
+				Endpoint = "https://dummy.com"
+			}
+		};
 		var clipboard = new TestClipboardManager();
 		var ocrService = new FakeOcrService("recognized text");
 		using var temp = new TempFile();
@@ -30,7 +39,14 @@ public class OcrManagerTests
 	[Fact]
 	public async Task ExtractTextFromFilesAsync_DispatchesClipboardUpdate_WhenOffUiThread()
 	{
-		var settings = new Settings();
+		var settings = new Settings
+		{
+			AzureComputerVisionSettings = new AzureComputerVisionSettings
+			{
+				ApiKey = "dummy",
+				Endpoint = "https://dummy.com"
+			}
+		};
 		var clipboard = new TestClipboardManager();
 		var ocrService = new FakeOcrService("batched result");
 		using var temp = new TempFile();
@@ -49,6 +65,65 @@ public class OcrManagerTests
 		Assert.Equal(expected, clipboard.LastText);
 		Assert.Equal(1, clipboard.CallCount);
 		Assert.Equal(1, manager.RunOnDispatcherCalls);
+	}
+
+	[Fact]
+	public async Task ExtractTextFromFilesAsync_ReturnsFailure_WhenFilePathsIsNull()
+	{
+		var settings = new Settings
+		{
+			AzureComputerVisionSettings = new AzureComputerVisionSettings
+			{
+				ApiKey = "dummy",
+				Endpoint = "https://dummy.com"
+			}
+		};
+		var clipboard = new TestClipboardManager();
+		var ocrService = new FakeOcrService("recognized text");
+		var manager = new TestableOcrManager(settings, ocrService, clipboard, () => true, _ => Task.CompletedTask);
+		await Assert.ThrowsAsync<ArgumentNullException>(() => manager.ExtractTextFromFilesAsync(null!, OcrReadingOrder.TopToBottomColumnAware, CancellationToken.None));
+	}
+
+	[Fact]
+	public async Task ExtractTextFromFilesAsync_ReturnsFailure_WhenNoValidPaths()
+	{
+		var settings = new Settings
+		{
+			AzureComputerVisionSettings = new AzureComputerVisionSettings
+			{
+				ApiKey = "dummy",
+				Endpoint = "https://dummy.com"
+			}
+		};
+		var clipboard = new TestClipboardManager();
+		var ocrService = new FakeOcrService("recognized text");
+		var manager = new TestableOcrManager(settings, ocrService, clipboard, () => true, _ => Task.CompletedTask);
+		var result = await manager.ExtractTextFromFilesAsync(Array.Empty<string>(), OcrReadingOrder.TopToBottomColumnAware, CancellationToken.None);
+		Assert.False(result.Success);
+		Assert.Equal(string.Empty, result.Text);
+		Assert.Equal(0, result.TotalCount);
+		Assert.Equal(0, result.SuccessCount);
+		Assert.Empty(result.Failures);
+		Assert.Equal(0, clipboard.CallCount);
+	}
+
+	[Fact]
+	public async Task ExtractTextFromFilesAsync_ReturnsFailure_WhenOcrNotConfigured()
+	{
+		var settings = new Settings(); // No AzureComputerVisionSettings
+		var clipboard = new TestClipboardManager();
+		var ocrService = new FakeOcrService("recognized text");
+		using var temp = new TempFile();
+		File.WriteAllText(temp.Path, "sample");
+		var manager = new TestableOcrManager(settings, ocrService, clipboard, () => true, _ => Task.CompletedTask);
+		var result = await manager.ExtractTextFromFilesAsync(new[] { temp.Path }, OcrReadingOrder.TopToBottomColumnAware, CancellationToken.None);
+		Assert.False(result.Success);
+		Assert.Equal(string.Empty, result.Text);
+		Assert.Equal(1, result.TotalCount);
+		Assert.Equal(0, result.SuccessCount);
+		Assert.Single(result.Failures);
+		Assert.Contains("Azure Computer Vision settings are missing", result.Failures[0]);
+		Assert.Equal(0, clipboard.CallCount);
 	}
 
 	private sealed class TestableOcrManager : OcrManager
@@ -83,11 +158,18 @@ public class OcrManagerTests
 	{
 		public string? LastText { get; private set; }
 		public int CallCount { get; private set; }
+		public int SetImageCallCount { get; private set; }
 
 		public override void SetText(string text)
 		{
 			CallCount++;
 			LastText = text;
+		}
+
+		public Task SetImageAsync(SoftwareBitmap bitmap)
+		{
+			SetImageCallCount++;
+			return Task.CompletedTask;
 		}
 	}
 

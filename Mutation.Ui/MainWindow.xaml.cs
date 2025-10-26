@@ -981,11 +981,23 @@ public sealed partial class MainWindow : Window
 			if (files == null || files.Count == 0)
 				return;
 
-			BtnOcrDocuments.IsEnabled = false;
-			ShowStatus("OCR documents", $"Processing {files.Count} document(s)...", InfoBarSeverity.Informational);
+                        BtnOcrDocuments.IsEnabled = false;
+                        ShowStatus("OCR documents", $"Processing {files.Count} document(s)...", InfoBarSeverity.Informational);
 
-			var paths = files.Select(file => file.Path).ToList();
-			var result = await _ocrManager.ExtractTextFromFilesAsync(paths, OcrReadingOrder.TopToBottomColumnAware, CancellationToken.None);
+                        OcrDocumentsProgressBar.Value = 0;
+                        OcrDocumentsProgressBar.Maximum = 1;
+                        OcrDocumentsProgressPanel.Visibility = Visibility.Visible;
+                        OcrDocumentsProgressLabel.Text = "Preparing documents...";
+
+                        var paths = files.Select(file => file.Path).ToList();
+                        var progress = new Progress<OcrProcessingProgress>(info =>
+                        {
+                                OcrDocumentsProgressPanel.Visibility = Visibility.Visible;
+                                OcrDocumentsProgressBar.Maximum = Math.Max(1, info.TotalSegments);
+                                OcrDocumentsProgressBar.Value = info.ProcessedSegments;
+                                OcrDocumentsProgressLabel.Text = $"{info.FileName} (Page {info.PageNumber} of {info.TotalPagesForFile})";
+                        });
+                        var result = await _ocrManager.ExtractTextFromFilesAsync(paths, OcrReadingOrder.TopToBottomColumnAware, CancellationToken.None, progress);
 			SetOcrText(result.Text);
 
 			if (result.SuccessCount == 0)
@@ -1011,11 +1023,15 @@ public sealed partial class MainWindow : Window
 			ShowStatus("OCR documents", ex.Message, InfoBarSeverity.Error);
 			await ShowErrorDialog("OCR Documents Error", ex);
 		}
-		finally
-		{
-			BtnOcrDocuments.IsEnabled = true;
-		}
-	}
+                finally
+                {
+                        BtnOcrDocuments.IsEnabled = true;
+                        OcrDocumentsProgressPanel.Visibility = Visibility.Collapsed;
+                        OcrDocumentsProgressBar.Value = 0;
+                        OcrDocumentsProgressBar.Maximum = 1;
+                        OcrDocumentsProgressLabel.Text = string.Empty;
+                }
+        }
 
         private async void BtnDownloadOcrResults_Click(object sender, RoutedEventArgs e)
         {
