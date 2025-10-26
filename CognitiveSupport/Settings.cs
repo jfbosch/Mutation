@@ -109,7 +109,7 @@ public class AzureComputerVisionSettings
 	public string? ApiKey { get; set; }
 	public string? Endpoint { get; set; }
 	public int TimeoutSeconds { get; set; } = 10;
-	public bool UseFreeTier { get; set; } = true;
+	public bool UseFreeTier { get; set; } = false;
 	public int FreeTierPageLimit { get; set; } = 2;
 	public int MaxParallelDocuments { get; set; } = 2;
 	public int MaxParallelRequests { get; set; } = 4;
