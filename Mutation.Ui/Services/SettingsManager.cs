@@ -150,6 +150,12 @@ internal class SettingsManager : ISettingsManager
                         somethingWasMissing = true;
                 }
 
+		if (azureComputerVisionSettings.UseFreeTier)
+		{
+			azureComputerVisionSettings.UseFreeTier = false;
+			somethingWasMissing = true;
+		}
+
 
 		if (settings.AudioSettings is null)
 		{

@@ -376,7 +376,7 @@ public class OcrManager
                 {
                     int totalPages = document.PageCount;
                     int batchSize = 2; // Process in batches of 2 pages
-                    int pagesToProcess = useFreeTier ? Math.Min(totalPages, freeTierPageLimit) : totalPages;
+                    int pagesToProcess = useFreeTier ? totalPages : totalPages;
 
                     for (int i = 0; i < pagesToProcess; i += batchSize)
                     {
