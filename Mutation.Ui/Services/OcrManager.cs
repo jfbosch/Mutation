@@ -107,7 +107,10 @@ public class OcrManager
             .ToList();
 
         if (paths.Count == 0)
+        {
+            PlayBeep(BeepType.Failure);
             return new(false, string.Empty, 0, 0, Array.Empty<string>());
+        }
 
         if (!IsOcrConfigured(out string configurationError))
         {
