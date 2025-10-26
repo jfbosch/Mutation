@@ -106,108 +106,145 @@ public class OcrManager
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (paths.Count == 0)
+        if (paths.Count ==0)
         {
             PlayBeep(BeepType.Failure);
-            return new(false, string.Empty, 0, 0, Array.Empty<string>());
+            return new(false, string.Empty,0,0, Array.Empty<string>());
         }
 
         if (!IsOcrConfigured(out string configurationError))
         {
             PlayBeep(BeepType.Failure);
-            return new(false, string.Empty, paths.Count, 0, new[] { configurationError });
+            return new(false, string.Empty, paths.Count,0, new[] { configurationError });
         }
 
         var batches = ExpandFileBatches(paths);
         int totalPages = batches.Sum(batch => batch.Items.Sum(item => item.PageIndices.Count));
-        if (totalPages == 0)
+        if (totalPages ==0)
         {
             PlayBeep(BeepType.Failure);
-            return new(false, string.Empty, paths.Count, 0, Array.Empty<string>());
+            return new(false, string.Empty, paths.Count,0, Array.Empty<string>());
         }
 
         var combinedText = new StringBuilder();
         var failures = new List<string>();
-        int successCount = 0;
-        int processedPages = 0;
+        int successCount =0;
+        int processedPages =0;
 
-        foreach (var batch in batches)
+        // Determine parallelism
+        int maxParallelDocuments = _settings.AzureComputerVisionSettings?.MaxParallelDocuments >0
+            ? _settings.AzureComputerVisionSettings.MaxParallelDocuments
+            :1;
+
+        var semaphore = new SemaphoreSlim(maxParallelDocuments);
+
+        var perFileResults = new (string FileName, string Text, bool HasSuccess, bool HasFailure, List<string> Failures)[batches.Count];
+
+        var tasks = new List<Task>(batches.Count);
+
+        for (int fileIndex = 0; fileIndex < batches.Count; fileIndex++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            bool fileHasSuccess = false;
-            bool fileHasFailure = false;
-            var fileTextBuilder = new StringBuilder();
-            int batchIndex = 0;
-            foreach (var item in batch.Items)
+            var batch = batches[fileIndex];
+            int localFileIndex = fileIndex;
+            tasks.Add(Task.Run(async () =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                string batchPages = item.PageIndices.Count == 1 ? $"{item.PageIndices[0] + 1}" : $"{item.PageIndices.Min() + 1}-{item.PageIndices.Max() + 1}";
-
+                await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    if (item.InitializationError is not null)
+                    bool fileHasSuccess = false;
+                    bool fileHasFailure = false;
+                    var fileTextBuilder = new StringBuilder();
+                    var localFailures = new List<string>();
+
+                    foreach (var item in batch.Items)
                     {
-                        fileHasFailure = true;
-                        failures.Add($"{batch.FileName}: {item.InitializationError.Message}");
-                        continue;
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        string batchPages = item.PageIndices.Count == 1 ? $"{item.PageIndices[0] + 1}" : $"{item.PageIndices.Min() + 1}-{item.PageIndices.Max() + 1}";
+
+                        try
+                        {
+                            if (item.InitializationError is not null)
+                            {
+                                fileHasFailure = true;
+                                localFailures.Add($"{batch.FileName}: {item.InitializationError.Message}");
+                                continue;
+                            }
+
+                            using var stream = item.OpenStream();
+                            string text = await _ocrService.ExtractText(order, stream, cancellationToken).ConfigureAwait(false);
+
+                            if (fileTextBuilder.Length > 0)
+                                fileTextBuilder.AppendLine();
+
+                            if (item.TotalPages > 1)
+                            {
+                                fileTextBuilder.AppendLine($"({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages})");
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(text))
+                                fileTextBuilder.AppendLine(text.TrimEnd());
+
+                            fileHasSuccess = true;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            fileHasFailure = true;
+                            localFailures.Add($"{batch.FileName} ({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages}): Operation was canceled.");
+                        }
+                        catch (Exception ex)
+                        {
+                            fileHasFailure = true;
+                            localFailures.Add($"{batch.FileName} ({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages}): {ex.Message}");
+                        }
+                        finally
+                        {
+                            int pages = item.PageIndices.Count;
+                            int newProcessed = Interlocked.Add(ref processedPages, pages);
+                            progress?.Report(new OcrProcessingProgress(newProcessed, item.TotalPages, batch.FileName, batchPages));
+                        }
                     }
 
-                    using var stream = item.OpenStream();
-                    string text = await _ocrService.ExtractText(order, stream, cancellationToken);
-
-                    if (fileTextBuilder.Length > 0)
-                        fileTextBuilder.AppendLine();
-
-                    if (item.TotalPages > 1)
-                    {
-                        fileTextBuilder.AppendLine($"({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages})");
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(text))
-                        fileTextBuilder.AppendLine(text.TrimEnd());
-
-                    fileHasSuccess = true;
-                }
-                catch (OperationCanceledException)
-                {
-                    fileHasFailure = true;
-                    failures.Add($"{batch.FileName} ({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages}): Operation was canceled.");
-                }
-                catch (Exception ex)
-                {
-                    fileHasFailure = true;
-                    failures.Add($"{batch.FileName} ({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages}): {ex.Message}");
+                    perFileResults[localFileIndex] = (batch.FileName, fileTextBuilder.ToString().TrimEnd(), fileHasSuccess, fileHasFailure, localFailures);
                 }
                 finally
                 {
-                    processedPages += item.PageIndices.Count;
-                    progress?.Report(new OcrProcessingProgress(processedPages, item.TotalPages, batch.FileName, batchPages));
+                    semaphore.Release();
                 }
-            }
+            }, cancellationToken));
+        }
 
-            if (fileHasSuccess)
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        // Combine results in original order
+        for (int i =0; i < perFileResults.Length; i++)
+        {
+            var res = perFileResults[i];
+            if (res.FileName is null)
+                continue;
+
+            if (res.HasSuccess)
             {
-                if (combinedText.Length > 0)
+                if (combinedText.Length >0)
                     combinedText.AppendLine().AppendLine();
 
-                combinedText.AppendLine($"[{batch.FileName}]");
-
-                string fileText = fileTextBuilder.ToString().TrimEnd();
-                if (!string.IsNullOrWhiteSpace(fileText))
-                    combinedText.AppendLine(fileText);
+                combinedText.AppendLine($"[{res.FileName}]");
+                if (!string.IsNullOrWhiteSpace(res.Text))
+                    combinedText.AppendLine(res.Text);
             }
 
-            if (fileHasSuccess && !fileHasFailure)
+            if (res.HasSuccess && !res.HasFailure)
                 successCount++;
+
+            if (res.Failures != null && res.Failures.Count >0)
+                failures.AddRange(res.Failures);
         }
 
         string resultText = combinedText.ToString();
-        if (successCount > 0 && !string.IsNullOrWhiteSpace(resultText))
-            await SetClipboardTextAsync(resultText);
+        if (successCount >0 && !string.IsNullOrWhiteSpace(resultText))
+            await SetClipboardTextAsync(resultText).ConfigureAwait(false);
 
-        bool success = successCount > 0 && failures.Count == 0;
+        bool success = successCount >0 && failures.Count ==0;
         PlayBeep(success ? BeepType.Success : BeepType.Failure);
 
         return new(success, resultText, paths.Count, successCount, failures.AsReadOnly());
