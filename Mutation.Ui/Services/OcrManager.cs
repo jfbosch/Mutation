@@ -168,7 +168,8 @@ public class OcrManager
                 }
                 catch (OperationCanceledException)
                 {
-                    throw;
+                    fileHasFailure = true;
+                    failures.Add($"{batch.FileName} (Page {item.PageNumber}): Operation was canceled.");
                 }
                 catch (Exception ex)
                 {
@@ -203,7 +204,7 @@ public class OcrManager
             await SetClipboardTextAsync(resultText);
 
         bool success = successCount > 0 && failures.Count == 0;
-        _ = Task.Run(() => PlayBeep(success ? BeepType.Success : BeepType.Failure));
+        PlayBeep(success ? BeepType.Success : BeepType.Failure);
 
         return new(success, resultText, paths.Count, successCount, failures.AsReadOnly());
     }
