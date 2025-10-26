@@ -22,7 +22,7 @@ namespace Mutation.Ui.Services;
 
 public record OcrResult(bool Success, string Message);
 public record OcrBatchResult(bool Success, string Text, int TotalCount, int SuccessCount, IReadOnlyList<string> Failures);
-public record OcrProcessingProgress(int ProcessedSegments, int TotalSegments, string FileName, int BatchNumber, int TotalBatchesForFile, string BatchPages);
+public record OcrProcessingProgress(int ProcessedPages, int TotalPages, string FileName, string BatchPages);
 
 public class OcrManager
 {
@@ -119,8 +119,8 @@ public class OcrManager
         }
 
         var batches = ExpandFileBatches(paths);
-        int totalSegments = batches.Sum(batch => batch.Items.Count);
-        if (totalSegments == 0)
+        int totalPages = batches.Sum(batch => batch.Items.Sum(item => item.PageIndices.Count));
+        if (totalPages == 0)
         {
             PlayBeep(BeepType.Failure);
             return new(false, string.Empty, paths.Count, 0, Array.Empty<string>());
@@ -129,7 +129,7 @@ public class OcrManager
         var combinedText = new StringBuilder();
         var failures = new List<string>();
         int successCount = 0;
-        int processedSegments = 0;
+        int processedPages = 0;
 
         foreach (var batch in batches)
         {
@@ -182,9 +182,8 @@ public class OcrManager
                 }
                 finally
                 {
-                    processedSegments++;
-                    batchIndex++;
-                    progress?.Report(new OcrProcessingProgress(processedSegments, totalSegments, batch.FileName, batchIndex, batch.Items.Count, batchPages));
+                    processedPages += item.PageIndices.Count;
+                    progress?.Report(new OcrProcessingProgress(processedPages, item.TotalPages, batch.FileName, batchPages));
                 }
             }
 

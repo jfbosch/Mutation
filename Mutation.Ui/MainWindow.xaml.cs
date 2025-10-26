@@ -993,9 +993,9 @@ public sealed partial class MainWindow : Window
                         var progress = new Progress<OcrProcessingProgress>(info =>
                         {
                                 OcrDocumentsProgressPanel.Visibility = Visibility.Visible;
-                                OcrDocumentsProgressBar.Maximum = Math.Max(1, info.TotalSegments);
-                                OcrDocumentsProgressBar.Value = info.ProcessedSegments;
-                                OcrDocumentsProgressLabel.Text = $"{info.FileName} (Batch {info.BatchNumber} of {info.TotalBatchesForFile}: Pages {info.BatchPages})";
+                                OcrDocumentsProgressBar.Maximum = Math.Max(1, info.TotalPages);
+                                OcrDocumentsProgressBar.Value = info.ProcessedPages;
+                                OcrDocumentsProgressLabel.Text = $"{info.FileName} (Page {info.ProcessedPages} of {info.TotalPages})";
                         });
                         var result = await _ocrManager.ExtractTextFromFilesAsync(paths, OcrReadingOrder.TopToBottomColumnAware, CancellationToken.None, progress);
 			SetOcrText(result.Text);

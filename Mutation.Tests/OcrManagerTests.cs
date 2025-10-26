@@ -256,11 +256,9 @@ public class OcrManagerTests
 
 		Assert.True(result.Success);
 		Assert.Equal(1, progress.Count);
-		Assert.Equal(1, progress[0].ProcessedSegments);
-		Assert.Equal(1, progress[0].TotalSegments);
+		Assert.Equal(2, progress[0].ProcessedPages);
+		Assert.Equal(2, progress[0].TotalPages);
 		Assert.Equal(Path.GetFileName(pdf.Path), progress[0].FileName);
-		Assert.Equal(1, progress[0].BatchNumber);
-		Assert.Equal(1, progress[0].TotalBatchesForFile);
 		Assert.Equal("1-2", progress[0].BatchPages);
 		WaitForBeep(manager, 1);
 		Assert.Contains(BeepType.Success, manager.Beeps);
