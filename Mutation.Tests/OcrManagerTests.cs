@@ -411,12 +411,20 @@ public class OcrManagerTests
 		public TempPdf(int pageCount)
 		{
 			Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetRandomFileName() + ".pdf");
-			using var document = new PdfDocument();
-			for (var i = 0; i < pageCount; i++)
+			if (pageCount == 0)
 			{
-				document.Pages.Add();
+				string minimalPdf = "%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids []\n/Count 0\n>>\nendobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer\n<<\n/Size 3\n/Root 1 0 R\n>>\nstartxref\n110\n%%EOF";
+				File.WriteAllText(Path, minimalPdf);
 			}
-			document.Save(Path);
+			else
+			{
+				using var document = new PdfDocument();
+				for (var i = 0; i < pageCount; i++)
+				{
+					document.Pages.Add();
+				}
+				document.Save(Path);
+			}
 		}
 
 		public void Dispose()
