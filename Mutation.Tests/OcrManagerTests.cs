@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +12,14 @@ public class OcrManagerTests
 	[Fact]
 	public async Task ExtractTextFromFilesAsync_CopiesResult_WhenUiThread()
 	{
-		var settings = new Settings();
+		var settings = new Settings
+		{
+			AzureComputerVisionSettings = new AzureComputerVisionSettings
+			{
+				ApiKey = "dummy",
+				Endpoint = "https://dummy.com"
+			}
+		};
 		var clipboard = new TestClipboardManager();
 		var ocrService = new FakeOcrService("recognized text");
 		using var temp = new TempFile();
@@ -30,7 +37,14 @@ public class OcrManagerTests
 	[Fact]
 	public async Task ExtractTextFromFilesAsync_DispatchesClipboardUpdate_WhenOffUiThread()
 	{
-		var settings = new Settings();
+		var settings = new Settings
+		{
+			AzureComputerVisionSettings = new AzureComputerVisionSettings
+			{
+				ApiKey = "dummy",
+				Endpoint = "https://dummy.com"
+			}
+		};
 		var clipboard = new TestClipboardManager();
 		var ocrService = new FakeOcrService("batched result");
 		using var temp = new TempFile();
