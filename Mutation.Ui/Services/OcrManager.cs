@@ -162,7 +162,7 @@ public class OcrManager
 
                     if (item.TotalPages > 1)
                     {
-                        fileTextBuilder.AppendLine($"({item.PageIndices.Count == 1 ? "Page" : "Pages"} {batchPages})");
+                        fileTextBuilder.AppendLine($"({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages})");
                     }
 
                     if (!string.IsNullOrWhiteSpace(text))
@@ -173,12 +173,12 @@ public class OcrManager
                 catch (OperationCanceledException)
                 {
                     fileHasFailure = true;
-                    failures.Add($"{batch.FileName} ({item.PageIndices.Count == 1 ? "Page" : "Pages"} {batchPages}): Operation was canceled.");
+                    failures.Add($"{batch.FileName} ({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages}): Operation was canceled.");
                 }
                 catch (Exception ex)
                 {
                     fileHasFailure = true;
-                    failures.Add($"{batch.FileName} ({item.PageIndices.Count == 1 ? "Page" : "Pages"} {batchPages}): {ex.Message}");
+                    failures.Add($"{batch.FileName} ({(item.PageIndices.Count == 1 ? "Page" : "Pages")} {batchPages}): {ex.Message}");
                 }
                 finally
                 {
@@ -306,20 +306,23 @@ public class OcrManager
         await RunOnDispatcherAsync(() => _clipboard.SetText(text));
     }
 
-    private static IReadOnlyList<FileOcrBatch> ExpandFileBatches(IReadOnlyList<string> paths)
+    private IReadOnlyList<FileOcrBatch> ExpandFileBatches(IReadOnlyList<string> paths)
     {
         var batches = new List<FileOcrBatch>(paths.Count);
 
+        bool useFreeTier = _settings.AzureComputerVisionSettings?.UseFreeTier ?? true;
+        int freeTierPageLimit = _settings.AzureComputerVisionSettings?.FreeTierPageLimit ?? 2;
+
         foreach (string path in paths)
         {
-            var items = ExpandFile(path);
+            var items = ExpandFile(path, useFreeTier, freeTierPageLimit);
             batches.Add(new FileOcrBatch(path, items));
         }
 
         return batches;
     }
 
-    private static List<OcrWorkItem> ExpandFile(string path)
+    private static List<OcrWorkItem> ExpandFile(string path, bool useFreeTier, int freeTierPageLimit)
     {
         var items = new List<OcrWorkItem>();
 
@@ -337,7 +340,7 @@ public class OcrManager
                 {
                     int totalPages = document.PageCount;
                     int batchSize = 2; // Process in batches of 2 pages
-                    int pagesToProcess = totalPages; // TODO: Apply free tier limit if needed
+                    int pagesToProcess = useFreeTier ? Math.Min(totalPages, freeTierPageLimit) : totalPages;
 
                     for (int i = 0; i < pagesToProcess; i += batchSize)
                     {

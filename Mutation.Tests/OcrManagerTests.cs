@@ -154,13 +154,13 @@ public class OcrManagerTests
 	{
 		var settings = CreateValidSettings();
 		var clipboard = new TestClipboard();
-		var service = new StubOcrService("page one", "page two");
+		var service = new StubOcrService("page one\npage two");
 		using var pdf = new TempPdf(2);
 		var manager = new TestableOcrManager(settings, service, clipboard);
 
 		var result = await manager.ExtractTextFromFilesAsync(new[] { pdf.Path }, DefaultOrder, CancellationToken.None);
 
-		string expectedText = $"[{Path.GetFileName(pdf.Path)}]{Environment.NewLine}(Page 1){Environment.NewLine}page one{Environment.NewLine}{Environment.NewLine}(Page 2){Environment.NewLine}page two{Environment.NewLine}";
+		string expectedText = $"[{Path.GetFileName(pdf.Path)}]{Environment.NewLine}(Pages 1-2){Environment.NewLine}page one{Environment.NewLine}page two{Environment.NewLine}";
 		Assert.True(result.Success);
 		Assert.Equal(1, result.TotalCount);
 		Assert.Equal(1, result.SuccessCount);
@@ -170,7 +170,7 @@ public class OcrManagerTests
 		Assert.Equal(1, clipboard.SetTextCalls);
 		WaitForBeep(manager, 1);
 		Assert.Contains(BeepType.Success, manager.Beeps);
-		Assert.Equal(2, service.CallCount);
+		Assert.Equal(1, service.CallCount);
 	}
 
 	[Fact]
@@ -247,7 +247,7 @@ public class OcrManagerTests
 	{
 		var settings = CreateValidSettings();
 		var clipboard = new TestClipboard();
-		var service = new StubOcrService("page one", "page two");
+		var service = new StubOcrService("page one\npage two");
 		using var pdf = new TempPdf(2);
 		var progress = new List<OcrProcessingProgress>();
 		var manager = new TestableOcrManager(settings, service, clipboard);
@@ -255,17 +255,13 @@ public class OcrManagerTests
 		var result = await manager.ExtractTextFromFilesAsync(new[] { pdf.Path }, DefaultOrder, CancellationToken.None, new Progress<OcrProcessingProgress>(progress.Add));
 
 		Assert.True(result.Success);
-		Assert.Equal(2, progress.Count);
+		Assert.Equal(1, progress.Count);
 		Assert.Equal(1, progress[0].ProcessedSegments);
-		Assert.Equal(2, progress[0].TotalSegments);
+		Assert.Equal(1, progress[0].TotalSegments);
 		Assert.Equal(Path.GetFileName(pdf.Path), progress[0].FileName);
-		Assert.Equal(1, progress[0].PageNumber);
-		Assert.Equal(2, progress[0].TotalPagesForFile);
-		Assert.Equal(2, progress[1].ProcessedSegments);
-		Assert.Equal(2, progress[1].TotalSegments);
-		Assert.Equal(Path.GetFileName(pdf.Path), progress[1].FileName);
-		Assert.Equal(2, progress[1].PageNumber);
-		Assert.Equal(2, progress[1].TotalPagesForFile);
+		Assert.Equal(1, progress[0].BatchNumber);
+		Assert.Equal(1, progress[0].TotalBatchesForFile);
+		Assert.Equal("1-2", progress[0].BatchPages);
 		WaitForBeep(manager, 1);
 		Assert.Contains(BeepType.Success, manager.Beeps);
 	}
