@@ -217,7 +217,7 @@ public class OcrService : IOcrService, IDisposable
 
 		TimeSpan delayBeforeFirstPoll = initialDelay > TimeSpan.Zero ? initialDelay : defaultDelay;
 		if (delayBeforeFirstPoll > TimeSpan.Zero)
-			await Task.Delay(delayBeforeFirstPoll, cancellationToken).ConfigureAwait(false);
+			await Task.Delay(delayBeforeFirstPoll, limiterCancellationToken).ConfigureAwait(false);
 
 		while (true)
 		{
@@ -236,7 +236,7 @@ public class OcrService : IOcrService, IDisposable
 			if (wait <= TimeSpan.Zero)
 				wait = defaultDelay;
 
-			await Task.Delay(wait, cancellationToken).ConfigureAwait(false);
+			await Task.Delay(wait, limiterCancellationToken).ConfigureAwait(false);
 		}
 	}
 
