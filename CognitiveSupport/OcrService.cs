@@ -64,13 +64,15 @@ public class OcrService : IOcrService, IDisposable
 					ctx["Attempt"] = ++attempt;
 				});
 
-	private CancellationTokenSource CreateLinkedCancellationTokenSource(int attempt, CancellationToken overallToken)
+	private TimeSpan GetPerRequestTimeout() => TimeSpan.FromSeconds(Math.Max(1, Math.Min(_timeoutSeconds, MaxTimeoutSeconds)));
+
+	private CancellationTokenSource CreatePerRequestCancellationTokenSource(CancellationToken overallToken)
 	{
-		// Cap the per-try timeout to avoid excessive waits
-		int perTryTimeout = Math.Max(1, Math.Min(_timeoutSeconds, MaxTimeoutSeconds));
-		var perTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(perTryTimeout));
-		return CancellationTokenSource.CreateLinkedTokenSource(overallToken, perTryCts.Token);
+		var cts = CancellationTokenSource.CreateLinkedTokenSource(overallToken);
+		cts.CancelAfter(GetPerRequestTimeout());
+		return cts;
 	}
+
 
 	private async Task<string> ExecuteReadInternal(
 		OcrReadingOrder ocrReadingOrder,
@@ -79,21 +81,13 @@ public class OcrService : IOcrService, IDisposable
 		CancellationToken overallCancellationToken)
 	{
 		int attempt = (int)context["Attempt"];
-		using var linkedCts = CreateLinkedCancellationTokenSource(attempt, overallCancellationToken);
+		if (attempt > 0) this.Beep(attempt);
 
-		try
-		{
-			if (attempt > 0) this.Beep(attempt);
+		imageStream.Seek(0, SeekOrigin.Begin);
 
-			imageStream.Seek(0, SeekOrigin.Begin);
-
-                        return await ReadInternal(ocrReadingOrder, imageStream, linkedCts.Token, overallCancellationToken).ConfigureAwait(false);
-		}
-		finally
-		{
-			linkedCts.Dispose();
-		}
+		return await ReadInternal(ocrReadingOrder, imageStream, overallCancellationToken).ConfigureAwait(false);
 	}
+
 
 	private async Task<string> Read(
 		OcrReadingOrder ocrReadingOrder,
@@ -179,53 +173,53 @@ public class OcrService : IOcrService, IDisposable
 	private async Task<string> ReadInternal(
 		OcrReadingOrder ocrReadingOrder,
 		Stream imageStream,
-		CancellationToken cancellationToken,
-		CancellationToken limiterCancellationToken)
+		CancellationToken overallCancellationToken)
 	{
 		const int operationIdLength = 36;
 
 		imageStream = EnsureMinimumImageSize(imageStream);
 
-		await SharedRateLimiter.WaitAsync(limiterCancellationToken).ConfigureAwait(false);
+		await SharedRateLimiter.WaitAsync(overallCancellationToken).ConfigureAwait(false);
 
+		using var requestCts = CreatePerRequestCancellationTokenSource(overallCancellationToken);
 		using HttpOperationHeaderResponse<ReadInStreamHeaders> response = await ComputerVisionClient
-		                                                          .ReadInStreamWithHttpMessagesAsync(
-		                                                                  imageStream,
-		                                                                  readingOrder: ocrReadingOrder.ToEnumMemberValue(),
-		                                                                  cancellationToken: cancellationToken)
-		                                                          .ConfigureAwait(false);
+				.ReadInStreamWithHttpMessagesAsync(
+					imageStream,
+					readingOrder: ocrReadingOrder.ToEnumMemberValue(),
+					cancellationToken: requestCts.Token)
+				.ConfigureAwait(false);
 
 		string operationId = response.Headers.OperationLocation[^operationIdLength..];
 		TimeSpan initialDelay = TryParseRetryAfter(response.Response.Headers) ?? TimeSpan.Zero;
 
 		var results = await GetReadOperationResultAsync(
-			operationId,
-			initialDelay,
-			cancellationToken,
-			limiterCancellationToken).ConfigureAwait(false);
+				operationId,
+				initialDelay,
+				overallCancellationToken).ConfigureAwait(false);
 
 		return ExtractTextFromResults(results);
 	}
 
+
 	private async Task<ReadOperationResult> GetReadOperationResultAsync(
 		string operationId,
 		TimeSpan initialDelay,
-		CancellationToken cancellationToken,
-		CancellationToken limiterCancellationToken)
+		CancellationToken overallCancellationToken)
 	{
 		TimeSpan defaultDelay = TimeSpan.FromMilliseconds(150);
 
 		TimeSpan delayBeforeFirstPoll = initialDelay > TimeSpan.Zero ? initialDelay : defaultDelay;
 		if (delayBeforeFirstPoll > TimeSpan.Zero)
-			await Task.Delay(delayBeforeFirstPoll, limiterCancellationToken).ConfigureAwait(false);
+			await Task.Delay(delayBeforeFirstPoll, overallCancellationToken).ConfigureAwait(false);
 
 		while (true)
 		{
-			await SharedRateLimiter.WaitAsync(limiterCancellationToken).ConfigureAwait(false);
+			await SharedRateLimiter.WaitAsync(overallCancellationToken).ConfigureAwait(false);
 
+			using var requestCts = CreatePerRequestCancellationTokenSource(overallCancellationToken);
 			var response = await ComputerVisionClient
-			                                                          .GetReadResultWithHttpMessagesAsync(Guid.Parse(operationId), cancellationToken: cancellationToken)
-			                                                          .ConfigureAwait(false);
+					.GetReadResultWithHttpMessagesAsync(Guid.Parse(operationId), cancellationToken: requestCts.Token)
+					.ConfigureAwait(false);
 
 			var result = response.Body;
 
@@ -236,9 +230,10 @@ public class OcrService : IOcrService, IDisposable
 			if (wait <= TimeSpan.Zero)
 				wait = defaultDelay;
 
-			await Task.Delay(wait, limiterCancellationToken).ConfigureAwait(false);
+			await Task.Delay(wait, overallCancellationToken).ConfigureAwait(false);
 		}
 	}
+
 
         private static string ExtractTextFromResults(ReadOperationResult results)
         {
