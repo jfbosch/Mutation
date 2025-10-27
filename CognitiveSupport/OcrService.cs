@@ -28,7 +28,7 @@ public class OcrService : IOcrService, IDisposable
         private string Endpoint { get; }
         private ComputerVisionClient ComputerVisionClient { get; }
         private readonly int _timeoutSeconds;
-        private readonly RequestRateLimiter _rateLimiter = new(20, TimeSpan.FromMinutes(1));
+	private static readonly RequestRateLimiter SharedRateLimiter = new(20, TimeSpan.FromMinutes(1));
 
 	public OcrService(string? subscriptionKey, string? endpoint, int timeoutSeconds = 30)
 	{
@@ -171,69 +171,74 @@ public class OcrService : IOcrService, IDisposable
                 }
         }
 
-        private async Task<string> ReadInternal(
-                OcrReadingOrder ocrReadingOrder,
-                Stream imageStream,
-                CancellationToken cancellationToken,
-                CancellationToken limiterCancellationToken)
-        {
-                const int operationIdLength = 36;
+	public static OcrRequestWindowState GetSharedRequestWindowState()
+	{
+		return SharedRateLimiter.GetSnapshot();
+	}
 
-                imageStream = EnsureMinimumImageSize(imageStream);
+	private async Task<string> ReadInternal(
+		OcrReadingOrder ocrReadingOrder,
+		Stream imageStream,
+		CancellationToken cancellationToken,
+		CancellationToken limiterCancellationToken)
+	{
+		const int operationIdLength = 36;
 
-                await _rateLimiter.WaitAsync(limiterCancellationToken).ConfigureAwait(false);
+		imageStream = EnsureMinimumImageSize(imageStream);
 
-                using HttpOperationHeaderResponse<ReadInStreamHeaders> response = await ComputerVisionClient
-                                                                  .ReadInStreamWithHttpMessagesAsync(
-                                                                          imageStream,
-                                                                          readingOrder: ocrReadingOrder.ToEnumMemberValue(),
-                                                                          cancellationToken: cancellationToken)
-                                                                  .ConfigureAwait(false);
+		await SharedRateLimiter.WaitAsync(limiterCancellationToken).ConfigureAwait(false);
 
-                string operationId = response.Headers.OperationLocation[^operationIdLength..];
-                TimeSpan initialDelay = TryParseRetryAfter(response.Response.Headers) ?? TimeSpan.Zero;
+		using HttpOperationHeaderResponse<ReadInStreamHeaders> response = await ComputerVisionClient
+		                                                          .ReadInStreamWithHttpMessagesAsync(
+		                                                                  imageStream,
+		                                                                  readingOrder: ocrReadingOrder.ToEnumMemberValue(),
+		                                                                  cancellationToken: cancellationToken)
+		                                                          .ConfigureAwait(false);
 
-                var results = await GetReadOperationResultAsync(
-                        operationId,
-                        initialDelay,
-                        cancellationToken,
-                        limiterCancellationToken).ConfigureAwait(false);
+		string operationId = response.Headers.OperationLocation[^operationIdLength..];
+		TimeSpan initialDelay = TryParseRetryAfter(response.Response.Headers) ?? TimeSpan.Zero;
+
+		var results = await GetReadOperationResultAsync(
+			operationId,
+			initialDelay,
+			cancellationToken,
+			limiterCancellationToken).ConfigureAwait(false);
 
 		return ExtractTextFromResults(results);
 	}
 
-        private async Task<ReadOperationResult> GetReadOperationResultAsync(
-                string operationId,
-                TimeSpan initialDelay,
-                CancellationToken cancellationToken,
-                CancellationToken limiterCancellationToken)
-        {
-                TimeSpan defaultDelay = TimeSpan.FromMilliseconds(150);
+	private async Task<ReadOperationResult> GetReadOperationResultAsync(
+		string operationId,
+		TimeSpan initialDelay,
+		CancellationToken cancellationToken,
+		CancellationToken limiterCancellationToken)
+	{
+		TimeSpan defaultDelay = TimeSpan.FromMilliseconds(150);
 
-                TimeSpan delayBeforeFirstPoll = initialDelay > TimeSpan.Zero ? initialDelay : defaultDelay;
-                if (delayBeforeFirstPoll > TimeSpan.Zero)
-                        await Task.Delay(delayBeforeFirstPoll, cancellationToken).ConfigureAwait(false);
+		TimeSpan delayBeforeFirstPoll = initialDelay > TimeSpan.Zero ? initialDelay : defaultDelay;
+		if (delayBeforeFirstPoll > TimeSpan.Zero)
+			await Task.Delay(delayBeforeFirstPoll, cancellationToken).ConfigureAwait(false);
 
-                while (true)
-                {
-                        await _rateLimiter.WaitAsync(limiterCancellationToken).ConfigureAwait(false);
+		while (true)
+		{
+			await SharedRateLimiter.WaitAsync(limiterCancellationToken).ConfigureAwait(false);
 
-                        var response = await ComputerVisionClient
-                                                                  .GetReadResultWithHttpMessagesAsync(Guid.Parse(operationId), cancellationToken: cancellationToken)
-                                                                  .ConfigureAwait(false);
+			var response = await ComputerVisionClient
+			                                                          .GetReadResultWithHttpMessagesAsync(Guid.Parse(operationId), cancellationToken: cancellationToken)
+			                                                          .ConfigureAwait(false);
 
 			var result = response.Body;
 
 			if (result.Status is OperationStatusCodes.Succeeded or OperationStatusCodes.Failed)
 				return result;
 
-                        TimeSpan wait = TryParseRetryAfter(response.Response.Headers) ?? defaultDelay;
-                        if (wait <= TimeSpan.Zero)
-                                wait = defaultDelay;
+			TimeSpan wait = TryParseRetryAfter(response.Response.Headers) ?? defaultDelay;
+			if (wait <= TimeSpan.Zero)
+				wait = defaultDelay;
 
-                        await Task.Delay(wait, cancellationToken).ConfigureAwait(false);
-                }
-        }
+			await Task.Delay(wait, cancellationToken).ConfigureAwait(false);
+		}
+	}
 
         private static string ExtractTextFromResults(ReadOperationResult results)
         {
@@ -292,58 +297,112 @@ public class OcrService : IOcrService, IDisposable
                 ComputerVisionClient?.Dispose();
         }
 
-        private sealed class RequestRateLimiter
-        {
-                private readonly int _limit;
-                private readonly TimeSpan _window;
-                private readonly Queue<DateTime> _timestamps = new();
-                private readonly SemaphoreSlim _mutex = new(1, 1);
+		public readonly record struct OcrRequestWindowState(
+		int Limit,
+		TimeSpan WindowLength,
+		int RequestsInWindow,
+		long TotalRequestsGranted,
+		DateTimeOffset? LastRequestUtc,
+		TimeSpan TimeUntilWindowReset);
 
-                public RequestRateLimiter(int limit, TimeSpan window)
-                {
-                        _limit = limit;
-                        _window = window;
-                }
+		private sealed class RequestRateLimiter
+		{
+			private readonly int _limit;
+			private readonly TimeSpan _window;
+			private readonly Queue<DateTime> _timestamps = new();
+			private readonly object _sync = new();
+			private long _totalGranted;
+			private DateTime? _lastGrantedUtc;
 
-                public async Task WaitAsync(CancellationToken token)
-                {
-                        while (true)
-                        {
-                                token.ThrowIfCancellationRequested();
+			public RequestRateLimiter(int limit, TimeSpan window)
+			{
+				_limit = limit;
+				_window = window;
+			}
 
-                                TimeSpan delay = TimeSpan.Zero;
+			public async Task WaitAsync(CancellationToken token)
+			{
+				while (true)
+				{
+					token.ThrowIfCancellationRequested();
+					TimeSpan delay = TimeSpan.Zero;
 
-                                await _mutex.WaitAsync(token).ConfigureAwait(false);
-                                try
-                                {
-                                        var now = DateTime.UtcNow;
+					lock (_sync)
+					{
+						var now = DateTime.UtcNow;
+						RemoveExpired(now);
 
-                                        while (_timestamps.Count > 0 && now - _timestamps.Peek() >= _window)
-                                        {
-                                                _timestamps.Dequeue();
-                                        }
+						if (_timestamps.Count < _limit)
+						{
+							_timestamps.Enqueue(now);
+							_totalGranted++;
+							_lastGrantedUtc = now;
+							return;
+						}
 
-                                        if (_timestamps.Count < _limit)
-                                        {
-                                                _timestamps.Enqueue(now);
-                                                return;
-                                        }
+						var oldest = _timestamps.Peek();
+						delay = _window - (now - oldest);
+						if (delay < TimeSpan.Zero)
+						{
+							delay = TimeSpan.Zero;
+						}
+					}
 
-                                        var oldest = _timestamps.Peek();
-                                        delay = _window - (now - oldest);
-                                        if (delay < TimeSpan.Zero)
-                                                delay = TimeSpan.Zero;
-                                }
-                                finally
-                                {
-                                        _mutex.Release();
-                                }
+					if (delay > TimeSpan.Zero)
+					{
+						await Task.Delay(delay, token).ConfigureAwait(false);
+					}
+				}
+			}
 
-                                if (delay > TimeSpan.Zero)
-                                {
-                                        await Task.Delay(delay, token).ConfigureAwait(false);
-                                }
-                        }
-                }
-        }
+			public OcrRequestWindowState GetSnapshot()
+			{
+				lock (_sync)
+				{
+					var now = DateTime.UtcNow;
+					RemoveExpired(now);
+
+					TimeSpan timeUntilReset = TimeSpan.Zero;
+					if (_timestamps.Count > 0)
+					{
+						var oldest = _timestamps.Peek();
+						timeUntilReset = _window - (now - oldest);
+						if (timeUntilReset < TimeSpan.Zero)
+						{
+							timeUntilReset = TimeSpan.Zero;
+						}
+					}
+
+					DateTimeOffset? lastRequest = _lastGrantedUtc.HasValue
+					? new DateTimeOffset(DateTime.SpecifyKind(_lastGrantedUtc.Value, DateTimeKind.Utc))
+					: null;
+
+					return new OcrRequestWindowState(
+					_limit,
+					_window,
+					_timestamps.Count,
+					_totalGranted,
+					lastRequest,
+					timeUntilReset);
+				}
+			}
+
+			private void RemoveExpired(DateTime now)
+			{
+				while (_timestamps.Count > 0 && now - _timestamps.Peek() >= _window)
+				{
+					_timestamps.Dequeue();
+				}
+			}
+
+			private void Reset()
+			{
+				lock (_sync)
+				{
+					_timestamps.Clear();
+					_totalGranted = 0;
+					_lastGrantedUtc = null;
+				}
+			}
+		}
 }

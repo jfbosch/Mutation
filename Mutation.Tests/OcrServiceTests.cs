@@ -37,25 +37,54 @@ public class OcrServiceTests
                 Assert.True(stopwatch.Elapsed >= TimeSpan.FromMilliseconds(85));
         }
 
-        [Fact]
-        public async Task RequestRateLimiter_RespectsLimitAcrossMultipleCalls()
-        {
-                Type? limiterType = typeof(OcrService).GetNestedType("RequestRateLimiter", BindingFlags.NonPublic);
-                Assert.NotNull(limiterType);
-                object? limiter = Activator.CreateInstance(limiterType!, 2, TimeSpan.FromMilliseconds(120));
-                Assert.NotNull(limiter);
-                MethodInfo? waitAsync = limiterType!.GetMethod("WaitAsync", BindingFlags.Public | BindingFlags.Instance);
-                Assert.NotNull(waitAsync);
+	[Fact]
+	public async Task RequestRateLimiter_RespectsLimitAcrossMultipleCalls()
+	{
+		Type? limiterType = typeof(OcrService).GetNestedType("RequestRateLimiter", BindingFlags.NonPublic);
+		Assert.NotNull(limiterType);
+		object? limiter = Activator.CreateInstance(limiterType!, 2, TimeSpan.FromMilliseconds(120));
+		Assert.NotNull(limiter);
+		MethodInfo? waitAsync = limiterType!.GetMethod("WaitAsync", BindingFlags.Public | BindingFlags.Instance);
+		Assert.NotNull(waitAsync);
 
-                await ((Task)waitAsync!.Invoke(limiter, new object[] { CancellationToken.None })!).ConfigureAwait(false);
-                await ((Task)waitAsync.Invoke(limiter, new object[] { CancellationToken.None })!).ConfigureAwait(false);
+		await ((Task)waitAsync!.Invoke(limiter, new object[] { CancellationToken.None })!).ConfigureAwait(false);
+		await ((Task)waitAsync.Invoke(limiter, new object[] { CancellationToken.None })!).ConfigureAwait(false);
 
-                var stopwatch = Stopwatch.StartNew();
-                await ((Task)waitAsync.Invoke(limiter, new object[] { CancellationToken.None })!).ConfigureAwait(false);
-                stopwatch.Stop();
+		var stopwatch = Stopwatch.StartNew();
+		await ((Task)waitAsync.Invoke(limiter, new object[] { CancellationToken.None })!).ConfigureAwait(false);
+		stopwatch.Stop();
 
-                Assert.True(stopwatch.Elapsed >= TimeSpan.FromMilliseconds(100));
-        }
+		Assert.True(stopwatch.Elapsed >= TimeSpan.FromMilliseconds(100));
+	}
+
+	[Fact]
+	public async Task SharedRateLimiter_TracksUsageAcrossOperations()
+	{
+		Type? limiterType = typeof(OcrService).GetNestedType("RequestRateLimiter", BindingFlags.NonPublic);
+		Assert.NotNull(limiterType);
+		FieldInfo? sharedField = typeof(OcrService).GetField("SharedRateLimiter", BindingFlags.NonPublic | BindingFlags.Static);
+		Assert.NotNull(sharedField);
+		object? limiter = sharedField!.GetValue(null);
+		Assert.NotNull(limiter);
+		MethodInfo? reset = limiterType!.GetMethod("Reset", BindingFlags.NonPublic | BindingFlags.Instance);
+		Assert.NotNull(reset);
+		reset!.Invoke(limiter, Array.Empty<object>());
+		MethodInfo? waitAsync = limiterType.GetMethod("WaitAsync", BindingFlags.Public | BindingFlags.Instance);
+		Assert.NotNull(waitAsync);
+
+		for (int i = 0; i < 3; i++)
+		{
+			await ((Task)waitAsync!.Invoke(limiter, new object[] { CancellationToken.None })!).ConfigureAwait(false);
+		}
+
+		OcrService.OcrRequestWindowState state = OcrService.GetSharedRequestWindowState();
+		Assert.Equal(20, state.Limit);
+		Assert.Equal(TimeSpan.FromMinutes(1), state.WindowLength);
+		Assert.Equal(3, state.TotalRequestsGranted);
+		Assert.Equal(3, state.RequestsInWindow);
+		Assert.True(state.TimeUntilWindowReset >= TimeSpan.Zero);
+		Assert.True(state.LastRequestUtc.HasValue);
+	}
 
 	[Fact]
 	public void TryParseRetryAfter_PrefersDeltaHeader()
