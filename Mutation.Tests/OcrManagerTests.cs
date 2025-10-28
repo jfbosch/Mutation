@@ -343,6 +343,79 @@ public class OcrManagerTests
                 Assert.Contains(BeepType.Success, manager.Beeps);
         }
 
+	[Fact]
+	public void SupportedFileExtensions_MatchExpectedSet()
+	{
+		string[] expected = { ".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff" };
+		Assert.Equal(expected, OcrManager.SupportedFileExtensions);
+	}
+
+	[Fact]
+	public async Task ExtractTextFromFilesAsync_SplitsPdfOnly()
+	{
+		var settings = CreateValidSettings();
+		var clipboard = new TestClipboard();
+		using var pdf = new TempPdf(3);
+		using var png = new TempFile(".png");
+		using var jpeg = new TempFile(".jpeg");
+		var service = new StubOcrService("pdf page one", "pdf page two", "pdf page three", "png text", "jpeg text");
+		var manager = new TestableOcrManager(settings, service, clipboard);
+
+		var result = await manager.ExtractTextFromFilesAsync(new[] { pdf.Path, png.Path, jpeg.Path }, DefaultOrder, CancellationToken.None);
+
+		Assert.True(result.Success);
+		Assert.Equal(3 + 2, service.CallCount);
+		Assert.Contains("(Page 1)", result.Text, StringComparison.Ordinal);
+		string pngHeader = $"[{Path.GetFileName(png.Path)}]";
+		string jpegHeader = $"[{Path.GetFileName(jpeg.Path)}]";
+		string pngSection = ExtractSection(result.Text, pngHeader);
+		string jpegSection = ExtractSection(result.Text, jpegHeader);
+		Assert.DoesNotContain("(Page", pngSection, StringComparison.Ordinal);
+		Assert.DoesNotContain("(Page", jpegSection, StringComparison.Ordinal);
+		Assert.Equal(result.Text, clipboard.LastText);
+		Assert.Equal(1, clipboard.SetTextCalls);
+		WaitForBeep(manager, 1);
+		Assert.Contains(BeepType.Success, manager.Beeps);
+	}
+
+	[Fact]
+	public async Task ExtractTextFromFilesAsync_ProcessesMixedSupportedAndUnsupportedFiles()
+	{
+		var settings = CreateValidSettings();
+		var clipboard = new TestClipboard();
+		using var png = new TempFile(".png");
+		using var textFile = new TempFile(".txt");
+		var service = new StubOcrService("png text");
+		var manager = new TestableOcrManager(settings, service, clipboard);
+
+		var result = await manager.ExtractTextFromFilesAsync(new[] { png.Path, textFile.Path }, DefaultOrder, CancellationToken.None);
+
+		Assert.False(result.Success);
+		Assert.Equal(2, result.TotalCount);
+		Assert.Equal(1, result.SuccessCount);
+		Assert.Single(result.Failures);
+		Assert.Contains(Path.GetFileName(textFile.Path), result.Failures[0], StringComparison.OrdinalIgnoreCase);
+		Assert.Contains("unsupported", result.Failures[0], StringComparison.OrdinalIgnoreCase);
+		Assert.Contains("png text", result.Text, StringComparison.OrdinalIgnoreCase);
+		Assert.Equal(1, clipboard.SetTextCalls);
+		Assert.Equal(1, service.CallCount);
+		WaitForBeep(manager, 1);
+		Assert.Contains(BeepType.Failure, manager.Beeps);
+	}
+
+	private static string ExtractSection(string text, string header)
+	{
+		int start = text.IndexOf(header, StringComparison.Ordinal);
+		Assert.True(start >= 0, $"Header '{header}' not found.");
+		string segment = text[start..];
+		int separatorIndex = segment.IndexOf($"{Environment.NewLine}{Environment.NewLine}", StringComparison.Ordinal);
+		if (separatorIndex >= 0)
+		{
+			segment = segment[..separatorIndex];
+		}
+		return segment;
+	}
+
 	private static Settings CreateValidSettings() => new()
 	{
 		AzureComputerVisionSettings = new AzureComputerVisionSettings
