@@ -256,6 +256,78 @@ public class OcrServiceTests
 	}
 
 	[Fact]
+	public async Task SharedRateLimiter_ScalesTwentyPerMinuteThrottleAcrossRuns()
+	{
+		Type? limiterType = typeof(OcrService).GetNestedType("RequestRateLimiter", BindingFlags.NonPublic);
+		Assert.NotNull(limiterType);
+		FieldInfo? sharedField = typeof(OcrService).GetField("SharedRateLimiter", BindingFlags.NonPublic | BindingFlags.Static);
+		Assert.NotNull(sharedField);
+		object? originalLimiter = sharedField!.GetValue(null);
+		Assert.NotNull(originalLimiter);
+
+		MethodInfo? reset = limiterType!.GetMethod("Reset", BindingFlags.NonPublic | BindingFlags.Instance);
+		Assert.NotNull(reset);
+		reset!.Invoke(originalLimiter, Array.Empty<object>());
+
+		// Use a scaled window mirroring Azure's 20 requests per minute limit (4 per 120 ms in tests)
+		object? testLimiter = Activator.CreateInstance(limiterType!, 4, TimeSpan.FromMilliseconds(120));
+		Assert.NotNull(testLimiter);
+		sharedField.SetValue(null, testLimiter);
+
+		try
+		{
+			MethodInfo? waitAsync = limiterType.GetMethod("WaitAsync", BindingFlags.Public | BindingFlags.Instance);
+			Assert.NotNull(waitAsync);
+
+			var stopwatch = Stopwatch.StartNew();
+			for (int i = 0; i < 10; i++)
+			{
+				await ((Task)waitAsync!.Invoke(testLimiter, new object[] { CancellationToken.None })!).ConfigureAwait(false);
+				OcrService.OcrRequestWindowState snapshot = OcrService.GetSharedRequestWindowState();
+				Assert.InRange(snapshot.RequestsInWindow, 1, 4);
+				Assert.True(snapshot.TotalRequestsGranted >= i + 1);
+			}
+			stopwatch.Stop();
+
+			Assert.True(stopwatch.Elapsed >= TimeSpan.FromMilliseconds(200));
+		}
+		finally
+		{
+			sharedField.SetValue(null, originalLimiter);
+			reset.Invoke(originalLimiter, Array.Empty<object>());
+		}
+	}
+
+	[Fact]
+	public void TryParseRetryAfter_ParsesHttpDateHeader()
+	{
+		MethodInfo? method = typeof(OcrService).GetMethod("TryParseRetryAfter", BindingFlags.NonPublic | BindingFlags.Static);
+		Assert.NotNull(method);
+		var message = new HttpResponseMessage();
+		var date = DateTimeOffset.UtcNow.AddSeconds(5);
+		message.Headers.RetryAfter = new RetryConditionHeaderValue(date);
+
+		TimeSpan? delay = (TimeSpan?)method!.Invoke(null, new object?[] { message.Headers });
+
+		Assert.True(delay.HasValue);
+		Assert.InRange(delay!.Value.TotalSeconds, 0.5, 10);
+	}
+
+	[Fact]
+	public void TryParseRetryAfter_ParsesStringSecondsValue()
+	{
+		MethodInfo? method = typeof(OcrService).GetMethod("TryParseRetryAfter", BindingFlags.NonPublic | BindingFlags.Static);
+		Assert.NotNull(method);
+		var message = new HttpResponseMessage();
+		message.Headers.TryAddWithoutValidation("Retry-After", "7");
+
+		TimeSpan? delay = (TimeSpan?)method!.Invoke(null, new object?[] { message.Headers });
+
+		Assert.True(delay.HasValue);
+		Assert.InRange(delay!.Value.TotalSeconds, 6.5, 7.5);
+	}
+
+	[Fact]
 	public void TryParseRetryAfter_PrefersDeltaHeader()
 	{
 		MethodInfo? method = typeof(OcrService).GetMethod("TryParseRetryAfter", BindingFlags.NonPublic | BindingFlags.Static);
