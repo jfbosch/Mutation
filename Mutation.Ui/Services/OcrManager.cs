@@ -2,7 +2,11 @@
 using Microsoft.UI.Xaml;
 using Mutation.Ui.Views;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Graphics.Imaging;
@@ -15,6 +19,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 namespace Mutation.Ui.Services;
 
 public record OcrResult(bool Success, string Message);
+public record OcrBatchResult(bool Success, string Text, int TotalCount, int SuccessCount, IReadOnlyList<string> Failures);
 
 public class OcrManager
 {
@@ -50,7 +55,7 @@ public class OcrManager
         if (bitmap != null)
         {
             await _clipboard.SetImageAsync(bitmap);
-            _ = Task.Run(() => BeepPlayer.Play(BeepType.Success));
+            _ = Task.Run(() => PlayBeep(BeepType.Success));
         }
     }
 
@@ -64,13 +69,13 @@ public class OcrManager
         var bitmap = await CaptureScreenshotAsync();
         if (bitmap == null)
         {
-            _ = Task.Run(() => BeepPlayer.Play(BeepType.Failure));
+            _ = Task.Run(() => PlayBeep(BeepType.Failure));
             return new(false, "Screenshot cancelled.");
         }
 
         await _clipboard.SetImageAsync(bitmap);
         var result = await ExtractTextViaOcrAsync(order, bitmap);
-        _ = Task.Run(() => BeepPlayer.Play(result.Success ? BeepType.Success : BeepType.Failure));
+        _ = Task.Run(() => PlayBeep(result.Success ? BeepType.Success : BeepType.Failure));
         return result;
     }
 
@@ -79,13 +84,76 @@ public class OcrManager
         var bitmap = await _clipboard.TryGetImageAsync();
         if (bitmap == null)
         {
-            BeepPlayer.Play(BeepType.Failure);
+            PlayBeep(BeepType.Failure);
             return new(false, "No image on clipboard.");
         }
 
         var result = await ExtractTextViaOcrAsync(order, bitmap);
-        _ = Task.Run(() => BeepPlayer.Play(result.Success ? BeepType.Success : BeepType.Failure));
+        _ = Task.Run(() => PlayBeep(result.Success ? BeepType.Success : BeepType.Failure));
         return result;
+    }
+
+    public async Task<OcrBatchResult> ExtractTextFromFilesAsync(IEnumerable<string> filePaths, OcrReadingOrder order, CancellationToken cancellationToken)
+    {
+        if (filePaths is null)
+            throw new ArgumentNullException(nameof(filePaths));
+
+        List<string> paths = filePaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (paths.Count == 0)
+            return new(false, string.Empty, 0, 0, Array.Empty<string>());
+
+        var combinedText = new StringBuilder();
+        var failures = new List<string>();
+        int successCount = 0;
+
+        foreach (string path in paths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                using var stream = File.OpenRead(path);
+                string text = await _ocrService.ExtractText(order, stream, cancellationToken);
+
+                if (combinedText.Length > 0)
+                {
+                    combinedText.AppendLine().AppendLine();
+                }
+
+                string fileName = Path.GetFileName(path);
+                combinedText.AppendLine($"[{fileName}]");
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    combinedText.AppendLine(text.TrimEnd());
+                }
+
+                successCount++;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string fileName = Path.GetFileName(path);
+                failures.Add($"{fileName}: {ex.Message}");
+            }
+        }
+
+        string resultText = combinedText.ToString();
+        if (successCount > 0 && !string.IsNullOrWhiteSpace(resultText))
+        {
+            await SetClipboardTextAsync(resultText);
+        }
+
+        bool success = successCount > 0 && failures.Count == 0;
+        _ = Task.Run(() => PlayBeep(success ? BeepType.Success : BeepType.Failure));
+
+        return new(success, resultText, paths.Count, successCount, failures.AsReadOnly());
     }
 
     private async Task<OcrResult> ExtractTextViaOcrAsync(OcrReadingOrder order, SoftwareBitmap bitmap)
@@ -100,13 +168,67 @@ public class OcrManager
         try
         {
             var text = await _ocrService.ExtractText(order, netStream, default);
-            _clipboard.SetText(text);
+            await SetClipboardTextAsync(text);
             return new(true, text);
         }
         catch (Exception ex)
         {
             return new(false, ex.Message);
         }
+    }
+
+    private async Task SetClipboardTextAsync(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        if (HasDispatcherThreadAccess())
+        {
+            _clipboard.SetText(text);
+            return;
+        }
+
+        await RunOnDispatcherAsync(() => _clipboard.SetText(text));
+    }
+
+    protected virtual bool HasDispatcherThreadAccess()
+    {
+        var dispatcher = _window?.DispatcherQueue;
+        return dispatcher?.HasThreadAccess ?? true;
+    }
+
+    protected virtual Task RunOnDispatcherAsync(Action action)
+    {
+        var dispatcher = _window?.DispatcherQueue;
+        if (dispatcher is null || dispatcher.HasThreadAccess)
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        var tcs = new TaskCompletionSource<object?>();
+        if (!dispatcher.TryEnqueue(() =>
+        {
+            try
+            {
+                action();
+                tcs.SetResult(null);
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+            }
+        }))
+        {
+            tcs.SetException(new InvalidOperationException("Failed to enqueue work on the dispatcher."));
+        }
+
+        return tcs.Task;
+    }
+
+    protected virtual void PlayBeep(BeepType type)
+    {
+        BeepPlayer.Play(type);
     }
 
     private async Task<SoftwareBitmap?> CaptureScreenshotAsync()
@@ -158,7 +280,7 @@ public class OcrManager
         {
             // Activate and show overlay (inside SelectRegionAsync), then play start beep asynchronously to avoid UI delay
             var selectTask = overlay.SelectRegionAsync();
-            _ = Task.Run(() => BeepPlayer.Play(BeepType.Start));
+            _ = Task.Run(() => PlayBeep(BeepType.Start));
             Rect? selectionRect = await selectTask;
             if (selectionRect == null || selectionRect.Value.Width < 1 || selectionRect.Value.Height < 1)
                 return null;
