@@ -403,6 +403,112 @@ public class OcrManagerTests
 		Assert.Contains(BeepType.Failure, manager.Beeps);
 	}
 
+
+	[Fact]
+	public async Task ExtractTextFromFilesAsync_ProcessesEverySupportedImageTypeWithoutSplitting()
+	{
+		var settings = CreateValidSettings();
+		var clipboard = new TestClipboard();
+		using var png = new TempFile(".png");
+		using var jpg = new TempFile(".jpg");
+		using var jpeg = new TempFile(".jpeg");
+		using var bmp = new TempFile(".bmp");
+		using var tif = new TempFile(".tif");
+		using var tiff = new TempFile(".tiff");
+		var service = new StubOcrService("png text", "jpg text", "jpeg text", "bmp text", "tif text", "tiff text");
+		var manager = new TestableOcrManager(settings, service, clipboard);
+
+		string[] paths = { png.Path, jpg.Path, jpeg.Path, bmp.Path, tif.Path, tiff.Path };
+		var result = await manager.ExtractTextFromFilesAsync(paths, DefaultOrder, CancellationToken.None);
+
+		Assert.True(result.Success);
+		Assert.Equal(paths.Length, result.TotalCount);
+		Assert.Equal(paths.Length, result.SuccessCount);
+		Assert.Equal(paths.Length, service.CallCount);
+
+		foreach (string path in paths)
+		{
+			string header = $"[{Path.GetFileName(path)}]";
+			string section = ExtractSection(result.Text, header);
+			Assert.Contains(header, result.Text, StringComparison.Ordinal);
+			Assert.DoesNotContain("(Page", section, StringComparison.Ordinal);
+		}
+
+		Assert.Equal(result.Text, clipboard.LastText);
+		Assert.Equal(1, clipboard.SetTextCalls);
+		WaitForBeep(manager, 1);
+		Assert.Contains(BeepType.Success, manager.Beeps);
+	}
+
+	[Fact]
+	public async Task ExtractTextFromFilesAsync_ProcessesMixedFilesInSingleSelection()
+	{
+		var settings = CreateValidSettings();
+		var clipboard = new TestClipboard();
+		using var pdf = new TempPdf(2);
+		using var png = new TempFile(".png");
+		using var jpeg = new TempFile(".jpeg");
+		var service = new StubOcrService("pdf page one", "pdf page two", "png text", "jpeg text");
+		var manager = new TestableOcrManager(settings, service, clipboard);
+
+		var result = await manager.ExtractTextFromFilesAsync(new[] { pdf.Path, png.Path, jpeg.Path }, DefaultOrder, CancellationToken.None);
+
+		Assert.True(result.Success);
+		Assert.Equal(3, result.TotalCount);
+		Assert.Equal(3, result.SuccessCount);
+		Assert.Equal(4, service.CallCount);
+		Assert.Contains("(Page 1)", result.Text, StringComparison.Ordinal);
+		Assert.Contains("(Page 2)", result.Text, StringComparison.Ordinal);
+
+		string pdfHeader = $"[{Path.GetFileName(pdf.Path)}]";
+		string pngHeader = $"[{Path.GetFileName(png.Path)}]";
+		string jpegHeader = $"[{Path.GetFileName(jpeg.Path)}]";
+		string pdfSection = ExtractSection(result.Text, pdfHeader);
+		string pngSection = ExtractSection(result.Text, pngHeader);
+		string jpegSection = ExtractSection(result.Text, jpegHeader);
+
+		Assert.Contains("(Page 1)", pdfSection, StringComparison.Ordinal);
+		Assert.Contains("(Page 2)", pdfSection, StringComparison.Ordinal);
+		Assert.DoesNotContain("(Page", pngSection, StringComparison.Ordinal);
+		Assert.DoesNotContain("(Page", jpegSection, StringComparison.Ordinal);
+
+		Assert.Equal(result.Text, clipboard.LastText);
+		Assert.Equal(1, clipboard.SetTextCalls);
+		WaitForBeep(manager, 1);
+		Assert.Contains(BeepType.Success, manager.Beeps);
+	}
+
+	[Fact]
+	public async Task ExtractTextFromFilesAsync_HandlesOddPagePdfSuccessfully()
+	{
+		var settings = CreateValidSettings();
+		var clipboard = new TestClipboard();
+		using var pdf = new TempPdf(3);
+		var service = new StubOcrService("odd page one", "odd page two", "odd page three");
+		var manager = new TestableOcrManager(settings, service, clipboard);
+
+		var result = await manager.ExtractTextFromFilesAsync(new[] { pdf.Path }, DefaultOrder, CancellationToken.None);
+
+		Assert.True(result.Success);
+		Assert.Equal(1, result.TotalCount);
+		Assert.Equal(1, result.SuccessCount);
+		Assert.Equal(3, service.CallCount);
+
+		string header = $"[{Path.GetFileName(pdf.Path)}]";
+		string section = ExtractSection(result.Text, header);
+		Assert.Contains("(Page 1)", section, StringComparison.Ordinal);
+		Assert.Contains("(Page 2)", section, StringComparison.Ordinal);
+		Assert.Contains("(Page 3)", section, StringComparison.Ordinal);
+		Assert.Contains("odd page one", section, StringComparison.OrdinalIgnoreCase);
+		Assert.Contains("odd page two", section, StringComparison.OrdinalIgnoreCase);
+		Assert.Contains("odd page three", section, StringComparison.OrdinalIgnoreCase);
+
+		Assert.Equal(result.Text, clipboard.LastText);
+		Assert.Equal(1, clipboard.SetTextCalls);
+		WaitForBeep(manager, 1);
+		Assert.Contains(BeepType.Success, manager.Beeps);
+	}
+
 	private static string ExtractSection(string text, string header)
 	{
 		int start = text.IndexOf(header, StringComparison.Ordinal);
