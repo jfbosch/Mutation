@@ -28,7 +28,7 @@ public class OcrService : IOcrService, IDisposable
         private string Endpoint { get; }
         private ComputerVisionClient ComputerVisionClient { get; }
         private readonly int _timeoutSeconds;
-	private static readonly RequestRateLimiter SharedRateLimiter = new(20, TimeSpan.FromMinutes(1));
+	private static RequestRateLimiter SharedRateLimiter = new(20, TimeSpan.FromMinutes(1));
 
 	public OcrService(string? subscriptionKey, string? endpoint, int timeoutSeconds = 30)
 	{

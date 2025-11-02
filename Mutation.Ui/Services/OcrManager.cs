@@ -139,72 +139,73 @@ public class OcrManager
         int successCount = 0;
         int processedSegments = 0;
 
-        foreach (var batch in batches)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
+		foreach (var batch in batches)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
 
-            bool fileHasSuccess = false;
-            bool fileHasFailure = false;
-            var fileTextBuilder = new StringBuilder();
+			bool fileHasSuccess = false;
+			bool fileHasFailure = false;
+			var fileTextBuilder = new StringBuilder();
+			int totalPagesForFile = Math.Max(1, batch.Items.Count);
 
-            foreach (var item in batch.Items)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
+			foreach (var item in batch.Items)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
 
-                try
-                {
-                    if (item.InitializationError is not null)
-                    {
-                        fileHasFailure = true;
-                        failures.Add($"{batch.FileName}: {item.InitializationError.Message}");
-                        continue;
-                    }
+				try
+				{
+					if (item.InitializationError is not null)
+					{
+						fileHasFailure = true;
+						failures.Add($"{batch.FileName}: {item.InitializationError.Message}");
+						continue;
+					}
 
-                    using var stream = item.OpenStream();
-                    string text = await _ocrService.ExtractText(order, stream, cancellationToken);
+					using var stream = item.OpenStream();
+					string text = await _ocrService.ExtractText(order, stream, cancellationToken);
 
-                    if (fileTextBuilder.Length > 0)
-                        fileTextBuilder.AppendLine();
+					if (fileTextBuilder.Length > 0)
+						fileTextBuilder.AppendLine();
 
-                    if (item.TotalPages > 1)
-                        fileTextBuilder.AppendLine($"(Page {item.PageNumber})");
+					if (totalPagesForFile > 1)
+						fileTextBuilder.AppendLine($"(Page {item.PageNumber})");
 
-                    if (!string.IsNullOrWhiteSpace(text))
-                        fileTextBuilder.AppendLine(text.TrimEnd());
+					if (!string.IsNullOrWhiteSpace(text))
+						fileTextBuilder.AppendLine(text.TrimEnd());
 
-                    fileHasSuccess = true;
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    fileHasFailure = true;
-                    failures.Add($"{batch.FileName} (Page {item.PageNumber}): {ex.Message}");
-                }
-                finally
-                {
-                    processedSegments++;
-                    progress?.Report(new OcrProcessingProgress(processedSegments, totalSegments, batch.FileName, item.PageNumber, item.TotalPages));
-                }
-            }
+					fileHasSuccess = true;
+				}
+				catch (OperationCanceledException)
+				{
+					throw;
+				}
+				catch (Exception ex)
+				{
+					fileHasFailure = true;
+					failures.Add($"{batch.FileName} (Page {item.PageNumber}): {ex.Message}");
+				}
+				finally
+				{
+					processedSegments++;
+					progress?.Report(new OcrProcessingProgress(processedSegments, totalSegments, batch.FileName, item.PageNumber, totalPagesForFile));
+				}
+			}
 
-            if (fileHasSuccess)
-            {
-                if (combinedText.Length > 0)
-                    combinedText.AppendLine().AppendLine();
+			if (fileHasSuccess)
+			{
+				if (combinedText.Length > 0)
+					combinedText.AppendLine().AppendLine();
 
-                combinedText.AppendLine($"[{batch.FileName}]");
+				combinedText.AppendLine($"[{batch.FileName}]");
 
-                string fileText = fileTextBuilder.ToString().TrimEnd();
-                if (!string.IsNullOrWhiteSpace(fileText))
-                    combinedText.AppendLine(fileText);
-            }
+				string fileText = fileTextBuilder.ToString().TrimEnd();
+				if (!string.IsNullOrWhiteSpace(fileText))
+					combinedText.AppendLine(fileText);
+			}
 
-            if (fileHasSuccess && !fileHasFailure)
-                successCount++;
-        }
+			if (fileHasSuccess && !fileHasFailure)
+				successCount++;
+		}
 
         string resultText = combinedText.ToString();
         if (successCount > 0 && !string.IsNullOrWhiteSpace(resultText))
