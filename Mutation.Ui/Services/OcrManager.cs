@@ -145,8 +145,8 @@ public class OcrManager
 
 			bool fileHasSuccess = false;
 			bool fileHasFailure = false;
-			var fileTextBuilder = new StringBuilder();
-			int totalPagesForFile = Math.Max(1, batch.Items.Count);
+			int totalPagesForFile = Math.Max(1, batch.Items.Select(item => Math.Max(item.TotalPages, item.PageNumber)).DefaultIfEmpty(1).Max());
+			var pageResults = new List<(int PageNumber, string Text)>();
 
 			foreach (var item in batch.Items)
 			{
@@ -163,16 +163,8 @@ public class OcrManager
 
 					using var stream = item.OpenStream();
 					string text = await _ocrService.ExtractText(order, stream, cancellationToken);
-
-					if (fileTextBuilder.Length > 0)
-						fileTextBuilder.AppendLine();
-
-					if (totalPagesForFile > 1)
-						fileTextBuilder.AppendLine($"(Page {item.PageNumber})");
-
-					if (!string.IsNullOrWhiteSpace(text))
-						fileTextBuilder.AppendLine(text.TrimEnd());
-
+					string sanitizedText = string.IsNullOrWhiteSpace(text) ? string.Empty : text.TrimEnd();
+					pageResults.Add((item.PageNumber, sanitizedText));
 					fileHasSuccess = true;
 				}
 				catch (OperationCanceledException)
@@ -198,16 +190,31 @@ public class OcrManager
 
 				combinedText.AppendLine($"[{batch.FileName}]");
 
+				pageResults.Sort((left, right) => left.PageNumber.CompareTo(right.PageNumber));
+				var fileTextBuilder = new StringBuilder();
+
+				foreach (var segment in pageResults)
+				{
+					if (fileTextBuilder.Length > 0)
+						fileTextBuilder.AppendLine();
+
+					if (totalPagesForFile > 1)
+						fileTextBuilder.AppendLine($"(Page {segment.PageNumber})");
+
+					if (!string.IsNullOrWhiteSpace(segment.Text))
+						fileTextBuilder.AppendLine(segment.Text);
+				}
+
 				string fileText = fileTextBuilder.ToString().TrimEnd();
 				if (!string.IsNullOrWhiteSpace(fileText))
 					combinedText.AppendLine(fileText);
 			}
 
 			if (fileHasSuccess && !fileHasFailure)
-				successCount++;
+				++successCount;
 		}
 
-        string resultText = combinedText.ToString();
+		string resultText = combinedText.ToString();
         if (successCount > 0 && !string.IsNullOrWhiteSpace(resultText))
             await SetClipboardTextAsync(resultText);
 
