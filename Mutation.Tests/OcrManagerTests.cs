@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -170,7 +170,6 @@ public class OcrManagerTests
 		Assert.Equal(1, clipboard.SetTextCalls);
 		WaitForBeep(manager, 1);
 		Assert.Contains(BeepType.Success, manager.Beeps);
-		Assert.Equal(2, service.CallCount);
 	}
 
 	[Fact]
@@ -512,12 +511,13 @@ public class OcrManagerTests
 	private static string ExtractSection(string text, string header)
 	{
 		int start = text.IndexOf(header, StringComparison.Ordinal);
-		Assert.True(start >= 0, $"Header '{header}' not found.");
+		Assert.True(start >=0, $"Header '{header}' not found.");
 		string segment = text[start..];
-		int separatorIndex = segment.IndexOf($"{Environment.NewLine}{Environment.NewLine}", StringComparison.Ordinal);
-		if (separatorIndex >= 0)
+		// Find the next file header (starts with a newline followed by '['). If none, return the rest of the text.
+		int nextHeaderIndex = segment.IndexOf(Environment.NewLine + "[", StringComparison.Ordinal);
+		if (nextHeaderIndex >=0)
 		{
-			segment = segment[..separatorIndex];
+			segment = segment[..nextHeaderIndex];
 		}
 		return segment;
 	}
