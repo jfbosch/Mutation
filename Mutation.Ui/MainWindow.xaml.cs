@@ -961,6 +961,110 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
+	private async void BtnOcrDocuments_Click(object sender, RoutedEventArgs e)
+	{
+		try
+		{
+			var picker = new FileOpenPicker
+			{
+				SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+				ViewMode = PickerViewMode.List
+			};
+                        foreach (string extension in OcrManager.SupportedFileExtensions)
+                        {
+                                picker.FileTypeFilter.Add(extension);
+                        }
+
+			InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+			IReadOnlyList<StorageFile>? files = await picker.PickMultipleFilesAsync();
+			if (files == null || files.Count == 0)
+				return;
+
+                        BtnOcrDocuments.IsEnabled = false;
+                        ShowStatus("OCR documents", $"Processing {files.Count} document(s)...", InfoBarSeverity.Informational);
+
+                        OcrDocumentsProgressBar.Value = 0;
+                        OcrDocumentsProgressBar.Maximum = 1;
+                        OcrDocumentsProgressPanel.Visibility = Visibility.Visible;
+                        OcrDocumentsProgressLabel.Text = "Preparing documents...";
+
+                        var paths = files.Select(file => file.Path).ToList();
+                        var progress = new Progress<OcrProcessingProgress>(info =>
+                        {
+                                OcrDocumentsProgressPanel.Visibility = Visibility.Visible;
+                                OcrDocumentsProgressBar.Maximum = Math.Max(1, info.TotalSegments);
+                                OcrDocumentsProgressBar.Value = info.ProcessedSegments;
+                                OcrDocumentsProgressLabel.Text = $"{info.FileName} (Page {info.PageNumber} of {info.TotalPagesForFile})";
+                        });
+                        var result = await _ocrManager.ExtractTextFromFilesAsync(paths, OcrReadingOrder.TopToBottomColumnAware, CancellationToken.None, progress);
+			SetOcrText(result.Text);
+
+			if (result.SuccessCount == 0)
+			{
+				string failureDetails = result.Failures.Count > 0 ? string.Join("\n", result.Failures) : "Unable to extract text from the selected documents.";
+				ShowStatus("OCR documents", failureDetails, InfoBarSeverity.Error);
+			}
+			else if (result.Success)
+			{
+				ShowStatus("OCR documents", $"Processed {result.SuccessCount} document(s). Results copied to the clipboard.", InfoBarSeverity.Success);
+			}
+			else
+			{
+				string failureSummary = BuildFailureSummary(result.Failures);
+				string message = string.IsNullOrWhiteSpace(failureSummary)
+					? $"Processed {result.SuccessCount} of {result.TotalCount} document(s)."
+					: $"Processed {result.SuccessCount} of {result.TotalCount} document(s). Issues: {failureSummary}";
+				ShowStatus("OCR documents", message, InfoBarSeverity.Warning);
+			}
+		}
+		catch (Exception ex)
+		{
+			ShowStatus("OCR documents", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("OCR Documents Error", ex);
+		}
+                finally
+                {
+                        BtnOcrDocuments.IsEnabled = true;
+                        OcrDocumentsProgressPanel.Visibility = Visibility.Collapsed;
+                        OcrDocumentsProgressBar.Value = 0;
+                        OcrDocumentsProgressBar.Maximum = 1;
+                        OcrDocumentsProgressLabel.Text = string.Empty;
+                }
+        }
+
+        private async void BtnDownloadOcrResults_Click(object sender, RoutedEventArgs e)
+        {
+                string text = TxtOcr.Text;
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                        ShowStatus("OCR documents", "No OCR results available to download.", InfoBarSeverity.Warning);
+                        return;
+                }
+
+                try
+                {
+                        var picker = new FileSavePicker
+                        {
+                                SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+                                SuggestedFileName = $"ocr-results-{DateTime.Now:yyyyMMdd-HHmmss}"
+                        };
+                        picker.FileTypeChoices.Add("Text Document", new List<string> { ".txt" });
+
+                        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+                        StorageFile? file = await picker.PickSaveFileAsync();
+                        if (file is null)
+                                return;
+
+                        await FileIO.WriteTextAsync(file, text);
+                        ShowStatus("OCR documents", $"Saved OCR results to {file.Name}.", InfoBarSeverity.Success);
+                }
+                catch (Exception ex)
+                {
+                        ShowStatus("OCR documents", ex.Message, InfoBarSeverity.Error);
+                        await ShowErrorDialog("Save OCR Result Error", ex);
+                }
+        }
+
 	public async void BtnSpeechToText_Click(object? sender, RoutedEventArgs? e)
 	{
 		try
@@ -1860,9 +1964,27 @@ public sealed partial class MainWindow : Window
 		catch (TaskCanceledException) { }
 	}
 
+	private static string BuildFailureSummary(IReadOnlyList<string> failures)
+	{
+		if (failures.Count == 0)
+			return string.Empty;
+
+		var sample = failures.Take(3).ToList();
+		string summary = string.Join("; ", sample);
+		if (failures.Count > sample.Count)
+			summary += "; ...";
+
+		return summary;
+	}
+
 	internal void SetOcrText(string message)
 	{
-		TxtOcr.Text = message;
+		string safeMessage = message ?? string.Empty;
+		TxtOcr.Text = safeMessage;
+		if (BtnDownloadOcrResults is not null)
+		{
+			BtnDownloadOcrResults.IsEnabled = !string.IsNullOrWhiteSpace(safeMessage);
+		}
 	}
 
 	private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)

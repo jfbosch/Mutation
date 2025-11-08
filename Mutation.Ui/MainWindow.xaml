@@ -605,6 +605,49 @@
                                         </StackPanel>
                                     </Grid>
                                 </Button>
+
+                                <Button
+                                    x:Name="BtnOcrDocuments"
+                                    Style="{StaticResource OutlinedButtonStyle}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Click="BtnOcrDocuments_Click"
+                                    AccessKey="R"
+                                    AutomationProperties.Name="OCR documents"
+                                    ToolTipService.ToolTip="Select documents and extract their text in a single batch">
+                                    <Grid ColumnSpacing="12" VerticalAlignment="Stretch">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="32" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon
+                                            Glyph="&#xE898;"
+                                            FontFamily="Segoe Fluent Icons"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="OCR documents" />
+                                            <TextBlock
+                                                Text="Batch PDFs and images into one result"
+                                                Style="{StaticResource CaptionTextStyle}"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+
+                                <StackPanel x:Name="OcrDocumentsProgressPanel" Spacing="4" Visibility="Collapsed">
+                                    <TextBlock
+                                        x:Name="OcrDocumentsProgressLabel"
+                                        Text="Preparing documents..."
+                                        Style="{StaticResource CaptionTextStyle}"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <ProgressBar
+                                        x:Name="OcrDocumentsProgressBar"
+                                        Minimum="0"
+                                        Maximum="1"
+                                        Value="0"
+                                        Height="4" />
+                                </StackPanel>
                             </StackPanel>
 
                             <TextBox
@@ -617,6 +660,20 @@
                                 ScrollViewer.HorizontalScrollMode="Auto"
                                 AutomationProperties.Name="OCR result"
                                 ToolTipService.ToolTip="Text extracted from captured images" />
+
+                            <Button
+                                x:Name="BtnDownloadOcrResults"
+                                Style="{StaticResource AccentButtonStyle}"
+                                HorizontalAlignment="Left"
+                                Click="BtnDownloadOcrResults_Click"
+                                IsEnabled="False"
+                                AutomationProperties.Name="Download OCR result"
+                                ToolTipService.ToolTip="Save the OCR output to a text document">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE118;" FontFamily="Segoe Fluent Icons" />
+                                    <TextBlock Text="Download OCR result" />
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
                     </Border>
 

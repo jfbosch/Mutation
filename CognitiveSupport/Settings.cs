@@ -103,12 +103,17 @@ public class AzureComputerVisionSettings
 	public string? OcrHotKey { get; set; }
 	public string? OcrLeftToRightTopToBottomHotKey { get; set; }
 
-	// If this is not null, this hotkey will be sent to the system after an OCR operation completes. 
-        public string? SendHotkeyAfterOcrOperation { get; set; }
+	// If this is not null, this hotkey will be sent to the system after an OCR operation completes.
+	public string? SendHotkeyAfterOcrOperation { get; set; }
 
 	public string? ApiKey { get; set; }
 	public string? Endpoint { get; set; }
 	public int TimeoutSeconds { get; set; } = 10;
+	public bool UseFreeTier { get; set; } = true;
+	public int FreeTierPageLimit { get; set; } = 2;
+	public int MaxParallelDocuments { get; set; } = 2;
+	public int MaxParallelRequests { get; set; } = 4;
+	public long? MaxDocumentBytes { get; set; }
 
 	public AzureComputerVisionSettings()
 	{

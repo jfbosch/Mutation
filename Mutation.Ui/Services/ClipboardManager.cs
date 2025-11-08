@@ -29,7 +29,7 @@ public class ClipboardManager
 		return null;
 	}
 
-	public void SetText(string text)
+	public virtual void SetText(string text)
 	{
 		if (string.IsNullOrWhiteSpace(text))
 			return;

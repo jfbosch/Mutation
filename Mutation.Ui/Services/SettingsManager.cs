@@ -120,6 +120,36 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 
+                if (azureComputerVisionSettings.FreeTierPageLimit <= 0)
+                {
+                        azureComputerVisionSettings.FreeTierPageLimit = 2;
+                        somethingWasMissing = true;
+                }
+
+                if (azureComputerVisionSettings.MaxParallelDocuments <= 0)
+                {
+                        azureComputerVisionSettings.MaxParallelDocuments = 2;
+                        somethingWasMissing = true;
+                }
+
+                if (azureComputerVisionSettings.MaxParallelRequests <= 0)
+                {
+                        azureComputerVisionSettings.MaxParallelRequests = 4;
+                        somethingWasMissing = true;
+                }
+
+                if (azureComputerVisionSettings.MaxParallelRequests > 20)
+                {
+                        azureComputerVisionSettings.MaxParallelRequests = 20;
+                        somethingWasMissing = true;
+                }
+
+                if (azureComputerVisionSettings.FreeTierPageLimit > 20)
+                {
+                        azureComputerVisionSettings.FreeTierPageLimit = 20;
+                        somethingWasMissing = true;
+                }
+
 
 		if (settings.AudioSettings is null)
 		{
