@@ -195,9 +195,6 @@ public class OcrManager
 
 				foreach (var segment in pageResults)
 				{
-					if (fileTextBuilder.Length > 0)
-						fileTextBuilder.AppendLine();
-
 					if (totalPagesForFile > 1)
 						fileTextBuilder.AppendLine($"(Page {segment.PageNumber})");
 
