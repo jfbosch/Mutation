@@ -193,13 +193,19 @@ public class OcrManager
 				pageResults.Sort((left, right) => left.PageNumber.CompareTo(right.PageNumber));
 				var fileTextBuilder = new StringBuilder();
 
-				foreach (var segment in pageResults)
+				for (int index = 0; index < pageResults.Count; index++)
 				{
+					var segment = pageResults[index];
+
 					if (totalPagesForFile > 1)
 						fileTextBuilder.AppendLine($"(Page {segment.PageNumber})");
 
 					if (!string.IsNullOrWhiteSpace(segment.Text))
 						fileTextBuilder.AppendLine(segment.Text);
+
+					bool hasAdditionalSegments = index < pageResults.Count - 1;
+					if (hasAdditionalSegments && totalPagesForFile > 1)
+						fileTextBuilder.AppendLine();
 				}
 
 				string fileText = fileTextBuilder.ToString().TrimEnd();
