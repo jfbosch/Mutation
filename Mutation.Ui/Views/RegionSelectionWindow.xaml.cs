@@ -69,6 +69,9 @@ public sealed partial class RegionSelectionWindow : Window
 	[DllImport("user32.dll")]
 	private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+	[DllImport("user32.dll")]
+	private static extern bool IsIconic(IntPtr hWnd);
+
 	[DllImport("kernel32.dll")]
 	private static extern uint GetCurrentThreadId();
 
@@ -463,7 +466,12 @@ public sealed partial class RegionSelectionWindow : Window
 			}
 			try
 			{
-				try { ShowWindow(target, SW_RESTORE); } catch { }
+				bool isIconic = false;
+				try { isIconic = IsIconic(target); } catch { isIconic = false; }
+				if (isIconic)
+				{
+					try { ShowWindow(target, SW_RESTORE); } catch { }
+				}
 				try { BringWindowToTop(target); } catch { }
 				try { SetForegroundWindow(target); } catch { }
 			}
