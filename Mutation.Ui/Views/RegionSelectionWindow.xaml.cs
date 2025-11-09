@@ -98,6 +98,7 @@ public sealed partial class RegionSelectionWindow : Window
 	private const uint SWP_NOSIZE = 0x0001;
 	private const uint SWP_NOACTIVATE = 0x0010;
 	private const int SW_RESTORE = 9;
+	private const int FocusRetryDelayMilliseconds = 50; // Allow Windows message pump to settle before retrying focus restoration
 	public RegionSelectionWindow()
 	{
 		this.InitializeComponent();
@@ -518,8 +519,14 @@ public sealed partial class RegionSelectionWindow : Window
 		{
 			success = false;
 		}
-		if (success || !IsWindow(target) || !IsWindowVisible(target))
+		if (success)
 		{
+			// Focus restoration completed, so we can stop tracking the prior foreground window.
+			_previousForeground = IntPtr.Zero;
+		}
+		else if (!IsWindow(target) || !IsWindowVisible(target))
+		{
+			// The window is no longer valid; clear the handle to avoid repeated, futile retries.
 			_previousForeground = IntPtr.Zero;
 		}
 		return success;
@@ -542,7 +549,7 @@ public sealed partial class RegionSelectionWindow : Window
 			{
 				return;
 			}
-			_ = Task.Delay(50).ContinueWith(static (task, state) =>
+			_ = Task.Delay(FocusRetryDelayMilliseconds).ContinueWith(static (task, state) =>
 			{
 				if (state is RegionSelectionWindow window && window._dispatcherQueue is DispatcherQueue queue)
 				{
