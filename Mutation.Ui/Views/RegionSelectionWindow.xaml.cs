@@ -54,14 +54,30 @@ public sealed partial class RegionSelectionWindow : Window
 	[DllImport("user32.dll")]
 	private static extern bool SetForegroundWindow(IntPtr hWnd);
 
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetForegroundWindow();
+	[DllImport("user32.dll")]
+	private static extern IntPtr GetForegroundWindow();
+
+	[DllImport("user32.dll")]
+	private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+	[DllImport("user32.dll")]
+	private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+	[DllImport("user32.dll")]
+	private static extern bool BringWindowToTop(IntPtr hWnd);
+
+	[DllImport("user32.dll")]
+	private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+	[DllImport("kernel32.dll")]
+	private static extern uint GetCurrentThreadId();
 
 	private static readonly IntPtr HWND_TOPMOST = new(-1);
 	private const uint SWP_SHOWWINDOW = 0x0040; // keep for reference, but avoid using to prevent flicker
 	private const uint SWP_NOMOVE = 0x0002;
 	private const uint SWP_NOSIZE = 0x0001;
-        private const uint SWP_NOACTIVATE = 0x0010;
+	private const uint SWP_NOACTIVATE = 0x0010;
+	private const int SW_RESTORE = 9;
 	public RegionSelectionWindow()
 	{
 		this.InitializeComponent();
@@ -428,16 +444,39 @@ public sealed partial class RegionSelectionWindow : Window
                 }
         }
 
-        private void RestoreForegroundWindow()
-        {
-                var target = _previousForeground;
-                _previousForeground = IntPtr.Zero;
-                if (target == IntPtr.Zero || target == _hwnd)
-                {
-                        return;
-                }
-                try { SetForegroundWindow(target); } catch { }
-        }
+	private void RestoreForegroundWindow()
+	{
+		var target = _previousForeground;
+		_previousForeground = IntPtr.Zero;
+		if (target == IntPtr.Zero || target == _hwnd)
+		{
+			return;
+		}
+		try
+		{
+			uint targetThread = GetWindowThreadProcessId(target, out _);
+			uint currentThread = GetCurrentThreadId();
+			bool attached = false;
+			if (targetThread != 0 && targetThread != currentThread)
+			{
+				try { attached = AttachThreadInput(currentThread, targetThread, true); } catch { attached = false; }
+			}
+			try
+			{
+				try { ShowWindow(target, SW_RESTORE); } catch { }
+				try { BringWindowToTop(target); } catch { }
+				try { SetForegroundWindow(target); } catch { }
+			}
+			finally
+			{
+				if (attached)
+				{
+					try { AttachThreadInput(currentThread, targetThread, false); } catch { }
+				}
+			}
+		}
+		catch { }
+	}
 
         private void HideAndRestore()
         {
