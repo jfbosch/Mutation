@@ -549,23 +549,24 @@ public sealed partial class RegionSelectionWindow : Window
 			{
 				return;
 			}
-			_ = Task.Delay(FocusRetryDelayMilliseconds).ContinueWith(static (task, state) =>
+			_ = Task.Run(async () =>
 			{
-				if (state is RegionSelectionWindow window && window._dispatcherQueue is DispatcherQueue queue)
+				await Task.Delay(FocusRetryDelayMilliseconds);
+				if (this._dispatcherQueue is DispatcherQueue queue)
 				{
-					if (window._previousForeground == IntPtr.Zero)
+					if (this._previousForeground == IntPtr.Zero)
 					{
 						return;
 					}
 					queue.TryEnqueue(DispatcherQueuePriority.Low, () =>
 					{
-						if (!window.TryRestoreForegroundWindow())
+						if (!this.TryRestoreForegroundWindow())
 						{
-							window._previousForeground = IntPtr.Zero;
+							this._previousForeground = IntPtr.Zero;
 						}
 					});
 				}
-			}, this, TaskScheduler.Default);
+			});
 		});
 	}
 }
