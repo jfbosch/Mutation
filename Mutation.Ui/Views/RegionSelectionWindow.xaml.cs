@@ -23,6 +23,7 @@ public sealed partial class RegionSelectionWindow : Window
 	private int _bmpH;
 	private Point? _lastPointerPos; // track last known position in overlay coords
 	private bool _initialLayoutDone;
+        private IntPtr _previousForeground;
 
 	// Cache XAML elements to avoid reliance on generated fields
 	private Microsoft.UI.Xaml.Controls.Image? _img;
@@ -53,10 +54,14 @@ public sealed partial class RegionSelectionWindow : Window
 	[DllImport("user32.dll")]
 	private static extern bool SetForegroundWindow(IntPtr hWnd);
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
 	private static readonly IntPtr HWND_TOPMOST = new(-1);
 	private const uint SWP_SHOWWINDOW = 0x0040; // keep for reference, but avoid using to prevent flicker
 	private const uint SWP_NOMOVE = 0x0002;
 	private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOACTIVATE = 0x0010;
 	public RegionSelectionWindow()
 	{
 		this.InitializeComponent();
@@ -91,14 +96,26 @@ public sealed partial class RegionSelectionWindow : Window
 		// Prepare window for full-bleed content and no chrome; size to full virtual screen
 		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
 		var appWindow = this.AppWindow;
-		if (appWindow != null)
-		{
-			try
-			{
-				appWindow.MoveAndResize(new RectInt32(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
-			}
-			catch { }
-		}
+                if (appWindow != null)
+                {
+                        try
+                        {
+                                appWindow.MoveAndResize(new RectInt32(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
+                                if (appWindow.Presenter is OverlappedPresenter presenter)
+                                {
+                                        presenter.IsResizable = false;
+                                        presenter.IsMaximizable = false;
+                                        presenter.IsMinimizable = false;
+                                        presenter.SetBorderAndTitleBar(false, false);
+                                }
+                        }
+                        catch { }
+                }
+                try
+                {
+                        SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOACTIVATE);
+                }
+                catch { }
 		// Expand content into title bar area (hide chrome).
 		if (this.AppWindow?.TitleBar is AppWindowTitleBar tb)
 		{
@@ -124,21 +141,22 @@ public sealed partial class RegionSelectionWindow : Window
 		_bmpH = wb.PixelHeight;
 	}
 
-	public Task<Rect?> SelectRegionAsync()
-	{
-		_tcs = new TaskCompletionSource<Rect?>();
-		_dragging = false;
-		_lastPointerPos = null;
-		ResetSelection();
-		// Show and activate for input (in case window was hidden for reuse)
-		try { this.AppWindow?.Show(); } catch { }
-		this.Activate();
-		TryFocusOverlay();
-		// Ensure TopMost without using SWP_SHOWWINDOW to avoid flicker
-		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-		SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOMOVE | SWP_NOSIZE);
-		return _tcs.Task;
-	}
+        public Task<Rect?> SelectRegionAsync()
+        {
+                _tcs = new TaskCompletionSource<Rect?>();
+                _dragging = false;
+                _lastPointerPos = null;
+                ResetSelection();
+                RememberForegroundWindow();
+                // Show and activate for input (in case window was hidden for reuse)
+                try { this.AppWindow?.Show(); } catch { }
+                this.Activate();
+                TryFocusOverlay();
+                // Ensure TopMost without using SWP_SHOWWINDOW to avoid flicker
+                var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+                SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOMOVE | SWP_NOSIZE);
+                return _tcs.Task;
+        }
 
 	private void Overlay_PointerPressed(object sender, PointerRoutedEventArgs e)
 	{
@@ -151,7 +169,7 @@ public sealed partial class RegionSelectionWindow : Window
 			_dragging = false;
 			_tcs?.TrySetResult(null);
 			ResetSelection();
-			try { this.AppWindow?.Hide(); } catch { }
+			HideAndRestore();
 			return;
 		}
 		// Only start selection on left button
@@ -207,7 +225,7 @@ public sealed partial class RegionSelectionWindow : Window
 			_dragging = false;
 			_tcs?.TrySetResult(null);
 			ResetSelection();
-			try { this.AppWindow?.Hide(); } catch { }
+			HideAndRestore();
 			return;
 		}
 		if (!_dragging) return;
@@ -253,7 +271,7 @@ public sealed partial class RegionSelectionWindow : Window
 		);
 		_tcs?.TrySetResult(rectPx);
 		ResetSelection();
-		try { this.AppWindow?.Hide(); } catch { }
+		HideAndRestore();
 	}
 
 	private void InitializeCrosshairAtCursor(System.Drawing.Rectangle bounds)
@@ -292,7 +310,7 @@ public sealed partial class RegionSelectionWindow : Window
 		{
 			_dragging = false;
 			_tcs?.TrySetResult(null);
-			try { this.AppWindow?.Hide(); } catch { }
+			HideAndRestore();
 		}
 	}
 
@@ -360,7 +378,7 @@ public sealed partial class RegionSelectionWindow : Window
 	public void PrepareWindowForReuse()
 	{
 		PrepareWindow();
-		try { this.AppWindow?.Hide(); } catch { }
+		HideAndRestore();
 	}
 
 	private void Overlay_Loaded(object sender, RoutedEventArgs e)
@@ -385,8 +403,45 @@ public sealed partial class RegionSelectionWindow : Window
 		}
 	}
 
-	private void TryFocusOverlay()
-	{
-		try { _overlay?.Focus(FocusState.Programmatic); } catch { }
-	}
+        private void TryFocusOverlay()
+        {
+                try { _overlay?.Focus(FocusState.Programmatic); } catch { }
+        }
+
+        private void RememberForegroundWindow()
+        {
+                try
+                {
+                        var current = GetForegroundWindow();
+                        if (current != IntPtr.Zero && current != _hwnd)
+                        {
+                                _previousForeground = current;
+                        }
+                        else
+                        {
+                                _previousForeground = IntPtr.Zero;
+                        }
+                }
+                catch
+                {
+                        _previousForeground = IntPtr.Zero;
+                }
+        }
+
+        private void RestoreForegroundWindow()
+        {
+                var target = _previousForeground;
+                _previousForeground = IntPtr.Zero;
+                if (target == IntPtr.Zero || target == _hwnd)
+                {
+                        return;
+                }
+                try { SetForegroundWindow(target); } catch { }
+        }
+
+        private void HideAndRestore()
+        {
+                try { this.AppWindow?.Hide(); } catch { }
+                RestoreForegroundWindow();
+        }
 }
