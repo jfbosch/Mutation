@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Windowing;
+﻿using Microsoft.UI.Dispatching;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -23,7 +24,8 @@ public sealed partial class RegionSelectionWindow : Window
 	private int _bmpH;
 	private Point? _lastPointerPos; // track last known position in overlay coords
 	private bool _initialLayoutDone;
-        private IntPtr _previousForeground;
+	private IntPtr _previousForeground;
+	private readonly DispatcherQueue? _dispatcherQueue;
 
 	// Cache XAML elements to avoid reliance on generated fields
 	private Microsoft.UI.Xaml.Controls.Image? _img;
@@ -72,6 +74,21 @@ public sealed partial class RegionSelectionWindow : Window
 	[DllImport("user32.dll")]
 	private static extern bool IsIconic(IntPtr hWnd);
 
+	[DllImport("user32.dll")]
+	private static extern bool IsWindow(IntPtr hWnd);
+
+	[DllImport("user32.dll")]
+	private static extern bool IsWindowVisible(IntPtr hWnd);
+
+	[DllImport("user32.dll")]
+	private static extern IntPtr SetActiveWindow(IntPtr hWnd);
+
+	[DllImport("user32.dll")]
+	private static extern IntPtr SetFocus(IntPtr hWnd);
+
+	[DllImport("user32.dll")]
+	private static extern bool AllowSetForegroundWindow(uint dwProcessId);
+
 	[DllImport("kernel32.dll")]
 	private static extern uint GetCurrentThreadId();
 
@@ -85,6 +102,7 @@ public sealed partial class RegionSelectionWindow : Window
 	{
 		this.InitializeComponent();
 		_hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+		_dispatcherQueue = DispatcherQueue.GetForCurrentThread();
 		EnsureElementRefs();
 	}
 
@@ -447,17 +465,23 @@ public sealed partial class RegionSelectionWindow : Window
                 }
         }
 
-	private void RestoreForegroundWindow()
+	private bool TryRestoreForegroundWindow()
 	{
 		var target = _previousForeground;
-		_previousForeground = IntPtr.Zero;
 		if (target == IntPtr.Zero || target == _hwnd)
 		{
-			return;
+			_previousForeground = IntPtr.Zero;
+			return false;
 		}
+		if (!IsWindow(target))
+		{
+			_previousForeground = IntPtr.Zero;
+			return false;
+		}
+		bool success = false;
 		try
 		{
-			uint targetThread = GetWindowThreadProcessId(target, out _);
+			uint targetThread = GetWindowThreadProcessId(target, out uint targetProcessId);
 			uint currentThread = GetCurrentThreadId();
 			bool attached = false;
 			if (targetThread != 0 && targetThread != currentThread)
@@ -466,6 +490,10 @@ public sealed partial class RegionSelectionWindow : Window
 			}
 			try
 			{
+				if (targetProcessId != 0)
+				{
+					try { AllowSetForegroundWindow(targetProcessId); } catch { }
+				}
 				bool isIconic = false;
 				try { isIconic = IsIconic(target); } catch { isIconic = false; }
 				if (isIconic)
@@ -474,6 +502,8 @@ public sealed partial class RegionSelectionWindow : Window
 				}
 				try { BringWindowToTop(target); } catch { }
 				try { SetForegroundWindow(target); } catch { }
+				try { SetActiveWindow(target); } catch { }
+				try { SetFocus(target); } catch { }
 			}
 			finally
 			{
@@ -482,13 +512,53 @@ public sealed partial class RegionSelectionWindow : Window
 					try { AttachThreadInput(currentThread, targetThread, false); } catch { }
 				}
 			}
+			success = GetForegroundWindow() == target;
 		}
-		catch { }
+		catch
+		{
+			success = false;
+		}
+		if (success || !IsWindow(target) || !IsWindowVisible(target))
+		{
+			_previousForeground = IntPtr.Zero;
+		}
+		return success;
 	}
 
-        private void HideAndRestore()
-        {
-                try { this.AppWindow?.Hide(); } catch { }
-                RestoreForegroundWindow();
-        }
+	private void HideAndRestore()
+	{
+		try { this.AppWindow?.Hide(); } catch { }
+		if (TryRestoreForegroundWindow() || _previousForeground == IntPtr.Zero)
+		{
+			return;
+		}
+		if (_dispatcherQueue is null)
+		{
+			return;
+		}
+		_dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+		{
+			if (TryRestoreForegroundWindow() || _previousForeground == IntPtr.Zero)
+			{
+				return;
+			}
+			_ = Task.Delay(50).ContinueWith(static (task, state) =>
+			{
+				if (state is RegionSelectionWindow window && window._dispatcherQueue is DispatcherQueue queue)
+				{
+					if (window._previousForeground == IntPtr.Zero)
+					{
+						return;
+					}
+					queue.TryEnqueue(DispatcherQueuePriority.Low, () =>
+					{
+						if (!window.TryRestoreForegroundWindow())
+						{
+							window._previousForeground = IntPtr.Zero;
+						}
+					});
+				}
+			}, this, TaskScheduler.Default);
+		});
+	}
 }
