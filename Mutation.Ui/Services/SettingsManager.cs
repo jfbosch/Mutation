@@ -2,7 +2,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
-using OpenAI.ObjectModels;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -402,12 +401,12 @@ End of summary.
 			{
 				new LlmSettings.ModelDeploymentIdMap
 				{
-					ModelName = Models.Gpt_3_5_Turbo,
+					ModelName = "gpt-3.5-turbo",
 					DeploymentId = "gpt-35-turbo"
 				},
 				new LlmSettings.ModelDeploymentIdMap
 				{
-					ModelName = Models.Gpt_4,
+					ModelName = "gpt-4",
 					DeploymentId = "gpt-4"
 				},
 			};

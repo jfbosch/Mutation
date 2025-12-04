@@ -1,39 +1,32 @@
-﻿using OpenAI;
-using OpenAI.Interfaces;
-using OpenAI.Managers;
-using OpenAI.ObjectModels.RequestModels;
+﻿using Azure;
+using Azure.AI.OpenAI;
+using OpenAI.Chat;
+using System.ClientModel;
 
 namespace CognitiveSupport;
 
 public class LlmService : ILlmService
 {
-	private readonly string ApiKey;
-	private readonly string Endpoint;
-	private readonly object _lock = new object();
-	private readonly Dictionary<string, IOpenAIService> _openAIServices;
+	private readonly Dictionary<string, ChatClient> _chatClients;
 
 	public LlmService(
 		string apiKey,
 		string azureResourceName,
 		List<LlmSettings.ModelDeploymentIdMap> modelDeploymentIdMaps)
 	{
-		ApiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+		if (string.IsNullOrEmpty(apiKey)) throw new ArgumentNullException(nameof(apiKey));
 		if (modelDeploymentIdMaps is null || !modelDeploymentIdMaps.Any())
 			throw new ArgumentNullException(nameof(modelDeploymentIdMaps));
 
-		_openAIServices = new Dictionary<string, IOpenAIService>();
+		_chatClients = new Dictionary<string, ChatClient>();
+
+		var endpoint = new Uri($"https://{azureResourceName}.openai.azure.com/");
+		var credential = new AzureKeyCredential(apiKey);
+		var azureClient = new AzureOpenAIClient(endpoint, credential);
+
 		foreach (var map in modelDeploymentIdMaps)
 		{
-			OpenAiOptions options = new OpenAiOptions
-			{
-				ApiKey = apiKey,
-				ResourceName = azureResourceName,
-				ProviderType = ProviderType.Azure,
-				DeploymentId = map.DeploymentId,
-			};
-			HttpClient httpClient = new HttpClient();
-			httpClient.Timeout = TimeSpan.FromSeconds(60);
-			_openAIServices[map.ModelName] = new OpenAIService(options, httpClient);
+			_chatClients[map.ModelName] = azureClient.GetChatClient(map.DeploymentId);
 		}
 	}
 
@@ -42,27 +35,22 @@ public class LlmService : ILlmService
 		string llmModelName,
 		decimal temperature = 0.7m)
 	{
-		if (!_openAIServices.ContainsKey(llmModelName))
-			throw new ArgumentException($"{llmModelName} is not one of the configured models. The following are the available, configured models: {string.Join(",", _openAIServices.Keys)}", nameof(llmModelName));
+		if (!_chatClients.ContainsKey(llmModelName))
+			throw new ArgumentException($"{llmModelName} is not one of the configured models. The following are the available, configured models: {string.Join(",", _chatClients.Keys)}", nameof(llmModelName));
 
-		var service = _openAIServices[llmModelName];
-		var response = await service.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+		var client = _chatClients[llmModelName];
+
+		ChatCompletionOptions options = new()
 		{
-			Messages = messages,
-			Model = llmModelName,
-			Temperature = (float)temperature,
-		});
-		if (response.Successful)
+			Temperature = (float)temperature
+		};
+
+		ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages, options);
+
+		if (result.Value.Content.Count > 0)
 		{
-			return response.Choices.First().Message.Content;
+			return result.Value.Content[0].Text;
 		}
-		else
-		{
-			if (response.Error == null)
-			{
-				throw new Exception("Unknown Error");
-			}
-			return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
-		}
+		return string.Empty;
 	}
 }

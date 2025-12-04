@@ -1,7 +1,5 @@
 ﻿using CognitiveSupport.Extensions;
-using OpenAI.Interfaces;
-using OpenAI.ObjectModels;
-using OpenAI.ObjectModels.RequestModels;
+using OpenAI.Audio;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
@@ -12,20 +10,16 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 {
 	public string ServiceName { get; init; }
 
-	private readonly string _modelId;
-	private readonly object _lock = new object();
-	private readonly IOpenAIService _openAIService;
+	private readonly AudioClient _audioClient;
 	private readonly int _timeoutSeconds;
 
 	public OpenAiSpeechToTextService(
 		string serviceName,
-		IOpenAIService openAIService,
-		string modelId,
+		AudioClient audioClient,
 		int timeoutSeconds)
 	{
 		this.ServiceName = serviceName;
-		_openAIService = openAIService ?? throw new ArgumentNullException(nameof(openAIService));
-		_modelId = modelId ?? throw new ArgumentNullException(nameof(modelId), "Check your Whisper API provider's documentation for supported modelIds. On OpenAI, it's something like 'whisper-1'. On Groq, it's something like 'whisper-large-v3'.");
+		_audioClient = audioClient ?? throw new ArgumentNullException(nameof(audioClient));
 		_timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 10;
 	}
 
@@ -37,7 +31,6 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 		if (string.IsNullOrEmpty(audioffilePath))
 			throw new ArgumentException($"'{nameof(audioffilePath)}' cannot be null or empty.", nameof(audioffilePath));
 
-		var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
 		const string AttemptKey = "Attempt";
 
 		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
@@ -67,36 +60,24 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 			if (attempt > 0)
 				this.Beep(attempt);
 
-			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, audioBytes, linkedCts.Token).ConfigureAwait(false);
+			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, linkedCts.Token).ConfigureAwait(false);
 		}, context, overallCancellationToken).ConfigureAwait(false);
 
-		if (response.Successful)
-		{
-			return response.Text;
-		}
-		else
-		{
-			if (response.Error == null)
-			{
-				throw new Exception("Unknown Error");
-			}
-			return $"Error converting speech to text: {response.Error.Code} {response.Error.Message}";
-		}
+		return response;
 	}
 
-	private async Task<OpenAI.ObjectModels.ResponseModels.AudioCreateTranscriptionResponse> TranscribeViaWhisper(
+	private async Task<string> TranscribeViaWhisper(
 		string speechToTextPrompt,
-		string audioffilePath,
-		byte[] audioBytes,
+		string audioFilePath,
 		CancellationToken cancellationToken)
 	{
-		return await _openAIService.Audio.CreateTranscription(new AudioCreateTranscriptionRequest
+		AudioTranscriptionOptions options = new()
 		{
 			Prompt = speechToTextPrompt,
-			FileName = Path.GetFileName(audioffilePath),
-			File = audioBytes,
-			Model = _modelId,
-			ResponseFormat = StaticValues.AudioStatics.ResponseFormat.Json
-		}, cancellationToken);
+		};
+
+		using var stream = File.OpenRead(audioFilePath);
+		var result = await _audioClient.TranscribeAudioAsync(stream, Path.GetFileName(audioFilePath), options, cancellationToken);
+		return result.Value.Text;
 	}
 }

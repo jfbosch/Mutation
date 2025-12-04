@@ -1,4 +1,4 @@
-﻿using OpenAI.ObjectModels.RequestModels;
+﻿using OpenAI.Chat;
 
 namespace CognitiveSupport;
 

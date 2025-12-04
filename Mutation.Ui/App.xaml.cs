@@ -7,7 +7,9 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Mutation.Ui.Services;
 using OpenAI;
-using OpenAI.Managers;
+using OpenAI.Audio;
+using Azure.AI.OpenAI;
+using System.ClientModel;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -395,21 +397,28 @@ public partial class App : Application
 	private static ISpeechToTextService CreateWhisperSpeechToTextService(HostApplicationBuilder builder, SpeechToTextServiceSettings serviceSettings, IServiceProvider sp)
 	{
 		string baseDomain = serviceSettings.BaseDomain?.Trim() ?? string.Empty;
+		string apiKey = serviceSettings.ApiKey ?? string.Empty;
+		string modelId = serviceSettings.ModelId ?? string.Empty;
 
-		OpenAiOptions options = new OpenAiOptions
+		AudioClient audioClient;
+		if (!string.IsNullOrEmpty(baseDomain))
 		{
-			ApiKey = serviceSettings.ApiKey ?? string.Empty,
-			BaseDomain = baseDomain,
-		};
-
-		IHttpClientFactory httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-		HttpClient httpClient = httpClientFactory.CreateClient("openai-http-client");
-		var openAIService = new OpenAIService(options, httpClient);
+			if (!baseDomain.EndsWith("/v1") && !baseDomain.EndsWith("/v1/"))
+			{
+				baseDomain = baseDomain.TrimEnd('/') + "/v1/";
+			}
+			var options = new OpenAIClientOptions { Endpoint = new Uri(baseDomain) };
+			var client = new OpenAIClient(new ApiKeyCredential(apiKey), options);
+			audioClient = client.GetAudioClient(modelId);
+		}
+		else
+		{
+			audioClient = new AudioClient(modelId, new ApiKeyCredential(apiKey));
+		}
 
 		return new OpenAiSpeechToTextService(
 				  serviceSettings.Name ?? string.Empty,
-				  openAIService,
-				  serviceSettings.ModelId ?? string.Empty,
+				  audioClient,
 				  serviceSettings.TimeoutSeconds > 0 ? serviceSettings.TimeoutSeconds : 10);
 	}
 
