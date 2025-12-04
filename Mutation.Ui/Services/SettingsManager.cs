@@ -360,11 +360,13 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 
+		/* ResourceName removed
 		if (string.IsNullOrWhiteSpace(llmSettings.ResourceName))
 		{
 			llmSettings.ResourceName = "The-Azure-resource-name-for-your-OpenAI-service";
 			somethingWasMissing = true;
 		}
+		*/
 
 		if (string.IsNullOrWhiteSpace(llmSettings.FormatTranscriptPrompt))
 		{
@@ -395,22 +397,20 @@ End of summary.
 
 
 
-		if (llmSettings.ModelDeploymentIdMaps == null || !llmSettings.ModelDeploymentIdMaps.Any())
+		if (llmSettings.Models == null || !llmSettings.Models.Any())
 		{
-			llmSettings.ModelDeploymentIdMaps = new List<LlmSettings.ModelDeploymentIdMap>
+			llmSettings.Models = new List<string>
 			{
-				new LlmSettings.ModelDeploymentIdMap
-				{
-					ModelName = "gpt-3.5-turbo",
-					DeploymentId = "gpt-35-turbo"
-				},
-				new LlmSettings.ModelDeploymentIdMap
-				{
-					ModelName = "gpt-4",
-					DeploymentId = "gpt-4"
-				},
+				"gpt-4.1",
+				"gpt-5.1"
 			};
+			somethingWasMissing = true;
+		}
 
+		if (string.IsNullOrWhiteSpace(llmSettings.ReasoningEffort))
+		{
+			llmSettings.ReasoningEffort = "low";
+			somethingWasMissing = true;
 		}
 
 		if (llmSettings.TranscriptFormatRules == null || !llmSettings.TranscriptFormatRules.Any())

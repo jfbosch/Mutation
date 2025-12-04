@@ -146,41 +146,25 @@ public class SpeechToTextServiceSettings
 public class LlmSettings
 {
 	public string? ApiKey { get; set; }
-	public string? ResourceName { get; set; }
-	public List<ModelDeploymentIdMap> ModelDeploymentIdMaps { get; set; }
+	public List<string> Models { get; set; }
+	public string? ReasoningEffort { get; set; } = "low";
 	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
 	public string? FormatTranscriptPrompt { get; set; }
 
 
 	public LlmSettings()
 	{
-		ModelDeploymentIdMaps = new List<ModelDeploymentIdMap>();
+		Models = new List<string>();
 		TranscriptFormatRules = new List<TranscriptFormatRule>();
 	}
 
-	public LlmSettings(string? apiKey, string? resourceName, List<ModelDeploymentIdMap> modelDeploymentIdMaps, List<TranscriptFormatRule> transcriptFormatRules, string? formatTranscriptPrompt)
+	public LlmSettings(string? apiKey, List<string> models, string? reasoningEffort, List<TranscriptFormatRule> transcriptFormatRules, string? formatTranscriptPrompt)
 	{
 		ApiKey = apiKey;
-		ResourceName = resourceName;
-		ModelDeploymentIdMaps = modelDeploymentIdMaps;
+		Models = models;
+		ReasoningEffort = reasoningEffort;
 		TranscriptFormatRules = transcriptFormatRules;
 		FormatTranscriptPrompt = formatTranscriptPrompt;
-	}
-
-	public class ModelDeploymentIdMap
-	{
-		public string? ModelName { get; set; }
-		public string? DeploymentId { get; set; }
-
-		public ModelDeploymentIdMap()
-		{
-		}
-
-		public ModelDeploymentIdMap(string? modelName, string? deploymentId)
-		{
-			ModelName = modelName;
-			DeploymentId = deploymentId;
-		}
 	}
 
 	public class TranscriptFormatRule

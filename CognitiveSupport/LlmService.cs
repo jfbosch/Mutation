@@ -1,6 +1,4 @@
-﻿using Azure;
-using Azure.AI.OpenAI;
-using OpenAI.Chat;
+﻿using OpenAI.Chat;
 using System.ClientModel;
 
 namespace CognitiveSupport;
@@ -8,25 +6,23 @@ namespace CognitiveSupport;
 public class LlmService : ILlmService
 {
 	private readonly Dictionary<string, ChatClient> _chatClients;
+	private readonly string _reasoningEffort;
 
 	public LlmService(
 		string apiKey,
-		string azureResourceName,
-		List<LlmSettings.ModelDeploymentIdMap> modelDeploymentIdMaps)
+		List<string> models,
+		string reasoningEffort)
 	{
 		if (string.IsNullOrEmpty(apiKey)) throw new ArgumentNullException(nameof(apiKey));
-		if (modelDeploymentIdMaps is null || !modelDeploymentIdMaps.Any())
-			throw new ArgumentNullException(nameof(modelDeploymentIdMaps));
+		if (models is null || !models.Any())
+			throw new ArgumentNullException(nameof(models));
 
 		_chatClients = new Dictionary<string, ChatClient>();
+		_reasoningEffort = reasoningEffort;
 
-		var endpoint = new Uri($"https://{azureResourceName}.openai.azure.com/");
-		var credential = new AzureKeyCredential(apiKey);
-		var azureClient = new AzureOpenAIClient(endpoint, credential);
-
-		foreach (var map in modelDeploymentIdMaps)
+		foreach (var model in models)
 		{
-			_chatClients[map.ModelName] = azureClient.GetChatClient(map.DeploymentId);
+			_chatClients[model] = new ChatClient(model, apiKey);
 		}
 	}
 
@@ -44,6 +40,13 @@ public class LlmService : ILlmService
 		{
 			Temperature = (float)temperature
 		};
+
+		/*
+		if (!string.IsNullOrWhiteSpace(_reasoningEffort) && Enum.TryParse<ChatReasoningEffort>(_reasoningEffort, true, out var effort))
+		{
+			options.ReasoningEffort = effort;
+		}
+		*/
 
 		ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages, options);
 
