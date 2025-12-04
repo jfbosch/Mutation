@@ -36,7 +36,7 @@ public class TranscriptFormatter
 		return text;
 	}
 
-	public async Task<string> FormatWithLlmAsync(string transcript, string systemPrompt)
+	public async Task<string> FormatWithLlmAsync(string transcript, string systemPrompt, string modelName)
 	{
 		if (transcript is null)
 			return transcript;
@@ -47,7 +47,7 @@ public class TranscriptFormatter
 				new UserChatMessage($"Reformat the following transcript: {transcript}")
 		  };
 
-		string formattedText = await _llmService.CreateChatCompletion(messages, "gpt-4");
+		string formattedText = await _llmService.CreateChatCompletion(messages, modelName);
 		return formattedText.FixNewLines();
 	}
 }

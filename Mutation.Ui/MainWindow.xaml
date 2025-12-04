@@ -403,6 +403,17 @@
                                         ScrollViewer.HorizontalScrollMode="Auto"
                                         AutomationProperties.Name="Format prompt"
                                         ToolTipService.ToolTip="Prompt used for large language model formatting" />
+                                    <ComboBox
+                                        x:Name="CmbLlmModel"
+                                        Header="LLM Model"
+                                        PlaceholderText="Select a model"
+                                        HorizontalAlignment="Stretch"
+                                        SelectionChanged="CmbLlmModel_SelectionChanged" />
+                                    <CheckBox
+                                        x:Name="ChkAutoFormat"
+                                        Content="Auto format after audio transcription"
+                                        Checked="ChkAutoFormat_Checked"
+                                        Unchecked="ChkAutoFormat_Unchecked" />
                                 </StackPanel>
                             </Grid>
 

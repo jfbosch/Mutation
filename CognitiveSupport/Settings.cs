@@ -147,6 +147,8 @@ public class LlmSettings
 {
 	public string? ApiKey { get; set; }
 	public List<string> Models { get; set; }
+	public string? SelectedLlmModel { get; set; }
+	public bool AutoFormatWithLlm { get; set; }
 	public string? ReasoningEffort { get; set; } = "low";
 	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
 	public string? FormatTranscriptPrompt { get; set; }

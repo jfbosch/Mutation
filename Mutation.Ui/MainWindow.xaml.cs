@@ -171,6 +171,22 @@ public sealed partial class MainWindow : Window
 
 		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
 
+		if (_settings.LlmSettings != null)
+		{
+			CmbLlmModel.ItemsSource = _settings.LlmSettings.Models;
+			if (!string.IsNullOrEmpty(_settings.LlmSettings.SelectedLlmModel) && _settings.LlmSettings.Models.Contains(_settings.LlmSettings.SelectedLlmModel))
+			{
+				CmbLlmModel.SelectedItem = _settings.LlmSettings.SelectedLlmModel;
+			}
+			else if (_settings.LlmSettings.Models.Any())
+			{
+				CmbLlmModel.SelectedIndex = 0;
+				_settings.LlmSettings.SelectedLlmModel = _settings.LlmSettings.Models[0];
+			}
+
+			ChkAutoFormat.IsChecked = _settings.LlmSettings.AutoFormatWithLlm;
+		}
+
 		var tooltipManager = new TooltipManager(_settings);
 		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
 
@@ -1379,6 +1395,22 @@ public sealed partial class MainWindow : Window
 
                                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                                         BtnSpeechToText.IsEnabled = true;
+
+                                        if (_settings.LlmSettings?.AutoFormatWithLlm == true)
+                                        {
+                                            try
+                                            {
+                                                ShowStatus("Speech to Text", "Formatting with LLM...", InfoBarSeverity.Informational);
+                                                string prompt = TxtFormatPrompt.Text;
+                                                string modelName = _settings.LlmSettings.SelectedLlmModel ?? "gpt-4";
+                                                text = await _transcriptFormatter.FormatWithLlmAsync(text, prompt, modelName);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                ShowStatus("Auto-Format Warning", $"LLM formatting failed: {ex.Message}. Using original transcript.", InfoBarSeverity.Warning);
+                                            }
+                                        }
+
                                         FinalizeTranscript(text, "Transcript ready and copied.");
                                 }
 				catch (OperationCanceledException)
@@ -1442,7 +1474,8 @@ public sealed partial class MainWindow : Window
 			TxtFormatTranscript.Text = "Formatting...";
 			string raw = TxtSpeechToText.Text;
 			string prompt = TxtFormatPrompt.Text;
-			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
+			string modelName = _settings.LlmSettings?.SelectedLlmModel ?? "gpt-4";
+			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt, modelName);
 			TxtFormatTranscript.Text = formatted;
 			_clipboard.SetText(formatted);
 			InsertIntoActiveApplication(formatted);
@@ -1897,6 +1930,33 @@ public sealed partial class MainWindow : Window
 				_settings.MainWindowUiSettings.DictationInsertPreference = persistedValue;
 				_settingsManager.SaveSettingsToFile(_settings);
 			}
+		}
+	}
+
+	private void CmbLlmModel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (_settings.LlmSettings != null && CmbLlmModel.SelectedItem is string selectedModel)
+		{
+			_settings.LlmSettings.SelectedLlmModel = selectedModel;
+			_settingsManager.SaveSettingsToFile(_settings);
+		}
+	}
+
+	private void ChkAutoFormat_Checked(object sender, RoutedEventArgs e)
+	{
+		if (_settings.LlmSettings != null)
+		{
+			_settings.LlmSettings.AutoFormatWithLlm = true;
+			_settingsManager.SaveSettingsToFile(_settings);
+		}
+	}
+
+	private void ChkAutoFormat_Unchecked(object sender, RoutedEventArgs e)
+	{
+		if (_settings.LlmSettings != null)
+		{
+			_settings.LlmSettings.AutoFormatWithLlm = false;
+			_settingsManager.SaveSettingsToFile(_settings);
 		}
 	}
 
