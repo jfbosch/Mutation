@@ -438,12 +438,12 @@
                         </Grid>
                     </Border>
 
-                    <!-- Formatting & Automation -->
+                    <!-- Automation -->
                     <Border x:Name="FormattingAutomationCard" Style="{StaticResource CardStyle}" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Formatting &amp; Automation" Style="{StaticResource SectionHeaderTextStyle}" />
-                                <TextBlock Text="Control how transcripts are refined and where results are delivered." Style="{StaticResource CaptionTextStyle}" />
+                                <TextBlock Text="Automation" Style="{StaticResource SectionHeaderTextStyle}" />
+                                <TextBlock Text="Control where transcripts are delivered." Style="{StaticResource CaptionTextStyle}" />
                             </StackPanel>
 
                             <StackPanel Spacing="6">
