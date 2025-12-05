@@ -64,6 +64,7 @@ public sealed partial class MainWindow : Window
 
 	// Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
 	private bool _suppressAutoActions = false;
+	private bool _currentRecordingUsesLlmFormatting;
 
 	private ISpeechToTextService? _activeSpeechService;
 	private CancellationTokenSource _formatDebounceCts = new();
@@ -1362,10 +1363,11 @@ public sealed partial class MainWindow : Window
 				await dlg.ShowAsync();
 				return;
 			}
-
 			if (!_speechManager.Recording)
 			{
+                        _currentRecordingUsesLlmFormatting = useLlmFormatting;
                         _suppressAutoActions = true;
+                        TxtSpeechToText.IsReadOnly = true;
                         TxtSpeechToText.IsReadOnly = true;
                         TxtSpeechToText.Text = "Recording...";
                         UpdateSpeechButtonVisuals("Stop", StopGlyph);
@@ -1390,11 +1392,10 @@ public sealed partial class MainWindow : Window
                                 try
                                 {
                                         string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-
                                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                                         BtnSpeechToText.IsEnabled = true;
 
-                                        if (useLlmFormatting)
+                                        if (_currentRecordingUsesLlmFormatting)
                                         {
                                             try
                                             {
