@@ -1395,7 +1395,10 @@ public sealed partial class MainWindow : Window
                                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                                         BtnSpeechToText.IsEnabled = true;
 
-                                        string? formattedText = null;
+                                        // Always run rules-based formatting first
+                                        string rulesFormattedText = _transcriptFormatter.ApplyRules(text, false);
+                                        string finalFormattedText = rulesFormattedText;
+
                                         if (_currentRecordingUsesLlmFormatting)
                                         {
                                             try
@@ -1403,15 +1406,17 @@ public sealed partial class MainWindow : Window
                                                 ShowStatus("Speech to Text", "Formatting with LLM...", InfoBarSeverity.Informational);
                                                 string prompt = TxtFormatPrompt.Text;
                                                 string modelName = _settings.LlmSettings.SelectedLlmModel ?? "gpt-4";
-                                                formattedText = await _transcriptFormatter.FormatWithLlmAsync(text, prompt, modelName);
+                                                // Pass the rules-formatted text to the LLM
+                                                finalFormattedText = await _transcriptFormatter.FormatWithLlmAsync(rulesFormattedText, prompt, modelName);
                                             }
                                             catch (Exception ex)
                                             {
-                                                ShowStatus("Auto-Format Warning", $"LLM formatting failed: {ex.Message}. Using original transcript.", InfoBarSeverity.Warning);
+                                                ShowStatus("Auto-Format Warning", $"LLM formatting failed: {ex.Message}. Using rules-formatted transcript.", InfoBarSeverity.Warning);
+                                                // finalFormattedText remains rulesFormattedText
                                             }
                                         }
 
-                                        FinalizeTranscript(text, "Transcript ready and copied.", formattedText);
+                                        FinalizeTranscript(text, "Transcript ready and copied.", finalFormattedText);
                                 }
 				catch (OperationCanceledException)
 				{
