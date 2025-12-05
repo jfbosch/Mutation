@@ -666,7 +666,14 @@ public sealed partial class MainWindow : Window
 		_uiStateManager.Save(this);
 
 		if (_activeSpeechService != null)
+		{
 			_settings.SpeechToTextSettings!.ActiveSpeechToTextService = _activeSpeechService.ServiceName;
+			var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == _activeSpeechService.ServiceName);
+			if (serviceSettings != null)
+			{
+				serviceSettings.SpeechToTextPrompt = TxtSpeechToTextPrompt.Text;
+			}
+		}
 		_settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
 
 		var normalizedPairs = SyncHotkeyRouterSettings();
