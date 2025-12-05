@@ -1478,9 +1478,11 @@ public sealed partial class MainWindow : Window
 		{
 			TxtFormatTranscript.Text = "Formatting...";
 			string raw = TxtRawTranscript.Text;
+			string rulesFormatted = _transcriptFormatter.ApplyRules(raw, false);
+
 			string prompt = TxtFormatPrompt.Text;
 			string modelName = _settings.LlmSettings?.SelectedLlmModel ?? "gpt-4";
-			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt, modelName);
+			string formatted = await _transcriptFormatter.FormatWithLlmAsync(rulesFormatted, prompt, modelName);
 			TxtFormatTranscript.Text = formatted;
 			_clipboard.SetText(formatted);
 			InsertIntoActiveApplication(formatted);

@@ -386,6 +386,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <!-- Raw Transcript -->
@@ -401,6 +402,21 @@
                                 AutomationProperties.Name="Raw transcript"
                                 ToolTipService.ToolTip="Raw transcript generated from speech"
                                 TextChanged="TxtSpeechToText_TextChanged" />
+                            <Button
+                                Grid.Row="0"
+                                Grid.Column="2"
+                                x:Name="BtnFormatTranscript"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Click="BtnFormatTranscript_Click"
+                                AccessKey="F"
+                                VerticalAlignment="Top"
+                                AutomationProperties.Name="Format with rules"
+                                ToolTipService.ToolTip="Apply local formatting rules to the transcript">
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE8A1;" FontFamily="Segoe Fluent Icons" />
+                                    <TextBlock Text="Format with rules" />
+                                </StackPanel>
+                            </Button>
 
                             <!-- Formatted Transcript -->
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Formatted Transcript" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Top" Margin="0,6,0,0" />
@@ -414,6 +430,21 @@
                                 ScrollViewer.HorizontalScrollMode="Auto"
                                 AutomationProperties.Name="Formatted transcript"
                                 ToolTipService.ToolTip="Formatted transcript ready for sharing" />
+                            <Button
+                                Grid.Row="1"
+                                Grid.Column="2"
+                                x:Name="BtnFormatLlm"
+                                Style="{StaticResource OutlinedButtonStyle}"
+                                Click="BtnFormatLlm_Click"
+                                AccessKey="L"
+                                VerticalAlignment="Top"
+                                AutomationProperties.Name="Format with LLM"
+                                ToolTipService.ToolTip="Send transcript through the configured language model">
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe Fluent Icons" />
+                                    <TextBlock Text="Format with LLM" />
+                                </StackPanel>
+                            </Button>
                         </Grid>
                     </Border>
 
@@ -439,34 +470,6 @@
                                     TextWrapping="Wrap"
                                     Style="{StaticResource CaptionTextStyle}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            </StackPanel>
-
-                            <StackPanel x:Name="FormattingActionsPanel" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Stretch">
-                                <Button
-                                    x:Name="BtnFormatTranscript"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Click="BtnFormatTranscript_Click"
-                                    AccessKey="F"
-                                    AutomationProperties.Name="Format transcript"
-                                    ToolTipService.ToolTip="Apply local formatting rules to the transcript">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8A1;" FontFamily="Segoe Fluent Icons" />
-                                        <TextBlock Text="Format transcript" />
-                                    </StackPanel>
-                                </Button>
-
-                                <Button
-                                    x:Name="BtnFormatLlm"
-                                    Style="{StaticResource OutlinedButtonStyle}"
-                                    Click="BtnFormatLlm_Click"
-                                    AccessKey="L"
-                                    AutomationProperties.Name="Format transcript with LLM"
-                                    ToolTipService.ToolTip="Send transcript through the configured language model">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe Fluent Icons" />
-                                        <TextBlock Text="LLM formatting" />
-                                    </StackPanel>
-                                </Button>
                             </StackPanel>
                         </StackPanel>
                     </Border>
