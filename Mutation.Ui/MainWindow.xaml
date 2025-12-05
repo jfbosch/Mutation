@@ -376,11 +376,21 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Raw Transcript -->
-                    <Border x:Name="RawTranscriptCard" Style="{StaticResource CardStyle}" Grid.Row="2" Grid.ColumnSpan="2">
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="Raw Transcript" Style="{StaticResource CaptionTextStyle}" />
-                            <TextBox
+                    <!-- Transcripts -->
+                    <Border x:Name="TranscriptsCard" Style="{StaticResource CardStyle}" Grid.Row="2" Grid.ColumnSpan="2">
+                        <Grid RowSpacing="12" ColumnSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Raw Transcript -->
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Raw Transcript" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Top" Margin="0,6,0,0" />
+                            <TextBox Grid.Row="0" Grid.Column="1"
                                 x:Name="TxtRawTranscript"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
@@ -391,14 +401,10 @@
                                 AutomationProperties.Name="Raw transcript"
                                 ToolTipService.ToolTip="Raw transcript generated from speech"
                                 TextChanged="TxtSpeechToText_TextChanged" />
-                        </StackPanel>
-                    </Border>
 
-                    <!-- Formatted Transcript -->
-                    <Border x:Name="FormattedTranscriptCard" Style="{StaticResource CardStyle}" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
-                        <StackPanel Spacing="12">
-                            <TextBlock Text="Formatted Transcript" Style="{StaticResource CaptionTextStyle}" />
-                            <TextBox
+                            <!-- Formatted Transcript -->
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Formatted Transcript" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Top" Margin="0,6,0,0" />
+                            <TextBox Grid.Row="1" Grid.Column="1"
                                 x:Name="TxtFormatTranscript"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
@@ -408,7 +414,7 @@
                                 ScrollViewer.HorizontalScrollMode="Auto"
                                 AutomationProperties.Name="Formatted transcript"
                                 ToolTipService.ToolTip="Formatted transcript ready for sharing" />
-                        </StackPanel>
+                        </Grid>
                     </Border>
 
                     <!-- Formatting & Automation -->
@@ -869,20 +875,18 @@
                                 <Setter Target="SpeechCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="FormatPromptCard.(Grid.Row)" Value="2" />
                                 <Setter Target="FormatPromptCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="RawTranscriptCard.(Grid.Row)" Value="3" />
-                                <Setter Target="RawTranscriptCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="FormattedTranscriptCard.(Grid.Row)" Value="4" />
-                                <Setter Target="FormattedTranscriptCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="FormattingAutomationCard.(Grid.Row)" Value="5" />
+                                <Setter Target="TranscriptsCard.(Grid.Row)" Value="3" />
+                                <Setter Target="TranscriptsCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="FormattingAutomationCard.(Grid.Row)" Value="4" />
                                 <Setter Target="FormattingAutomationCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="CaptureCard.(Grid.Column)" Value="0" />
-                                <Setter Target="CaptureCard.(Grid.Row)" Value="6" />
+                                <Setter Target="CaptureCard.(Grid.Row)" Value="5" />
                                 <Setter Target="CaptureCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="ClipboardCard.(Grid.Column)" Value="0" />
-                                <Setter Target="ClipboardCard.(Grid.Row)" Value="7" />
+                                <Setter Target="ClipboardCard.(Grid.Row)" Value="6" />
                                 <Setter Target="ClipboardCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="HotkeyRouterCard.(Grid.Column)" Value="0" />
-                                <Setter Target="HotkeyRouterCard.(Grid.Row)" Value="8" />
+                                <Setter Target="HotkeyRouterCard.(Grid.Row)" Value="7" />
                                 <Setter Target="HotkeyRouterCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="FormattingActionsPanel.Orientation" Value="Vertical" />
                                 <Setter Target="ClipboardActionsPanel.Orientation" Value="Vertical" />
@@ -900,21 +904,19 @@
                                 <Setter Target="SpeechCard.(Grid.ColumnSpan)" Value="1" />
                                 <Setter Target="FormatPromptCard.(Grid.Row)" Value="1" />
                                 <Setter Target="FormatPromptCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="RawTranscriptCard.(Grid.Row)" Value="2" />
-                                <Setter Target="RawTranscriptCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="FormattedTranscriptCard.(Grid.Row)" Value="3" />
-                                <Setter Target="FormattedTranscriptCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="FormattingAutomationCard.(Grid.Row)" Value="4" />
+                                <Setter Target="TranscriptsCard.(Grid.Row)" Value="2" />
+                                <Setter Target="TranscriptsCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="FormattingAutomationCard.(Grid.Row)" Value="3" />
                                 <Setter Target="FormattingAutomationCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="CaptureCard.(Grid.Column)" Value="0" />
                                 <Setter Target="CaptureCard.(Grid.ColumnSpan)" Value="1" />
-                                <Setter Target="CaptureCard.(Grid.Row)" Value="5" />
+                                <Setter Target="CaptureCard.(Grid.Row)" Value="4" />
                                 <Setter Target="ClipboardCard.(Grid.Column)" Value="1" />
                                 <Setter Target="ClipboardCard.(Grid.ColumnSpan)" Value="1" />
-                                <Setter Target="ClipboardCard.(Grid.Row)" Value="5" />
+                                <Setter Target="ClipboardCard.(Grid.Row)" Value="4" />
                                 <Setter Target="HotkeyRouterCard.(Grid.Column)" Value="0" />
                                 <Setter Target="HotkeyRouterCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="HotkeyRouterCard.(Grid.Row)" Value="6" />
+                                <Setter Target="HotkeyRouterCard.(Grid.Row)" Value="5" />
                                 <Setter Target="FormattingActionsPanel.Orientation" Value="Horizontal" />
                                 <Setter Target="ClipboardActionsPanel.Orientation" Value="Horizontal" />
                             </VisualState.Setters>
