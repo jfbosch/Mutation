@@ -68,6 +68,7 @@ public sealed partial class MainWindow : Window
 
 	private ISpeechToTextService? _activeSpeechService;
 	private CancellationTokenSource _formatDebounceCts = new();
+	private CancellationTokenSource _promptDebounceCts = new();
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
 	private readonly DispatcherTimer _statusDismissTimer;
 	private bool _hotkeyRouterInitialized;
@@ -1213,7 +1214,7 @@ public sealed partial class MainWindow : Window
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
 
-                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService!, sessionToRetry, string.Empty, CancellationToken.None);
+                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService!, sessionToRetry, GetActivePrompt(), CancellationToken.None);
 
                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                         FinalizeTranscript(text, "Transcript refreshed from the selected session.");
@@ -1288,7 +1289,7 @@ public sealed partial class MainWindow : Window
                         RefreshSessions(session);
                         UpdateRecordingActionAvailability();
 
-                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, session, string.Empty, CancellationToken.None);
+                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, session, GetActivePrompt(), CancellationToken.None);
 
                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                         FinalizeTranscript(text, $"Transcript generated from {session.FileName}.");
@@ -1391,7 +1392,7 @@ public sealed partial class MainWindow : Window
 
                                 try
                                 {
-                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
+                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, GetActivePrompt(), CancellationToken.None);
                                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                                         BtnSpeechToText.IsEnabled = true;
 
@@ -1918,11 +1919,52 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
+	private string GetActivePrompt()
+	{
+		if (_activeSpeechService == null) return string.Empty;
+		var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == _activeSpeechService.ServiceName);
+		return serviceSettings?.SpeechToTextPrompt ?? string.Empty;
+	}
+
 	private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
 		if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
+		{
 			_activeSpeechService = svc;
+			var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == svc.ServiceName);
+			if (serviceSettings != null)
+			{
+				// Temporarily unsubscribe to avoid triggering the save logic
+				TxtSpeechToTextPrompt.TextChanged -= TxtSpeechToTextPrompt_TextChanged;
+				TxtSpeechToTextPrompt.Text = serviceSettings.SpeechToTextPrompt ?? string.Empty;
+				TxtSpeechToTextPrompt.TextChanged += TxtSpeechToTextPrompt_TextChanged;
+			}
+		}
 		UpdateRecordingActionAvailability();
+	}
+
+	private async void TxtSpeechToTextPrompt_TextChanged(object sender, TextChangedEventArgs e)
+	{
+		if (_activeSpeechService == null) return;
+
+		var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == _activeSpeechService.ServiceName);
+		if (serviceSettings != null)
+		{
+			serviceSettings.SpeechToTextPrompt = TxtSpeechToTextPrompt.Text;
+
+			_promptDebounceCts.Cancel();
+			_promptDebounceCts = new CancellationTokenSource();
+			var token = _promptDebounceCts.Token;
+			try
+			{
+				await Task.Delay(1000, token);
+				if (!token.IsCancellationRequested)
+				{
+					_settingsManager.SaveSettingsToFile(_settings);
+				}
+			}
+			catch (TaskCanceledException) { }
+		}
 	}
 
 	private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)

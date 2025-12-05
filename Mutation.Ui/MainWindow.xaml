@@ -251,6 +251,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
@@ -338,6 +339,16 @@
                                         ToolTipService.ToolTip="Upload an audio file for transcription">
                                         <FontIcon Glyph="&#xE898;" FontFamily="Segoe Fluent Icons" />
                                     </Button>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Spacing="6">
+                                    <TextBlock x:Name="LblSpeechToTextPrompt" Text="Prompt" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBox
+                                        x:Name="TxtSpeechToTextPrompt"
+                                        PlaceholderText="Optional prompt for context or keywords"
+                                        AutomationProperties.LabeledBy="{Binding ElementName=LblSpeechToTextPrompt}"
+                                        AutomationProperties.Name="Speech to text prompt"
+                                        TextChanged="TxtSpeechToTextPrompt_TextChanged" />
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
