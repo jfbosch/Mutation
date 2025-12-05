@@ -402,21 +402,26 @@
                                 AutomationProperties.Name="Raw transcript"
                                 ToolTipService.ToolTip="Raw transcript generated from speech"
                                 TextChanged="TxtSpeechToText_TextChanged" />
-                            <Button
-                                Grid.Row="0"
-                                Grid.Column="2"
-                                x:Name="BtnFormatTranscript"
-                                Style="{StaticResource AccentButtonStyle}"
-                                Click="BtnFormatTranscript_Click"
-                                AccessKey="F"
-                                VerticalAlignment="Top"
-                                AutomationProperties.Name="Format with rules"
-                                ToolTipService.ToolTip="Apply local formatting rules to the transcript">
-                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                    <FontIcon Glyph="&#xE8A1;" FontFamily="Segoe Fluent Icons" />
-                                    <TextBlock Text="Format with rules" />
-                                </StackPanel>
-                            </Button>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                                <Button
+                                    x:Name="BtnFormatTranscript"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    Click="BtnFormatTranscript_Click"
+                                    AccessKey="F"
+                                    AutomationProperties.Name="Format with rules"
+                                    ToolTipService.ToolTip="Apply local formatting rules to the transcript">
+                                    <FontIcon Glyph="&#xE90F;" FontFamily="Segoe Fluent Icons" />
+                                </Button>
+                                <Button
+                                    x:Name="BtnFormatLlm"
+                                    Style="{StaticResource OutlinedButtonStyle}"
+                                    Click="BtnFormatLlm_Click"
+                                    AccessKey="L"
+                                    AutomationProperties.Name="Format with LLM"
+                                    ToolTipService.ToolTip="Send transcript through the configured language model">
+                                    <FontIcon Glyph="&#xE781;" FontFamily="Segoe Fluent Icons" />
+                                </Button>
+                            </StackPanel>
 
                             <!-- Formatted Transcript -->
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Formatted Transcript" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Top" Margin="0,6,0,0" />
@@ -430,21 +435,6 @@
                                 ScrollViewer.HorizontalScrollMode="Auto"
                                 AutomationProperties.Name="Formatted transcript"
                                 ToolTipService.ToolTip="Formatted transcript ready for sharing" />
-                            <Button
-                                Grid.Row="1"
-                                Grid.Column="2"
-                                x:Name="BtnFormatLlm"
-                                Style="{StaticResource OutlinedButtonStyle}"
-                                Click="BtnFormatLlm_Click"
-                                AccessKey="L"
-                                VerticalAlignment="Top"
-                                AutomationProperties.Name="Format with LLM"
-                                ToolTipService.ToolTip="Send transcript through the configured language model">
-                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                    <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe Fluent Icons" />
-                                    <TextBlock Text="Format with LLM" />
-                                </StackPanel>
-                            </Button>
                         </Grid>
                     </Border>
 
