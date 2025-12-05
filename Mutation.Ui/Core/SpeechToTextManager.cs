@@ -160,22 +160,22 @@ internal class SpeechToTextManager
 		await _state.AudioRecorderLock.WaitAsync(token).ConfigureAwait(false);
 		try
 		{
-			_audioRecorder?.StopRecording();
-			_audioRecorder?.Dispose();
-			_audioRecorder = null;
-
-			string text = string.Empty;
 			_state.StartTranscription();
 			try
 			{
-				text = await service.ConvertAudioToText(prompt, recordingSession.FilePath, _state.TranscriptionCancellationTokenSource!.Token).ConfigureAwait(false);
+				_audioRecorder?.StopRecording();
+				_audioRecorder?.Dispose();
+				_audioRecorder = null;
+
+				if (_state.TranscriptionCancellationTokenSource?.IsCancellationRequested == true)
+					_state.TranscriptionCancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+				return await service.ConvertAudioToText(prompt, recordingSession.FilePath, _state.TranscriptionCancellationTokenSource!.Token).ConfigureAwait(false);
 			}
 			finally
 			{
 				_state.StopTranscription();
 			}
-
-			return text;
 		}
 		finally
 		{

@@ -1380,6 +1380,7 @@ public sealed partial class MainWindow : Window
                 }
                 else
                 {
+				_currentRecordingUsesLlmFormatting = useLlmFormatting;
 				BtnSpeechToText.IsEnabled = false;
 				_suppressAutoActions = true;
 				TxtRawTranscript.Text = "Transcribing...";
