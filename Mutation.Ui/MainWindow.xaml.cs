@@ -318,6 +318,7 @@ public sealed partial class MainWindow : Window
 		ConfigureButtonHotkey(BtnScreenshotOcr, BtnScreenshotOcrHotkey, _settings.AzureComputerVisionSettings?.ScreenshotOcrHotKey, "Capture a screenshot and extract text automatically");
 		ConfigureButtonHotkey(BtnScreenshotOcrLrtb, BtnScreenshotOcrLrtbHotkey, _settings.AzureComputerVisionSettings?.ScreenshotLeftToRightTopToBottomOcrHotKey, "Capture a screenshot and extract text using left-to-right reading order");
 		ConfigureButtonHotkey(BtnTextToSpeech, BtnTextToSpeechHotkey, _settings.TextToSpeechSettings?.TextToSpeechHotKey, "Play the clipboard text using text-to-speech");
+		ConfigureButtonHotkey(BtnFormatLlm, null, _settings.LlmSettings?.FormatWithLlmHotKey, "Send transcript through the configured language model");
 	}
 
 	private void InitializeHotkeyRouter()
@@ -1484,6 +1485,7 @@ public sealed partial class MainWindow : Window
 	{
 		try
 		{
+			BeepPlayer.Play(BeepType.Start);
 			TxtFormatTranscript.Text = "Formatting...";
 			string raw = TxtRawTranscript.Text;
 			string rulesFormatted = _transcriptFormatter.ApplyRules(raw, false);
@@ -1496,6 +1498,7 @@ public sealed partial class MainWindow : Window
 			InsertIntoActiveApplication(formatted);
 			BeepPlayer.Play(BeepType.Success);
 			ShowStatus("Formatting", "Transcript refined with the language model.", InfoBarSeverity.Success);
+			HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
 		}
 		catch (Exception ex)
 		{

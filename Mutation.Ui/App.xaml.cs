@@ -257,6 +257,17 @@ public partial class App : Application
 						  });
 			}
 
+			if (!string.IsNullOrWhiteSpace(settingsSvc.LlmSettings?.FormatWithLlmHotKey))
+			{
+				hkManager.RegisterHotkey(
+						  Hotkey.Parse(settingsSvc.LlmSettings.FormatWithLlmHotKey!),
+						  () =>
+						  {
+							  try { _window.DispatcherQueue.TryEnqueue(() => ((MainWindow)_window).BtnFormatLlm_Click(null!, null!)); }
+							  catch (Exception ex) { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).ShowErrorDialog("Format with LLM Error", ex)); }
+						  });
+			}
+
 			if (!string.IsNullOrWhiteSpace(settingsSvc.TextToSpeechSettings?.TextToSpeechHotKey))
 			{
 				hkManager.RegisterHotkey(

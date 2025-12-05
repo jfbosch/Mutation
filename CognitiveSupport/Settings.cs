@@ -152,6 +152,7 @@ public class LlmSettings
 	public string? ReasoningEffort { get; set; } = "low";
 	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
 	public string? FormatTranscriptPrompt { get; set; }
+	public string? FormatWithLlmHotKey { get; set; }
 
 
 	public LlmSettings()

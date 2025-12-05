@@ -400,7 +400,11 @@ End of summary.
 ";
 		}
 
-
+		if (string.IsNullOrWhiteSpace(llmSettings.FormatWithLlmHotKey))
+		{
+			llmSettings.FormatWithLlmHotKey = "ALT+SHIFT+P";
+			somethingWasMissing = true;
+		}
 
 		if (llmSettings.Models == null || !llmSettings.Models.Any())
 		{
