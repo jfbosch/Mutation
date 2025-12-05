@@ -124,6 +124,7 @@ public class SpeechToTextSettings
 {
         public string? TempDirectory { get; set; }
         public string? SpeechToTextHotKey { get; set; }
+        public string? SpeechToTextWithLlmFormattingHotKey { get; set; }
 
         // If this is not null, this hotkey will be sent to the system after a transcription operation completes.
         public string? SendHotkeyAfterTranscriptionOperation { get; set; }
@@ -148,7 +149,6 @@ public class LlmSettings
 	public string? ApiKey { get; set; }
 	public List<string> Models { get; set; }
 	public string? SelectedLlmModel { get; set; }
-	public bool AutoFormatWithLlm { get; set; }
 	public string? ReasoningEffort { get; set; } = "low";
 	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
 	public string? FormatTranscriptPrompt { get; set; }

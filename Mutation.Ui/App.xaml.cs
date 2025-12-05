@@ -241,8 +241,19 @@ public partial class App : Application
 						  Hotkey.Parse(settingsSvc.SpeechToTextSettings.SpeechToTextHotKey!),
 						  () =>
 						  {
-							  try { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).StartStopSpeechToTextAsync()); }
+							  try { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).StartStopSpeechToTextAsync(false)); }
 							  catch (Exception ex) { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).ShowErrorDialog("Speech to Text Error", ex)); }
+						  });
+			}
+
+			if (!string.IsNullOrWhiteSpace(settingsSvc.SpeechToTextSettings?.SpeechToTextWithLlmFormattingHotKey))
+			{
+				hkManager.RegisterHotkey(
+						  Hotkey.Parse(settingsSvc.SpeechToTextSettings.SpeechToTextWithLlmFormattingHotKey!),
+						  () =>
+						  {
+							  try { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).StartStopSpeechToTextAsync(true)); }
+							  catch (Exception ex) { _window.DispatcherQueue.TryEnqueue(async () => await ((MainWindow)_window).ShowErrorDialog("Speech to Text (LLM) Error", ex)); }
 						  });
 			}
 

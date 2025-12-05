@@ -183,8 +183,6 @@ public sealed partial class MainWindow : Window
 				CmbLlmModel.SelectedIndex = 0;
 				_settings.LlmSettings.SelectedLlmModel = _settings.LlmSettings.Models[0];
 			}
-
-			ChkAutoFormat.IsChecked = _settings.LlmSettings.AutoFormatWithLlm;
 		}
 
 		var tooltipManager = new TooltipManager(_settings);
@@ -1085,7 +1083,7 @@ public sealed partial class MainWindow : Window
 	{
 		try
 		{
-			await StartStopSpeechToTextAsync();
+			await StartStopSpeechToTextAsync(false);
 		}
 		catch (Exception ex)
 		{
@@ -1332,7 +1330,7 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	public async Task StartStopSpeechToTextAsync()
+	public async Task StartStopSpeechToTextAsync(bool useLlmFormatting = false)
 	{
 		try
 		{
@@ -1396,7 +1394,7 @@ public sealed partial class MainWindow : Window
                                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                                         BtnSpeechToText.IsEnabled = true;
 
-                                        if (_settings.LlmSettings?.AutoFormatWithLlm == true)
+                                        if (useLlmFormatting)
                                         {
                                             try
                                             {
@@ -1938,24 +1936,6 @@ public sealed partial class MainWindow : Window
 		if (_settings.LlmSettings != null && CmbLlmModel.SelectedItem is string selectedModel)
 		{
 			_settings.LlmSettings.SelectedLlmModel = selectedModel;
-			_settingsManager.SaveSettingsToFile(_settings);
-		}
-	}
-
-	private void ChkAutoFormat_Checked(object sender, RoutedEventArgs e)
-	{
-		if (_settings.LlmSettings != null)
-		{
-			_settings.LlmSettings.AutoFormatWithLlm = true;
-			_settingsManager.SaveSettingsToFile(_settings);
-		}
-	}
-
-	private void ChkAutoFormat_Unchecked(object sender, RoutedEventArgs e)
-	{
-		if (_settings.LlmSettings != null)
-		{
-			_settings.LlmSettings.AutoFormatWithLlm = false;
 			_settingsManager.SaveSettingsToFile(_settings);
 		}
 	}

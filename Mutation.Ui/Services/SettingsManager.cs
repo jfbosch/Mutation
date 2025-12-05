@@ -329,6 +329,11 @@ internal class SettingsManager : ISettingsManager
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
 			somethingWasMissing = true;
 		}
+		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextWithLlmFormattingHotKey))
+		{
+			speechToTextSettings.SpeechToTextWithLlmFormattingHotKey = "SHIFT+ALT+I";
+			somethingWasMissing = true;
+		}
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.TempDirectory))
 		{
 			speechToTextSettings.TempDirectory = @"C:\Temp\Mutation";
