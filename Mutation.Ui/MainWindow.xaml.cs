@@ -310,8 +310,8 @@ public sealed partial class MainWindow : Window
 
 	private void InitializeHotkeyVisuals()
 	{
-		ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
-		ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, BtnSpeechToTextLabel.Text);
+		ConfigureButtonHotkey(BtnToggleMic, null, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, "Toggle microphone mute state");
+		ConfigureButtonHotkey(BtnSpeechToText, null, _settings.SpeechToTextSettings?.SpeechToTextHotKey, "Start or stop speech capture");
 		ConfigureButtonHotkey(BtnScreenshot, BtnScreenshotHotkey, _settings.AzureComputerVisionSettings?.ScreenshotHotKey, "Copy a screenshot directly to the clipboard");
 		ConfigureButtonHotkey(BtnOcrClipboard, BtnOcrClipboardHotkey, _settings.AzureComputerVisionSettings?.OcrHotKey, "Run OCR on an image stored in the clipboard");
 		ConfigureButtonHotkey(BtnOcrClipboardLrtb, BtnOcrClipboardLrtbHotkey, _settings.AzureComputerVisionSettings?.OcrLeftToRightTopToBottomHotKey, "Run OCR on an image stored in the clipboard using left-to-right reading order");
@@ -1510,11 +1510,11 @@ public sealed partial class MainWindow : Window
 	private void UpdateMicrophoneToggleVisuals()
 	{
 		bool muted = _audioDeviceManager.IsMuted;
-		BtnToggleMicLabel.Text = muted ? "Unmute microphone" : "Mute microphone";
+		string labelText = muted ? "Unmute microphone" : "Mute microphone";
 		BtnToggleMicIcon.Glyph = MicOnGlyph;
 		BtnToggleMicSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
-		AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
-		ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
+		AutomationProperties.SetName(BtnToggleMic, labelText);
+		ConfigureButtonHotkey(BtnToggleMic, null, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, labelText);
 		MicStatusIcon.Glyph = MicOnGlyph;
 		MicStatusIconSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
 		MicStatusIcon.Foreground = ResolveBrush(muted ? "TextFillColorSecondaryBrush" : "TextFillColorPrimaryBrush");
@@ -1534,11 +1534,10 @@ public sealed partial class MainWindow : Window
 
 	private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
 	{
-		BtnSpeechToTextLabel.Text = label;
 		BtnSpeechToTextIcon.Glyph = glyph;
 		BtnSpeechToText.IsEnabled = isEnabled;
 		AutomationProperties.SetName(BtnSpeechToText, label);
-		ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
+		ConfigureButtonHotkey(BtnSpeechToText, null, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
 	}
 
         private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
