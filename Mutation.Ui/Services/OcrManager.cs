@@ -11,8 +11,10 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Windows.Data.Pdf;
 using Windows.Foundation;
 using Windows.Graphics.Imaging;
+using Windows.Storage;
 using Windows.Storage.Streams;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -161,7 +163,7 @@ public class OcrManager
 						continue;
 					}
 
-					using var stream = item.OpenStream();
+					using var stream = await item.OpenStreamAsync();
 					string text = await _ocrService.ExtractText(order, stream, cancellationToken);
 					string sanitizedText = string.IsNullOrWhiteSpace(text) ? string.Empty : text.TrimEnd();
 					pageResults.Add((item.PageNumber, sanitizedText));
@@ -396,30 +398,20 @@ public class OcrManager
         return SupportedFileExtensionSet.Contains(extension);
     }
 
-    private static Stream CreatePdfPageStream(string path, int pageIndex)
+    private static async Task<Stream> CreatePdfPageImageStreamAsync(string path, int pageIndex)
     {
-        var output = new MemoryStream();
+        StorageFile file = await StorageFile.GetFileFromPathAsync(path);
+        Windows.Data.Pdf.PdfDocument pdfDocument = await Windows.Data.Pdf.PdfDocument.LoadFromFileAsync(file);
 
-        using (var document = PdfReader.Open(path, PdfDocumentOpenMode.Import))
-        {
-            if (pageIndex < 0 || pageIndex >= document.PageCount)
-                throw new ArgumentOutOfRangeException(nameof(pageIndex));
+        if (pageIndex < 0 || pageIndex >= pdfDocument.PageCount)
+            throw new ArgumentOutOfRangeException(nameof(pageIndex));
 
-            using var singlePage = new PdfDocument
-            {
-                Version = document.Version
-            };
-
-            singlePage.Info.Title = document.Info.Title;
-            singlePage.Info.Author = document.Info.Author;
-            singlePage.Info.Subject = document.Info.Subject;
-            singlePage.Info.Keywords = document.Info.Keywords;
-            singlePage.AddPage(document.Pages[pageIndex]);
-            singlePage.Save(output, false);
-        }
-
-        output.Seek(0, SeekOrigin.Begin);
-        return output;
+        using Windows.Data.Pdf.PdfPage page = pdfDocument.GetPage((uint)pageIndex);
+        var stream = new InMemoryRandomAccessStream();
+        
+        // Render options can be customized if needed, e.g. scaling for better OCR
+        await page.RenderToStreamAsync(stream);
+        return stream.AsStreamForRead();
     }
 
     private sealed class FileOcrBatch
@@ -440,9 +432,9 @@ public class OcrManager
 
     private sealed class OcrWorkItem
     {
-        private readonly Func<Stream>? _streamFactory;
+        private readonly Func<Task<Stream>>? _streamFactory;
 
-        private OcrWorkItem(string originalPath, Func<Stream>? streamFactory, int pageNumber, int totalPages, Exception? initializationError)
+        private OcrWorkItem(string originalPath, Func<Task<Stream>>? streamFactory, int pageNumber, int totalPages, Exception? initializationError)
         {
             OriginalPath = originalPath;
             _streamFactory = streamFactory;
@@ -457,20 +449,20 @@ public class OcrManager
         public Exception? InitializationError { get; }
 
         public static OcrWorkItem CreateFile(string path) =>
-            new(path, () => File.OpenRead(path), 1, 1, null);
+            new(path, () => Task.FromResult<Stream>(File.OpenRead(path)), 1, 1, null);
 
         public static OcrWorkItem CreatePdf(string path, int pageNumber, int totalPages) =>
-            new(path, () => CreatePdfPageStream(path, pageNumber - 1), pageNumber, totalPages, null);
+            new(path, () => CreatePdfPageImageStreamAsync(path, pageNumber - 1), pageNumber, totalPages, null);
 
         public static OcrWorkItem CreateError(string path, Exception error) =>
             new(path, null, 1, 1, error);
 
-        public Stream OpenStream()
+        public async Task<Stream> OpenStreamAsync()
         {
             if (_streamFactory is null)
                 throw new InvalidOperationException("No stream factory available.");
 
-            return _streamFactory();
+            return await _streamFactory();
         }
     }
 
