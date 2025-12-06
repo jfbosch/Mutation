@@ -1,6 +1,6 @@
 ## Tech stack
 
-This is a .Net 9 solution.
+This is a .Net 10 solution.
 The Mutation.Ui is a WinUI 3 project (NOT WPF).
 
 ## Build \& test
@@ -11,6 +11,6 @@ The Mutation.Ui is a WinUI 3 project (NOT WPF).
 
 ## Conventions
 
-* Use the .NET 9 SDK already installed in the environment
+* Use the .NET 10 SDK already installed in the environment
 * Prefer 'dotnet build' over 'msbuild'
 * Use tabs and not spaces.
