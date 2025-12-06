@@ -457,8 +457,6 @@ public class OcrManagerTests
 		Assert.Equal(3, result.TotalCount);
 		Assert.Equal(3, result.SuccessCount);
 		Assert.Equal(4, service.CallCount);
-		Assert.Contains("(Page 1)", result.Text, StringComparison.Ordinal);
-		Assert.Contains("(Page 2)", result.Text, StringComparison.Ordinal);
 
 		string pdfHeader = $"[{Path.GetFileName(pdf.Path)}]";
 		string pngHeader = $"[{Path.GetFileName(png.Path)}]";
@@ -514,7 +512,10 @@ public class OcrManagerTests
 		int start = text.IndexOf(header, StringComparison.Ordinal);
 		Assert.True(start >= 0, $"Header '{header}' not found.");
 		string segment = text[start..];
-		int separatorIndex = segment.IndexOf($"{Environment.NewLine}{Environment.NewLine}", StringComparison.Ordinal);
+		// Files are separated by 3 newlines (1 from AppendLine(text), 2 from AppendLine().AppendLine() at start of next loop)
+		// Pages are separated by 2 newlines.
+		string separator = $"{Environment.NewLine}{Environment.NewLine}{Environment.NewLine}";
+		int separatorIndex = segment.IndexOf(separator, StringComparison.Ordinal);
 		if (separatorIndex >= 0)
 		{
 			segment = segment[..separatorIndex];

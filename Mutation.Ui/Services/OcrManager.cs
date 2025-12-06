@@ -218,6 +218,7 @@ public class OcrManager
 		}
 
 		string resultText = combinedText.ToString();
+		Console.WriteLine($"Final Result Text: {resultText}");
         if (successCount > 0 && !string.IsNullOrWhiteSpace(resultText))
             await SetClipboardTextAsync(resultText);
 
