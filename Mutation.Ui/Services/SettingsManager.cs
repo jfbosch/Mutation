@@ -2,7 +2,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
-using OpenAI.ObjectModels;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -330,6 +329,11 @@ internal class SettingsManager : ISettingsManager
 			speechToTextSettings.SpeechToTextHotKey = "SHIFT+ALT+U";
 			somethingWasMissing = true;
 		}
+		if (string.IsNullOrWhiteSpace(speechToTextSettings.SpeechToTextWithLlmFormattingHotKey))
+		{
+			speechToTextSettings.SpeechToTextWithLlmFormattingHotKey = "SHIFT+ALT+I";
+			somethingWasMissing = true;
+		}
 		if (string.IsNullOrWhiteSpace(speechToTextSettings.TempDirectory))
 		{
 			speechToTextSettings.TempDirectory = @"C:\Temp\Mutation";
@@ -361,11 +365,13 @@ internal class SettingsManager : ISettingsManager
 			somethingWasMissing = true;
 		}
 
+		/* ResourceName removed
 		if (string.IsNullOrWhiteSpace(llmSettings.ResourceName))
 		{
 			llmSettings.ResourceName = "The-Azure-resource-name-for-your-OpenAI-service";
 			somethingWasMissing = true;
 		}
+		*/
 
 		if (string.IsNullOrWhiteSpace(llmSettings.FormatTranscriptPrompt))
 		{
@@ -394,24 +400,26 @@ End of summary.
 ";
 		}
 
-
-
-		if (llmSettings.ModelDeploymentIdMaps == null || !llmSettings.ModelDeploymentIdMaps.Any())
+		if (string.IsNullOrWhiteSpace(llmSettings.FormatWithLlmHotKey))
 		{
-			llmSettings.ModelDeploymentIdMaps = new List<LlmSettings.ModelDeploymentIdMap>
-			{
-				new LlmSettings.ModelDeploymentIdMap
-				{
-					ModelName = Models.Gpt_3_5_Turbo,
-					DeploymentId = "gpt-35-turbo"
-				},
-				new LlmSettings.ModelDeploymentIdMap
-				{
-					ModelName = Models.Gpt_4,
-					DeploymentId = "gpt-4"
-				},
-			};
+			llmSettings.FormatWithLlmHotKey = "ALT+SHIFT+P";
+			somethingWasMissing = true;
+		}
 
+		if (llmSettings.Models == null || !llmSettings.Models.Any())
+		{
+			llmSettings.Models = new List<string>
+			{
+				"gpt-4.1",
+				"gpt-5.1"
+			};
+			somethingWasMissing = true;
+		}
+
+		if (string.IsNullOrWhiteSpace(llmSettings.ReasoningEffort))
+		{
+			llmSettings.ReasoningEffort = "low";
+			somethingWasMissing = true;
 		}
 
 		if (llmSettings.TranscriptFormatRules == null || !llmSettings.TranscriptFormatRules.Any())

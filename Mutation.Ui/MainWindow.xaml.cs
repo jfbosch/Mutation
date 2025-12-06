@@ -64,9 +64,11 @@ public sealed partial class MainWindow : Window
 
 	// Suppress auto-format/clipboard/beep when we change text programmatically or during record/transcribe
 	private bool _suppressAutoActions = false;
+	private bool _currentRecordingUsesLlmFormatting;
 
 	private ISpeechToTextService? _activeSpeechService;
 	private CancellationTokenSource _formatDebounceCts = new();
+	private CancellationTokenSource _promptDebounceCts = new();
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
 	private readonly DispatcherTimer _statusDismissTimer;
 	private bool _hotkeyRouterInitialized;
@@ -90,6 +92,7 @@ public sealed partial class MainWindow : Window
 	private const string StopGlyph = "\uE71A";
 	private const string ProcessingGlyph = "\uE8A0";
 	private const string PlayGlyph = "\uE768";
+	private const string MagicGlyph = "\uE890";
 
 	private const int WaveformSampleRate = 16_000;
 	private const int WaveformWindowMilliseconds = 40;
@@ -171,8 +174,22 @@ public sealed partial class MainWindow : Window
 
 		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
 
+		if (_settings.LlmSettings != null)
+		{
+			CmbLlmModel.ItemsSource = _settings.LlmSettings.Models;
+			if (!string.IsNullOrEmpty(_settings.LlmSettings.SelectedLlmModel) && _settings.LlmSettings.Models.Contains(_settings.LlmSettings.SelectedLlmModel))
+			{
+				CmbLlmModel.SelectedItem = _settings.LlmSettings.SelectedLlmModel;
+			}
+			else if (_settings.LlmSettings.Models.Any())
+			{
+				CmbLlmModel.SelectedIndex = 0;
+				_settings.LlmSettings.SelectedLlmModel = _settings.LlmSettings.Models[0];
+			}
+		}
+
 		var tooltipManager = new TooltipManager(_settings);
-		tooltipManager.SetupTooltips(TxtSpeechToText, TxtFormatTranscript);
+		tooltipManager.SetupTooltips(TxtRawTranscript, TxtFormatTranscript);
 
 		var insertOptions = Enum.GetValues(typeof(DictationInsertOption)).Cast<DictationInsertOption>().ToList();
 		CmbInsertOption.ItemsSource = insertOptions;
@@ -226,7 +243,7 @@ public sealed partial class MainWindow : Window
 
 	private IEnumerable<TextBox> GetMultiLineTextBoxes()
 	{
-		yield return TxtSpeechToText;
+		yield return TxtRawTranscript;
 		yield return TxtFormatPrompt;
 		yield return TxtFormatTranscript;
 		yield return TxtOcr;
@@ -294,14 +311,15 @@ public sealed partial class MainWindow : Window
 
 	private void InitializeHotkeyVisuals()
 	{
-		ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
-		ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, BtnSpeechToTextLabel.Text);
+		ConfigureButtonHotkey(BtnToggleMic, null, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, "Toggle microphone mute state");
+		ConfigureButtonHotkey(BtnSpeechToText, null, _settings.SpeechToTextSettings?.SpeechToTextHotKey, "Start or stop speech capture");
 		ConfigureButtonHotkey(BtnScreenshot, BtnScreenshotHotkey, _settings.AzureComputerVisionSettings?.ScreenshotHotKey, "Copy a screenshot directly to the clipboard");
 		ConfigureButtonHotkey(BtnOcrClipboard, BtnOcrClipboardHotkey, _settings.AzureComputerVisionSettings?.OcrHotKey, "Run OCR on an image stored in the clipboard");
 		ConfigureButtonHotkey(BtnOcrClipboardLrtb, BtnOcrClipboardLrtbHotkey, _settings.AzureComputerVisionSettings?.OcrLeftToRightTopToBottomHotKey, "Run OCR on an image stored in the clipboard using left-to-right reading order");
 		ConfigureButtonHotkey(BtnScreenshotOcr, BtnScreenshotOcrHotkey, _settings.AzureComputerVisionSettings?.ScreenshotOcrHotKey, "Capture a screenshot and extract text automatically");
 		ConfigureButtonHotkey(BtnScreenshotOcrLrtb, BtnScreenshotOcrLrtbHotkey, _settings.AzureComputerVisionSettings?.ScreenshotLeftToRightTopToBottomOcrHotKey, "Capture a screenshot and extract text using left-to-right reading order");
 		ConfigureButtonHotkey(BtnTextToSpeech, BtnTextToSpeechHotkey, _settings.TextToSpeechSettings?.TextToSpeechHotKey, "Play the clipboard text using text-to-speech");
+		ConfigureButtonHotkey(BtnFormatLlm, null, _settings.LlmSettings?.FormatWithLlmHotKey, "Send transcript through the configured language model");
 	}
 
 	private void InitializeHotkeyRouter()
@@ -650,7 +668,14 @@ public sealed partial class MainWindow : Window
 		_uiStateManager.Save(this);
 
 		if (_activeSpeechService != null)
+		{
 			_settings.SpeechToTextSettings!.ActiveSpeechToTextService = _activeSpeechService.ServiceName;
+			var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == _activeSpeechService.ServiceName);
+			if (serviceSettings != null)
+			{
+				serviceSettings.SpeechToTextPrompt = TxtSpeechToTextPrompt.Text;
+			}
+		}
 		_settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
 
 		var normalizedPairs = SyncHotkeyRouterSettings();
@@ -1069,7 +1094,20 @@ public sealed partial class MainWindow : Window
 	{
 		try
 		{
-			await StartStopSpeechToTextAsync();
+			await StartStopSpeechToTextAsync(false);
+		}
+		catch (Exception ex)
+		{
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Speech to Text Error", ex);
+		}
+	}
+
+	public async void BtnSpeechToTextWithFormat_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
+		{
+			await StartStopSpeechToTextAsync(true);
 		}
 		catch (Exception ex)
 		{
@@ -1192,13 +1230,13 @@ public sealed partial class MainWindow : Window
                         StopPlayback();
 
                         _suppressAutoActions = true;
-			TxtSpeechToText.IsReadOnly = true;
-			TxtSpeechToText.Text = "Transcribing...";
+			TxtRawTranscript.IsReadOnly = true;
+			TxtRawTranscript.Text = "Transcribing...";
 			UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
 
-                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService!, sessionToRetry, string.Empty, CancellationToken.None);
+                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService!, sessionToRetry, GetActivePrompt(), CancellationToken.None);
 
                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                         FinalizeTranscript(text, "Transcript refreshed from the selected session.");
@@ -1206,7 +1244,7 @@ public sealed partial class MainWindow : Window
                 catch (OperationCanceledException)
                 {
                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
-                        TxtSpeechToText.IsReadOnly = false;
+                        TxtRawTranscript.IsReadOnly = false;
 			_suppressAutoActions = false;
 			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
 			UpdateRecordingActionAvailability();
@@ -1214,7 +1252,7 @@ public sealed partial class MainWindow : Window
 		catch (Exception ex)
 		{
 			UpdateSpeechButtonVisuals("Record", RecordGlyph);
-			TxtSpeechToText.IsReadOnly = false;
+			TxtRawTranscript.IsReadOnly = false;
 			_suppressAutoActions = false;
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
@@ -1263,8 +1301,8 @@ public sealed partial class MainWindow : Window
 			StopPlayback();
 
 			_suppressAutoActions = true;
-			TxtSpeechToText.IsReadOnly = true;
-			TxtSpeechToText.Text = "Transcribing...";
+			TxtRawTranscript.IsReadOnly = true;
+			TxtRawTranscript.Text = "Transcribing...";
 			UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", $"Transcribing {file.Name}...", InfoBarSeverity.Informational);
@@ -1273,7 +1311,7 @@ public sealed partial class MainWindow : Window
                         RefreshSessions(session);
                         UpdateRecordingActionAvailability();
 
-                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, session, string.Empty, CancellationToken.None);
+                        string text = await _speechManager.TranscribeExistingRecordingAsync(_activeSpeechService, session, GetActivePrompt(), CancellationToken.None);
 
                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                         FinalizeTranscript(text, $"Transcript generated from {session.FileName}.");
@@ -1281,7 +1319,7 @@ public sealed partial class MainWindow : Window
                 catch (OperationCanceledException)
                 {
                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
-                        TxtSpeechToText.IsReadOnly = false;
+                        TxtRawTranscript.IsReadOnly = false;
 			_suppressAutoActions = false;
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
@@ -1289,7 +1327,7 @@ public sealed partial class MainWindow : Window
 		catch (Exception ex)
 		{
 			UpdateSpeechButtonVisuals("Record", RecordGlyph);
-			TxtSpeechToText.IsReadOnly = false;
+			TxtRawTranscript.IsReadOnly = false;
 			_suppressAutoActions = false;
 			UpdateRecordingActionAvailability();
 			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
@@ -1316,7 +1354,7 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
-	public async Task StartStopSpeechToTextAsync()
+	public async Task StartStopSpeechToTextAsync(bool useLlmFormatting = false)
 	{
 		try
 		{
@@ -1325,7 +1363,7 @@ public sealed partial class MainWindow : Window
 				_speechManager.CancelTranscription();
 				UpdateSpeechButtonVisuals("Record", RecordGlyph);
 				BtnSpeechToText.IsEnabled = true;
-				TxtSpeechToText.IsReadOnly = false;
+				TxtRawTranscript.IsReadOnly = false;
 				_suppressAutoActions = false;
 				ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
 				BeepPlayer.Play(BeepType.Failure);
@@ -1348,12 +1386,12 @@ public sealed partial class MainWindow : Window
 				await dlg.ShowAsync();
 				return;
 			}
-
 			if (!_speechManager.Recording)
 			{
+                        _currentRecordingUsesLlmFormatting = useLlmFormatting;
                         _suppressAutoActions = true;
-                        TxtSpeechToText.IsReadOnly = true;
-                        TxtSpeechToText.Text = "Recording...";
+                        TxtRawTranscript.IsReadOnly = true;
+                        TxtRawTranscript.Text = "Recording...";
                         UpdateSpeechButtonVisuals("Stop", StopGlyph);
                         ShowStatus("Speech to Text", "Listening for audio...", InfoBarSeverity.Informational);
                         BeepPlayer.Play(BeepType.Start);
@@ -1365,9 +1403,10 @@ public sealed partial class MainWindow : Window
                 }
                 else
                 {
+				_currentRecordingUsesLlmFormatting = useLlmFormatting;
 				BtnSpeechToText.IsEnabled = false;
 				_suppressAutoActions = true;
-				TxtSpeechToText.Text = "Transcribing...";
+				TxtRawTranscript.Text = "Transcribing...";
 				UpdateSpeechButtonVisuals("Transcribing...", ProcessingGlyph, false);
 				ShowStatus("Speech to Text", "Transcribing your recording...", InfoBarSeverity.Informational);
 				StopPlayback();
@@ -1375,17 +1414,38 @@ public sealed partial class MainWindow : Window
 
                                 try
                                 {
-                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, string.Empty, CancellationToken.None);
-
+                                        string text = await _speechManager.StopRecordingAndTranscribeAsync(_activeSpeechService, GetActivePrompt(), CancellationToken.None);
                                         UpdateSpeechButtonVisuals("Record", RecordGlyph);
                                         BtnSpeechToText.IsEnabled = true;
-                                        FinalizeTranscript(text, "Transcript ready and copied.");
+
+                                        // Always run rules-based formatting first
+                                        string rulesFormattedText = _transcriptFormatter.ApplyRules(text, false);
+                                        string finalFormattedText = rulesFormattedText;
+
+                                        if (_currentRecordingUsesLlmFormatting)
+                                        {
+                                            try
+                                            {
+                                                ShowStatus("Speech to Text", "Formatting with LLM...", InfoBarSeverity.Informational);
+                                                string prompt = TxtFormatPrompt.Text;
+                                                string modelName = _settings.LlmSettings.SelectedLlmModel ?? "gpt-4";
+                                                // Pass the rules-formatted text to the LLM
+                                                finalFormattedText = await _transcriptFormatter.FormatWithLlmAsync(rulesFormattedText, prompt, modelName);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                ShowStatus("Auto-Format Warning", $"LLM formatting failed: {ex.Message}. Using rules-formatted transcript.", InfoBarSeverity.Warning);
+                                                // finalFormattedText remains rulesFormattedText
+                                            }
+                                        }
+
+                                        FinalizeTranscript(text, "Transcript ready and copied.", finalFormattedText);
                                 }
 				catch (OperationCanceledException)
 				{
 					UpdateSpeechButtonVisuals("Record", RecordGlyph);
 					BtnSpeechToText.IsEnabled = true;
-					TxtSpeechToText.IsReadOnly = false;
+					TxtRawTranscript.IsReadOnly = false;
 					_suppressAutoActions = false;
 					ShowStatus("Speech to Text", "Transcription cancelled.", InfoBarSeverity.Warning);
 					UpdateRecordingActionAvailability();
@@ -1426,7 +1486,7 @@ public sealed partial class MainWindow : Window
 
 	public void BtnFormatTranscript_Click(object? sender, RoutedEventArgs? e)
 	{
-		string raw = TxtSpeechToText.Text;
+		string raw = TxtRawTranscript.Text;
 		string formatted = _transcriptFormatter.ApplyRules(raw, false);
 		TxtFormatTranscript.Text = formatted;
 		_clipboard.SetText(formatted);
@@ -1439,15 +1499,20 @@ public sealed partial class MainWindow : Window
 	{
 		try
 		{
+			BeepPlayer.Play(BeepType.Start);
 			TxtFormatTranscript.Text = "Formatting...";
-			string raw = TxtSpeechToText.Text;
+			string raw = TxtRawTranscript.Text;
+			string rulesFormatted = _transcriptFormatter.ApplyRules(raw, false);
+
 			string prompt = TxtFormatPrompt.Text;
-			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt);
+			string modelName = _settings.LlmSettings?.SelectedLlmModel ?? "gpt-4";
+			string formatted = await _transcriptFormatter.FormatWithLlmAsync(rulesFormatted, prompt, modelName);
 			TxtFormatTranscript.Text = formatted;
 			_clipboard.SetText(formatted);
 			InsertIntoActiveApplication(formatted);
 			BeepPlayer.Play(BeepType.Success);
 			ShowStatus("Formatting", "Transcript refined with the language model.", InfoBarSeverity.Success);
+			HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
 		}
 		catch (Exception ex)
 		{
@@ -1459,11 +1524,11 @@ public sealed partial class MainWindow : Window
 	private void UpdateMicrophoneToggleVisuals()
 	{
 		bool muted = _audioDeviceManager.IsMuted;
-		BtnToggleMicLabel.Text = muted ? "Unmute microphone" : "Mute microphone";
+		string labelText = muted ? "Unmute microphone" : "Mute microphone";
 		BtnToggleMicIcon.Glyph = MicOnGlyph;
 		BtnToggleMicSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
-		AutomationProperties.SetName(BtnToggleMic, BtnToggleMicLabel.Text);
-		ConfigureButtonHotkey(BtnToggleMic, BtnToggleMicHotkey, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, BtnToggleMicLabel.Text);
+		AutomationProperties.SetName(BtnToggleMic, labelText);
+		ConfigureButtonHotkey(BtnToggleMic, null, _settings.AudioSettings?.MicrophoneToggleMuteHotKey, labelText);
 		MicStatusIcon.Glyph = MicOnGlyph;
 		MicStatusIconSlash.Visibility = muted ? Visibility.Visible : Visibility.Collapsed;
 		MicStatusIcon.Foreground = ResolveBrush(muted ? "TextFillColorSecondaryBrush" : "TextFillColorPrimaryBrush");
@@ -1483,11 +1548,43 @@ public sealed partial class MainWindow : Window
 
 	private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
 	{
-		BtnSpeechToTextLabel.Text = label;
-		BtnSpeechToTextIcon.Glyph = glyph;
-		BtnSpeechToText.IsEnabled = isEnabled;
-		AutomationProperties.SetName(BtnSpeechToText, label);
-		ConfigureButtonHotkey(BtnSpeechToText, BtnSpeechToTextHotkey, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
+		if (label == "Record")
+		{
+			// Idle state
+			BtnSpeechToTextIcon.Glyph = RecordGlyph;
+			BtnSpeechToText.IsEnabled = true;
+			AutomationProperties.SetName(BtnSpeechToText, "Record");
+			ConfigureButtonHotkey(BtnSpeechToText, null, _settings.SpeechToTextSettings?.SpeechToTextHotKey, "Record");
+
+			BtnSpeechToTextWithFormatIcon.Glyph = MagicGlyph;
+			BtnSpeechToTextWithFormat.IsEnabled = true;
+			AutomationProperties.SetName(BtnSpeechToTextWithFormat, "Record and Format");
+			ConfigureButtonHotkey(BtnSpeechToTextWithFormat, null, _settings.SpeechToTextSettings?.SpeechToTextWithLlmFormattingHotKey, "Record and Format");
+		}
+		else if (label == "Stop")
+		{
+			// Recording state
+			BtnSpeechToTextIcon.Glyph = StopGlyph;
+			BtnSpeechToText.IsEnabled = true;
+			AutomationProperties.SetName(BtnSpeechToText, "Stop");
+			ConfigureButtonHotkey(BtnSpeechToText, null, _settings.SpeechToTextSettings?.SpeechToTextHotKey, "Stop");
+
+			BtnSpeechToTextWithFormatIcon.Glyph = StopGlyph;
+			BtnSpeechToTextWithFormat.IsEnabled = true;
+			AutomationProperties.SetName(BtnSpeechToTextWithFormat, "Stop and Format");
+			ConfigureButtonHotkey(BtnSpeechToTextWithFormat, null, _settings.SpeechToTextSettings?.SpeechToTextWithLlmFormattingHotKey, "Stop and Format");
+		}
+		else
+		{
+			// Transcribing / Processing
+			BtnSpeechToTextIcon.Glyph = glyph;
+			BtnSpeechToText.IsEnabled = isEnabled;
+			AutomationProperties.SetName(BtnSpeechToText, label);
+
+			BtnSpeechToTextWithFormatIcon.Glyph = glyph;
+			BtnSpeechToTextWithFormat.IsEnabled = isEnabled;
+			AutomationProperties.SetName(BtnSpeechToTextWithFormat, label);
+		}
 	}
 
         private void UpdatePlaybackButtonVisuals(string automationName, string glyph)
@@ -1626,18 +1723,18 @@ public sealed partial class MainWindow : Window
                 }, TaskScheduler.Default);
         }
 
-	private void FinalizeTranscript(string rawText, string successMessage)
+	private void FinalizeTranscript(string rawText, string successMessage, string? formattedText = null)
 	{
-		string formatted = _transcriptFormatter.ApplyRules(rawText, false);
+		string formatted = formattedText ?? _transcriptFormatter.ApplyRules(rawText, false);
 
-		TxtSpeechToText.Text = rawText;
+		TxtRawTranscript.Text = rawText;
 		TxtFormatTranscript.Text = formatted;
 
 		_clipboard.SetText(formatted);
 		InsertIntoActiveApplication(formatted);
 
                 BeepPlayer.Play(BeepType.Success);
-                TxtSpeechToText.IsReadOnly = false;
+                TxtRawTranscript.IsReadOnly = false;
                 _suppressAutoActions = false;
 
                 ShowStatus("Speech to Text", successMessage, InfoBarSeverity.Success);
@@ -1878,11 +1975,52 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
+	private string GetActivePrompt()
+	{
+		if (_activeSpeechService == null) return string.Empty;
+		var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == _activeSpeechService.ServiceName);
+		return serviceSettings?.SpeechToTextPrompt ?? string.Empty;
+	}
+
 	private void CmbSpeechService_SelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
 		if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
+		{
 			_activeSpeechService = svc;
+			var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == svc.ServiceName);
+			if (serviceSettings != null)
+			{
+				// Temporarily unsubscribe to avoid triggering the save logic
+				TxtSpeechToTextPrompt.TextChanged -= TxtSpeechToTextPrompt_TextChanged;
+				TxtSpeechToTextPrompt.Text = serviceSettings.SpeechToTextPrompt ?? string.Empty;
+				TxtSpeechToTextPrompt.TextChanged += TxtSpeechToTextPrompt_TextChanged;
+			}
+		}
 		UpdateRecordingActionAvailability();
+	}
+
+	private async void TxtSpeechToTextPrompt_TextChanged(object sender, TextChangedEventArgs e)
+	{
+		if (_activeSpeechService == null) return;
+
+		var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == _activeSpeechService.ServiceName);
+		if (serviceSettings != null)
+		{
+			serviceSettings.SpeechToTextPrompt = TxtSpeechToTextPrompt.Text;
+
+			_promptDebounceCts.Cancel();
+			_promptDebounceCts = new CancellationTokenSource();
+			var token = _promptDebounceCts.Token;
+			try
+			{
+				await Task.Delay(1000, token);
+				if (!token.IsCancellationRequested)
+				{
+					_settingsManager.SaveSettingsToFile(_settings);
+				}
+			}
+			catch (TaskCanceledException) { }
+		}
 	}
 
 	private void CmbInsertOption_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1897,6 +2035,15 @@ public sealed partial class MainWindow : Window
 				_settings.MainWindowUiSettings.DictationInsertPreference = persistedValue;
 				_settingsManager.SaveSettingsToFile(_settings);
 			}
+		}
+	}
+
+	private void CmbLlmModel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		if (_settings.LlmSettings != null && CmbLlmModel.SelectedItem is string selectedModel)
+		{
+			_settings.LlmSettings.SelectedLlmModel = selectedModel;
+			_settingsManager.SaveSettingsToFile(_settings);
 		}
 	}
 
@@ -1943,7 +2090,7 @@ public sealed partial class MainWindow : Window
 	private async void TxtSpeechToText_TextChanged(object sender, TextChangedEventArgs e)
 	{
 		// Avoid auto actions during programmatic updates or while recording/transcribing
-		if (_suppressAutoActions || TxtSpeechToText.IsReadOnly || _speechManager.Recording || _speechManager.Transcribing)
+		if (_suppressAutoActions || TxtRawTranscript.IsReadOnly || _speechManager.Recording || _speechManager.Transcribing)
 			return;
 
 		_formatDebounceCts.Cancel();
@@ -1954,7 +2101,7 @@ public sealed partial class MainWindow : Window
 			await Task.Delay(300, token);
 			if (!token.IsCancellationRequested)
 			{
-				string raw = TxtSpeechToText.Text;
+				string raw = TxtRawTranscript.Text;
 				string formatted = _transcriptFormatter.ApplyRules(raw, false);
 				TxtFormatTranscript.Text = formatted;
 				// Intentionally do not call _clipboard.SetText or InsertIntoActiveApplication here.

@@ -86,6 +86,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <Grid.Transitions>
@@ -98,24 +99,18 @@
                     <Border x:Name="MicrophoneCard" Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="0">
                         <Grid>
                             <Rectangle x:Name="MicPulseOverlay" Fill="{ThemeResource PrimaryBrush}" Opacity="0" IsHitTestVisible="False" RadiusX="16" RadiusY="16" />
-                            <StackPanel Spacing="16">
-                            <StackPanel Spacing="4">
+                            <StackPanel Spacing="0">
+                            <StackPanel Spacing="4" Margin="0,0,0,16">
                                 <TextBlock Text="Microphone" Style="{StaticResource SectionHeaderTextStyle}" />
-                                <TextBlock Text="Select your preferred capture device and control mute states instantly." Style="{StaticResource CaptionTextStyle}" />
                             </StackPanel>
 
-                            <Grid ColumnSpacing="16" RowSpacing="12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0" Spacing="6">
-                                    <TextBlock x:Name="LblMicrophone" Text="Microphone device" Style="{StaticResource CaptionTextStyle}" />
+                            <Grid ColumnSpacing="16" RowSpacing="12" Margin="0,0,0,10">
+                                <StackPanel Spacing="6">
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Grid Width="28" Height="28" VerticalAlignment="Center">
                                             <FontIcon
@@ -146,64 +141,55 @@
                                             Grid.Column="1"
                                             PlaceholderText="Select a microphone"
                                             HorizontalAlignment="Stretch"
-                                            AutomationProperties.LabeledBy="{Binding ElementName=LblMicrophone}"
+                                            VerticalAlignment="Center"
                                             AutomationProperties.Name="Microphone selection"
                                             ToolTipService.ToolTip="Choose the input microphone"
                                             SelectionChanged="CmbMicrophone_SelectionChanged" />
+                                        <Button
+                                            x:Name="BtnToggleMic"
+                                            Grid.Column="2"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            VerticalAlignment="Center"
+                                            Click="BtnToggleMic_Click"
+                                            AccessKey="M"
+                                            AutomationProperties.Name="Toggle microphone"
+                                            ToolTipService.ToolTip="Toggle microphone mute state (Alt+Q)">
+                                            <Grid Width="28" Height="28">
+                                                <FontIcon
+                                                    x:Name="BtnToggleMicIcon"
+                                                    Glyph="&#xE720;"
+                                                    FontFamily="Segoe Fluent Icons"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                />
+                                                <Rectangle
+                                                    x:Name="BtnToggleMicSlash"
+                                                    Width="20"
+                                                    Height="2"
+                                                    RadiusX="1"
+                                                    RadiusY="1"
+                                                    Fill="{Binding Foreground, ElementName=BtnToggleMicIcon}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="Collapsed"
+                                                    IsHitTestVisible="False"
+                                                    RenderTransformOrigin="0.5,0.5">
+                                                    <Rectangle.RenderTransform>
+                                                        <CompositeTransform Rotation="-45" />
+                                                    </Rectangle.RenderTransform>
+                                                </Rectangle>
+                                            </Grid>
+                                        </Button>
                                     </Grid>
                                 </StackPanel>
-
-                                <Button
-                                    x:Name="BtnToggleMic"
-                                    Grid.Column="1"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Click="BtnToggleMic_Click"
-                                    AccessKey="M"
-                                    AutomationProperties.Name="Toggle microphone"
-                                    ToolTipService.ToolTip="Toggle microphone mute state">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <Grid Width="28" Height="28">
-                                            <FontIcon
-                                                x:Name="BtnToggleMicIcon"
-                                                Glyph="&#xE720;"
-                                                FontFamily="Segoe Fluent Icons"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                            />
-                                            <Rectangle
-                                                x:Name="BtnToggleMicSlash"
-                                                Width="20"
-                                                Height="2"
-                                                RadiusX="1"
-                                                RadiusY="1"
-                                                Fill="{Binding Foreground, ElementName=BtnToggleMicIcon}"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Visibility="Collapsed"
-                                                IsHitTestVisible="False"
-                                                RenderTransformOrigin="0.5,0.5">
-                                                <Rectangle.RenderTransform>
-                                                    <CompositeTransform Rotation="-45" />
-                                                </Rectangle.RenderTransform>
-                                            </Rectangle>
-                                        </Grid>
-                                        <StackPanel Spacing="2">
-                                            <TextBlock x:Name="BtnToggleMicLabel" Text="Mute microphone" />
-                                            <TextBlock
-                                                x:Name="BtnToggleMicHotkey"
-                                                Text="Hotkey: ALT+Q"
-                                                Style="{StaticResource CaptionTextStyle}"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Button>
                             </Grid>
 
-                            <Grid Margin="0,4,0,0" x:Name="MicWaveContainer">
+                            <Grid x:Name="MicWaveContainer">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
+
                                 <Grid x:Name="MicWaveArea" Grid.Column="0" PointerReleased="MicWaveArea_PointerReleased">
                                     <ScottPlot:WinUIPlot
                                         x:Name="MicWaveformPlot"
@@ -239,7 +225,6 @@
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Speech to Text" Style="{StaticResource SectionHeaderTextStyle}" />
-                                <TextBlock Text="Choose a service and record clear transcripts with responsive controls." Style="{StaticResource CaptionTextStyle}" />
                             </StackPanel>
 
                             <Grid ColumnSpacing="16" RowSpacing="12">
@@ -250,44 +235,45 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
-                                    <TextBlock x:Name="LblSpeechService" Text="Speech service" Style="{StaticResource CaptionTextStyle}" />
+                                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6" VerticalAlignment="Center">
                                     <ComboBox
                                         x:Name="CmbSpeechService"
                                         PlaceholderText="Select a speech-to-text service"
-                                        AutomationProperties.LabeledBy="{Binding ElementName=LblSpeechService}"
                                         AutomationProperties.Name="Speech-to-text service selection"
                                         ToolTipService.ToolTip="Pick the transcription engine"
                                         SelectionChanged="CmbSpeechService_SelectionChanged" />
                                 </StackPanel>
 
-                                <Button
-                                    x:Name="BtnSpeechToText"
-                                    Grid.Row="0"
-                                    Grid.Column="1"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Click="BtnSpeechToText_Click"
-                                    AccessKey="R"
-                                    AutomationProperties.Name="Record"
-                                    ToolTipService.ToolTip="Start or stop speech capture">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <Button
+                                        x:Name="BtnSpeechToText"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Click="BtnSpeechToText_Click"
+                                        AccessKey="R"
+                                        AutomationProperties.Name="Record"
+                                        ToolTipService.ToolTip="Start or stop speech capture (Shift+Alt+U)">
                                         <FontIcon
                                             x:Name="BtnSpeechToTextIcon"
                                             Glyph="&#xE7C8;"
                                             FontFamily="Segoe Fluent Icons"
                                         />
-                                        <StackPanel Spacing="2">
-                                            <TextBlock x:Name="BtnSpeechToTextLabel" Text="Record" />
-                                            <TextBlock
-                                                x:Name="BtnSpeechToTextHotkey"
-                                                Text="Hotkey: SHIFT+ALT+U"
-                                                Style="{StaticResource CaptionTextStyle}"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Button>
+                                    </Button>
+                                    <Button
+                                        x:Name="BtnSpeechToTextWithFormat"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Click="BtnSpeechToTextWithFormat_Click"
+                                        AutomationProperties.Name="Record and Format"
+                                        ToolTipService.ToolTip="Start or stop speech capture and format with LLM">
+                                        <FontIcon
+                                            x:Name="BtnSpeechToTextWithFormatIcon"
+                                            Glyph="&#xE890;"
+                                            FontFamily="Segoe Fluent Icons"
+                                        />
+                                    </Button>
+                                </StackPanel>
 
                                 <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
                                     <Button
@@ -338,103 +324,110 @@
                                         <FontIcon Glyph="&#xE898;" FontFamily="Segoe Fluent Icons" />
                                     </Button>
                                 </StackPanel>
+
+                                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Spacing="6">
+                                    <TextBlock x:Name="LblSpeechToTextPrompt" Text="Prompt" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBox
+                                        x:Name="TxtSpeechToTextPrompt"
+                                        PlaceholderText="Optional prompt for context or keywords"
+                                        AutomationProperties.LabeledBy="{Binding ElementName=LblSpeechToTextPrompt}"
+                                        AutomationProperties.Name="Speech to text prompt"
+                                        TextChanged="TxtSpeechToTextPrompt_TextChanged"
+                                        TextWrapping="Wrap"
+                                        AcceptsReturn="True"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                        ScrollViewer.VerticalScrollMode="Auto"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                        ScrollViewer.HorizontalScrollMode="Auto"
+                                        MaxHeight="120" />
+                                </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>
 
-                    <!-- Speech Transcript -->
-                    <Border x:Name="SpeechTranscriptCard" Style="{StaticResource CardStyle}" Grid.Row="1" Grid.ColumnSpan="2">
+                    <!-- Format Prompt -->
+                    <Border x:Name="FormatPromptCard" Style="{StaticResource CardStyle}" Grid.Row="1" Grid.ColumnSpan="2">
                         <StackPanel Spacing="12">
-                            <TextBlock Text="Transcript" Style="{StaticResource CaptionTextStyle}" />
-                            <TextBox
-                                x:Name="TxtSpeechToText"
+                            <TextBlock Text="Format Prompt" Style="{StaticResource SectionHeaderTextStyle}" />
+                            <TextBlock Text="Add optional guidance for LLM formatting." Style="{StaticResource CaptionTextStyle}" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    x:Name="TxtFormatPrompt"
+                                    Grid.Column="0"
+                                    PlaceholderText="Add optional guidance for LLM formatting"
+                                    AcceptsReturn="True"
+                                    TextWrapping="Wrap"
+                                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                    ScrollViewer.VerticalScrollMode="Auto"
+                                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                    ScrollViewer.HorizontalScrollMode="Auto"
+                                    AutomationProperties.Name="Format prompt"
+                                    ToolTipService.ToolTip="Prompt used for large language model formatting" />
+                                <ComboBox
+                                    x:Name="CmbLlmModel"
+                                    Grid.Column="1"
+                                    Header="LLM Model"
+                                    PlaceholderText="Select a model"
+                                    HorizontalAlignment="Stretch"
+                                    SelectionChanged="CmbLlmModel_SelectionChanged" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Transcripts -->
+                    <Border x:Name="TranscriptsCard" Style="{StaticResource CardStyle}" Grid.Row="2" Grid.ColumnSpan="2">
+                        <Grid RowSpacing="12" ColumnSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Raw Transcript -->
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Raw Transcript" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Top" Margin="0,6,0,0" />
+                            <TextBox Grid.Row="0" Grid.Column="1"
+                                x:Name="TxtRawTranscript"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
                                 ScrollViewer.VerticalScrollMode="Auto"
                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                 ScrollViewer.HorizontalScrollMode="Auto"
-                                AutomationProperties.Name="Speech to text transcript"
+                                AutomationProperties.Name="Raw transcript"
                                 ToolTipService.ToolTip="Raw transcript generated from speech"
                                 TextChanged="TxtSpeechToText_TextChanged" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Formatting & Automation -->
-                    <Border x:Name="FormattingCard" Style="{StaticResource CardStyle}" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
-                        <StackPanel Spacing="18">
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Formatting &amp; Automation" Style="{StaticResource SectionHeaderTextStyle}" />
-                                <TextBlock Text="Control how transcripts are refined and where results are delivered." Style="{StaticResource CaptionTextStyle}" />
-                            </StackPanel>
-
-                            <Grid ColumnSpacing="16" RowSpacing="12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0" Spacing="6">
-                                    <TextBlock x:Name="LblThirdPartyInteraction" Text="Third-party interaction" Style="{StaticResource CaptionTextStyle}" />
-                                    <ComboBox
-                                        x:Name="CmbInsertOption"
-                                        PlaceholderText="Select an automation option"
-                                        AutomationProperties.LabeledBy="{Binding ElementName=LblThirdPartyInteraction}"
-                                        AutomationProperties.Name="Third-party interaction mode"
-                                        ToolTipService.ToolTip="Choose how formatted text is inserted"
-                                        SelectionChanged="CmbInsertOption_SelectionChanged" />
-                                    <TextBlock
-                                        x:Name="ThirdPartyExplanationText"
-                                        TextWrapping="Wrap"
-                                        Style="{StaticResource CaptionTextStyle}"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="Format prompt" Style="{StaticResource CaptionTextStyle}" />
-                                    <TextBox
-                                        x:Name="TxtFormatPrompt"
-                                        PlaceholderText="Add optional guidance for LLM formatting"
-                                        AcceptsReturn="True"
-                                        TextWrapping="Wrap"
-                                        ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                        ScrollViewer.VerticalScrollMode="Auto"
-                                        ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                        ScrollViewer.HorizontalScrollMode="Auto"
-                                        AutomationProperties.Name="Format prompt"
-                                        ToolTipService.ToolTip="Prompt used for large language model formatting" />
-                                </StackPanel>
-                            </Grid>
-
-                            <StackPanel x:Name="FormattingActionsPanel" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Stretch">
+                            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
                                 <Button
                                     x:Name="BtnFormatTranscript"
                                     Style="{StaticResource AccentButtonStyle}"
                                     Click="BtnFormatTranscript_Click"
                                     AccessKey="F"
-                                    AutomationProperties.Name="Format transcript"
+                                    AutomationProperties.Name="Format with rules"
                                     ToolTipService.ToolTip="Apply local formatting rules to the transcript">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8A1;" FontFamily="Segoe Fluent Icons" />
-                                        <TextBlock Text="Format transcript" />
-                                    </StackPanel>
+                                    <FontIcon Glyph="&#xE90F;" FontFamily="Segoe Fluent Icons" />
                                 </Button>
-
                                 <Button
                                     x:Name="BtnFormatLlm"
                                     Style="{StaticResource OutlinedButtonStyle}"
                                     Click="BtnFormatLlm_Click"
                                     AccessKey="L"
-                                    AutomationProperties.Name="Format transcript with LLM"
+                                    AutomationProperties.Name="Format with LLM"
                                     ToolTipService.ToolTip="Send transcript through the configured language model">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <FontIcon Glyph="&#xE8FD;" FontFamily="Segoe Fluent Icons" />
-                                        <TextBlock Text="LLM formatting" />
-                                    </StackPanel>
+                                    <FontIcon Glyph="&#xE781;" FontFamily="Segoe Fluent Icons" />
                                 </Button>
                             </StackPanel>
 
-                            <TextBox
+                            <!-- Formatted Transcript -->
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Formatted Transcript" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Top" Margin="0,6,0,0" />
+                            <TextBox Grid.Row="1" Grid.Column="1"
                                 x:Name="TxtFormatTranscript"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
@@ -444,11 +437,37 @@
                                 ScrollViewer.HorizontalScrollMode="Auto"
                                 AutomationProperties.Name="Formatted transcript"
                                 ToolTipService.ToolTip="Formatted transcript ready for sharing" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Automation -->
+                    <Border x:Name="FormattingAutomationCard" Style="{StaticResource CardStyle}" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
+                        <StackPanel Spacing="18">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Automation" Style="{StaticResource SectionHeaderTextStyle}" />
+                                <TextBlock Text="Control where transcripts are delivered." Style="{StaticResource CaptionTextStyle}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <TextBlock x:Name="LblThirdPartyInteraction" Text="Third-party interaction" Style="{StaticResource CaptionTextStyle}" />
+                                <ComboBox
+                                    x:Name="CmbInsertOption"
+                                    PlaceholderText="Select an automation option"
+                                    AutomationProperties.LabeledBy="{Binding ElementName=LblThirdPartyInteraction}"
+                                    AutomationProperties.Name="Third-party interaction mode"
+                                    ToolTipService.ToolTip="Choose how formatted text is inserted"
+                                    SelectionChanged="CmbInsertOption_SelectionChanged" />
+                                <TextBlock
+                                    x:Name="ThirdPartyExplanationText"
+                                    TextWrapping="Wrap"
+                                    Style="{StaticResource CaptionTextStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- Capture & OCR -->
-                    <Border x:Name="CaptureCard" Style="{StaticResource CardStyle}" Grid.Row="3" Grid.Column="0">
+                    <Border x:Name="CaptureCard" Style="{StaticResource CardStyle}" Grid.Row="5" Grid.Column="0">
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Visual Capture" Style="{StaticResource SectionHeaderTextStyle}" />
@@ -678,7 +697,7 @@
                     </Border>
 
                     <!-- Clipboard & Voice -->
-                    <Border x:Name="ClipboardCard" Style="{StaticResource CardStyle}" Grid.Row="3" Grid.Column="1">
+                    <Border x:Name="ClipboardCard" Style="{StaticResource CardStyle}" Grid.Row="5" Grid.Column="1">
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Clipboard &amp; Voice" Style="{StaticResource SectionHeaderTextStyle}" />
@@ -737,7 +756,7 @@
                     </Border>
 
                     <!-- Hotkey Router -->
-                    <Border x:Name="HotkeyRouterCard" Style="{StaticResource CardStyle}" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
+                    <Border x:Name="HotkeyRouterCard" Style="{StaticResource CardStyle}" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2">
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Hotkey Router" Style="{StaticResource SectionHeaderTextStyle}" />
@@ -849,17 +868,20 @@
                                 <Setter Target="SpeechCard.(Grid.Column)" Value="0" />
                                 <Setter Target="SpeechCard.(Grid.Row)" Value="1" />
                                 <Setter Target="SpeechCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="SpeechTranscriptCard.(Grid.Row)" Value="2" />
-                                <Setter Target="FormattingCard.(Grid.Row)" Value="3" />
-                                <Setter Target="FormattingCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="FormatPromptCard.(Grid.Row)" Value="2" />
+                                <Setter Target="FormatPromptCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="TranscriptsCard.(Grid.Row)" Value="3" />
+                                <Setter Target="TranscriptsCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="FormattingAutomationCard.(Grid.Row)" Value="4" />
+                                <Setter Target="FormattingAutomationCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="CaptureCard.(Grid.Column)" Value="0" />
-                                <Setter Target="CaptureCard.(Grid.Row)" Value="4" />
+                                <Setter Target="CaptureCard.(Grid.Row)" Value="5" />
                                 <Setter Target="CaptureCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="ClipboardCard.(Grid.Column)" Value="0" />
-                                <Setter Target="ClipboardCard.(Grid.Row)" Value="5" />
+                                <Setter Target="ClipboardCard.(Grid.Row)" Value="6" />
                                 <Setter Target="ClipboardCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="HotkeyRouterCard.(Grid.Column)" Value="0" />
-                                <Setter Target="HotkeyRouterCard.(Grid.Row)" Value="6" />
+                                <Setter Target="HotkeyRouterCard.(Grid.Row)" Value="7" />
                                 <Setter Target="HotkeyRouterCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="FormattingActionsPanel.Orientation" Value="Vertical" />
                                 <Setter Target="ClipboardActionsPanel.Orientation" Value="Vertical" />
@@ -875,18 +897,21 @@
                                 <Setter Target="SpeechCard.(Grid.Column)" Value="1" />
                                 <Setter Target="SpeechCard.(Grid.Row)" Value="0" />
                                 <Setter Target="SpeechCard.(Grid.ColumnSpan)" Value="1" />
-                                <Setter Target="SpeechTranscriptCard.(Grid.Row)" Value="1" />
-                                <Setter Target="FormattingCard.(Grid.Row)" Value="2" />
-                                <Setter Target="FormattingCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="FormatPromptCard.(Grid.Row)" Value="1" />
+                                <Setter Target="FormatPromptCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="TranscriptsCard.(Grid.Row)" Value="2" />
+                                <Setter Target="TranscriptsCard.(Grid.ColumnSpan)" Value="2" />
+                                <Setter Target="FormattingAutomationCard.(Grid.Row)" Value="3" />
+                                <Setter Target="FormattingAutomationCard.(Grid.ColumnSpan)" Value="2" />
                                 <Setter Target="CaptureCard.(Grid.Column)" Value="0" />
                                 <Setter Target="CaptureCard.(Grid.ColumnSpan)" Value="1" />
-                                <Setter Target="CaptureCard.(Grid.Row)" Value="3" />
+                                <Setter Target="CaptureCard.(Grid.Row)" Value="4" />
                                 <Setter Target="ClipboardCard.(Grid.Column)" Value="1" />
                                 <Setter Target="ClipboardCard.(Grid.ColumnSpan)" Value="1" />
-                                <Setter Target="ClipboardCard.(Grid.Row)" Value="3" />
+                                <Setter Target="ClipboardCard.(Grid.Row)" Value="4" />
                                 <Setter Target="HotkeyRouterCard.(Grid.Column)" Value="0" />
                                 <Setter Target="HotkeyRouterCard.(Grid.ColumnSpan)" Value="2" />
-                                <Setter Target="HotkeyRouterCard.(Grid.Row)" Value="4" />
+                                <Setter Target="HotkeyRouterCard.(Grid.Row)" Value="5" />
                                 <Setter Target="FormattingActionsPanel.Orientation" Value="Horizontal" />
                                 <Setter Target="ClipboardActionsPanel.Orientation" Value="Horizontal" />
                             </VisualState.Setters>

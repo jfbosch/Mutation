@@ -1,7 +1,6 @@
 ﻿using CognitiveSupport;
 using CognitiveSupport.Extensions;
-using OpenAI.ObjectModels;
-using OpenAI.ObjectModels.RequestModels;
+using OpenAI.Chat;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -37,18 +36,18 @@ public class TranscriptFormatter
 		return text;
 	}
 
-	public async Task<string> FormatWithLlmAsync(string transcript, string systemPrompt)
+	public async Task<string> FormatWithLlmAsync(string transcript, string systemPrompt, string modelName)
 	{
 		if (transcript is null)
 			return transcript;
 
 		var messages = new List<ChatMessage>
 		  {
-				ChatMessage.FromSystem($"{systemPrompt}"),
-				ChatMessage.FromUser($"Reformat the following transcript: {transcript}")
+				new SystemChatMessage($"{systemPrompt}"),
+				new UserChatMessage($"Reformat the following transcript: {transcript}")
 		  };
 
-		string formattedText = await _llmService.CreateChatCompletion(messages, Models.Gpt_4);
+		string formattedText = await _llmService.CreateChatCompletion(messages, modelName);
 		return formattedText.FixNewLines();
 	}
 }

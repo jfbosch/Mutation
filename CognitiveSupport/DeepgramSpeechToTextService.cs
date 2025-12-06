@@ -9,9 +9,6 @@ namespace CognitiveSupport;
 
 public class DeepgramSpeechToTextService : ISpeechToTextService
 {
-	private const string ModelNova2 = "nova-2";
-	private const string ModelNova3 = "nova-3";
-
 	public string ServiceName { get; init; }
 
 	private readonly string _modelId;
@@ -39,17 +36,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 		if (string.IsNullOrEmpty(audioffilePath))
 			throw new ArgumentException($"'{nameof(audioffilePath)}' cannot be null or empty.", nameof(audioffilePath));
 
-		List<string> keywordsOrKeyterms = new();
-
-		switch (_modelId)
-		{
-			case ModelNova2:
-				keywordsOrKeyterms = ParseKeywords(speechToTextPrompt);
-				break;
-			case ModelNova3:
-				keywordsOrKeyterms = ParseKeyterms(speechToTextPrompt);
-				break;
-		}
+		List<string> keyterms = ParseKeyterms(speechToTextPrompt);
 
 		var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
 		const string AttemptKey = "Attempt";
@@ -80,7 +67,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 			if (attempt > 0)
 				this.Beep(attempt);
 
-			return await TranscribeViaDeepgram(keywordsOrKeyterms, audioBytes, linkedCts).ConfigureAwait(false);
+			return await TranscribeViaDeepgram(keyterms, audioBytes, linkedCts).ConfigureAwait(false);
 		}, context, overallCancellationToken).ConfigureAwait(false);
 
 		return response.Results.Channels?.FirstOrDefault()?.Alternatives?.FirstOrDefault().Transcript
@@ -88,7 +75,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 	}
 
 	private async Task<SyncResponse> TranscribeViaDeepgram(
-		List<string> keywordsOrKeyterms,
+		List<string> keyterms,
 		byte[] audioBytes,
 		CancellationTokenSource cancellationTokenSource)
 	{
@@ -97,9 +84,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 		  new PreRecordedSchema()
 		  {
 			  Model = _modelId,
-			  // nova-2 uses keywordsOrKeyterms, nova-3 uses keyterms
-			  Keywords = _modelId.StartsWith(ModelNova2) ? keywordsOrKeyterms : null,
-			  Keyterm = _modelId.StartsWith(ModelNova3) ? keywordsOrKeyterms : null,
+			  Keyterm = keyterms,
 
 			  Punctuate = true,
 			  FillerWords = false,
@@ -107,32 +92,6 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 			  SmartFormat = true,
 		  }, cancellationTokenSource = cancellationTokenSource);
 		return response;
-	}
-
-	private static List<string> ParseKeywords(string speechToTextPrompt)
-	{
-		if (speechToTextPrompt == null)
-			speechToTextPrompt = string.Empty;
-
-		string pattern = @"(?<=\bkeywords:\s*).*?(?=\.)";
-		Match match = Regex.Match(speechToTextPrompt, pattern, RegexOptions.IgnoreCase);
-		if (match.Success)
-		{
-			string keywordsString = match.Value.Trim();
-			var keywords = keywordsString.Split(",", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-				.Select(n =>
-				{
-					//If the keyword already contains an intensifier, return it as is. Else add an intensifier of 1. 
-					//https://developers.deepgram.com/docs/keywordsOrKeyterms
-					return n.IndexOf(":") > 0 ?
-						n :
-						$"{n}1";
-				})
-				.ToList();
-			return keywords;
-		}
-		else
-			return null;
 	}
 
 	private static List<string> ParseKeyterms(string speechToTextPrompt)

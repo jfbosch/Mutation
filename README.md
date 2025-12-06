@@ -32,7 +32,7 @@ files.
 Press one hotkey to start recording, press it again to stop and send the audio for transcription. Supported providers:
 
 * OpenAI Whisper family (gpt-4o-transcribe, gpt-4o-mini-transcribe)  
-* Deepgram nova-2 / nova-3  
+* Deepgram nova-3  
 * Any service exposing an OpenAI-compatible Whisper API
 
 The transcribed text is copied to the clipboard and can optionally be injected into the active text field.
