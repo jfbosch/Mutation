@@ -1,7 +1,6 @@
 ﻿using CognitiveSupport.Extensions;
-using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
-using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
-using Microsoft.Rest;
+using Azure;
+using Azure.AI.Vision.ImageAnalysis;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Timeout;
@@ -26,7 +25,7 @@ public class OcrService : IOcrService, IDisposable
 
         private string SubscriptionKey { get; }
         private string Endpoint { get; }
-        private ComputerVisionClient ComputerVisionClient { get; }
+        private ImageAnalysisClient ImageAnalysisClient { get; }
         private readonly int _timeoutSeconds;
 	private static RequestRateLimiter SharedRateLimiter = new(20, TimeSpan.FromMinutes(1));
 
@@ -34,7 +33,7 @@ public class OcrService : IOcrService, IDisposable
 	{
 		SubscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
 		Endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
-		ComputerVisionClient = CreateComputerVisionClient(Endpoint, SubscriptionKey);
+		ImageAnalysisClient = CreateImageAnalysisClient(Endpoint, SubscriptionKey);
 		_timeoutSeconds = Math.Max(1, Math.Min(timeoutSeconds, MaxTimeoutSeconds));
 	}
 
@@ -46,14 +45,15 @@ public class OcrService : IOcrService, IDisposable
 		return Read(ocrReadingOrder, imageStream, overallCancellationToken);
 	}
 
-	private static ComputerVisionClient CreateComputerVisionClient(string endpoint, string key) =>
-		 new(new ApiKeyServiceClientCredentials(key)) { Endpoint = endpoint };
+	private static ImageAnalysisClient CreateImageAnalysisClient(string endpoint, string key) =>
+		 new(new Uri(endpoint), new AzureKeyCredential(key));
 
 	private static Context CreateRetryContext() => new() { ["Attempt"] = 1 };
 
 	private static AsyncPolicy CreateRetryPolicy() =>
 		Policy
 			.Handle<HttpRequestException>()
+			.Or<RequestFailedException>(ex => ex.Status == 429 || ex.Status >= 500)
 			.Or<TimeoutRejectedException>()
 			.Or<TaskCanceledException>()
 			.WaitAndRetryAsync(
@@ -175,121 +175,45 @@ public class OcrService : IOcrService, IDisposable
 		Stream imageStream,
 		CancellationToken overallCancellationToken)
 	{
-		const int operationIdLength = 36;
-
 		imageStream = EnsureMinimumImageSize(imageStream);
 
 		await SharedRateLimiter.WaitAsync(overallCancellationToken).ConfigureAwait(false);
 
 		using var requestCts = CreatePerRequestCancellationTokenSource(overallCancellationToken);
-		using HttpOperationHeaderResponse<ReadInStreamHeaders> response = await ComputerVisionClient
-				.ReadInStreamWithHttpMessagesAsync(
-					imageStream,
-					readingOrder: ocrReadingOrder.ToEnumMemberValue(),
-					cancellationToken: requestCts.Token)
-				.ConfigureAwait(false);
+		
+		var binaryData = BinaryData.FromStream(imageStream);
 
-		string operationId = response.Headers.OperationLocation[^operationIdLength..];
-		TimeSpan initialDelay = TryParseRetryAfter(response.Response.Headers) ?? TimeSpan.Zero;
+		ImageAnalysisResult result = await ImageAnalysisClient.AnalyzeAsync(
+			binaryData,
+			VisualFeatures.Read,
+			new ImageAnalysisOptions { },
+			cancellationToken: requestCts.Token)
+			.ConfigureAwait(false);
 
-		var results = await GetReadOperationResultAsync(
-				operationId,
-				initialDelay,
-				overallCancellationToken).ConfigureAwait(false);
-
-		return ExtractTextFromResults(results);
+		return ExtractTextFromResults(result);
 	}
 
-
-	private async Task<ReadOperationResult> GetReadOperationResultAsync(
-		string operationId,
-		TimeSpan initialDelay,
-		CancellationToken overallCancellationToken)
-	{
-		TimeSpan defaultDelay = TimeSpan.FromMilliseconds(150);
-
-		TimeSpan delayBeforeFirstPoll = initialDelay > TimeSpan.Zero ? initialDelay : defaultDelay;
-		if (delayBeforeFirstPoll > TimeSpan.Zero)
-			await Task.Delay(delayBeforeFirstPoll, overallCancellationToken).ConfigureAwait(false);
-
-		while (true)
-		{
-			await SharedRateLimiter.WaitAsync(overallCancellationToken).ConfigureAwait(false);
-
-			using var requestCts = CreatePerRequestCancellationTokenSource(overallCancellationToken);
-			var response = await ComputerVisionClient
-					.GetReadResultWithHttpMessagesAsync(Guid.Parse(operationId), cancellationToken: requestCts.Token)
-					.ConfigureAwait(false);
-
-			var result = response.Body;
-
-			if (result.Status is OperationStatusCodes.Succeeded or OperationStatusCodes.Failed)
-				return result;
-
-			TimeSpan wait = TryParseRetryAfter(response.Response.Headers) ?? defaultDelay;
-			if (wait <= TimeSpan.Zero)
-				wait = defaultDelay;
-
-			await Task.Delay(wait, overallCancellationToken).ConfigureAwait(false);
-		}
-	}
-
-
-        private static string ExtractTextFromResults(ReadOperationResult results)
+        private static string ExtractTextFromResults(ImageAnalysisResult result)
         {
                 var sb = new StringBuilder();
 
-                foreach (ReadResult page in results.AnalyzeResult.ReadResults)
+                if (result.Read?.Blocks != null)
                 {
-                        foreach (Line line in page.Lines)
+                        foreach (var block in result.Read.Blocks)
                         {
-                                sb.AppendLine(line.Text);
+                                foreach (var line in block.Lines)
+                                {
+                                        sb.AppendLine(line.Text);
+                                }
                         }
                 }
 
                 return sb.ToString();
         }
 
-        private static TimeSpan? TryParseRetryAfter(HttpResponseHeaders? headers)
-        {
-                if (headers is null)
-                        return null;
-
-                if (headers.RetryAfter?.Delta is TimeSpan delta)
-                        return NormalizeDelay(delta);
-
-                if (headers.RetryAfter?.Date is DateTimeOffset date)
-                        return NormalizeDelay(date - DateTimeOffset.UtcNow);
-
-                return headers.TryGetValues("Retry-After", out IEnumerable<string>? values)
-                        ? ParseRetryAfterValues(values)
-                        : null;
-        }
-
-        private static TimeSpan? ParseRetryAfterValues(IEnumerable<string>? values)
-        {
-                string? first = values?.FirstOrDefault();
-                if (string.IsNullOrWhiteSpace(first))
-                        return null;
-
-                if (int.TryParse(first, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seconds))
-                        return NormalizeDelay(TimeSpan.FromSeconds(Math.Max(0, seconds)));
-
-                if (DateTimeOffset.TryParse(first, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTimeOffset date))
-                        return NormalizeDelay(date - DateTimeOffset.UtcNow);
-
-                return null;
-        }
-
-        private static TimeSpan? NormalizeDelay(TimeSpan delay)
-        {
-                return delay <= TimeSpan.Zero ? TimeSpan.Zero : delay;
-        }
-
-
         public void Dispose()
         {
-                ComputerVisionClient?.Dispose();
+                // ImageAnalysisClient does not implement IDisposable
         }
 
 		public readonly record struct OcrRequestWindowState(

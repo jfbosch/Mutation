@@ -299,49 +299,6 @@ public class OcrServiceTests
 	}
 
 	[Fact]
-	public void TryParseRetryAfter_ParsesHttpDateHeader()
-	{
-		MethodInfo? method = typeof(OcrService).GetMethod("TryParseRetryAfter", BindingFlags.NonPublic | BindingFlags.Static);
-		Assert.NotNull(method);
-		var message = new HttpResponseMessage();
-		var date = DateTimeOffset.UtcNow.AddSeconds(5);
-		message.Headers.RetryAfter = new RetryConditionHeaderValue(date);
-
-		TimeSpan? delay = (TimeSpan?)method!.Invoke(null, new object?[] { message.Headers });
-
-		Assert.True(delay.HasValue);
-		Assert.InRange(delay!.Value.TotalSeconds, 0.5, 10);
-	}
-
-	[Fact]
-	public void TryParseRetryAfter_ParsesStringSecondsValue()
-	{
-		MethodInfo? method = typeof(OcrService).GetMethod("TryParseRetryAfter", BindingFlags.NonPublic | BindingFlags.Static);
-		Assert.NotNull(method);
-		var message = new HttpResponseMessage();
-		message.Headers.TryAddWithoutValidation("Retry-After", "7");
-
-		TimeSpan? delay = (TimeSpan?)method!.Invoke(null, new object?[] { message.Headers });
-
-		Assert.True(delay.HasValue);
-		Assert.InRange(delay!.Value.TotalSeconds, 6.5, 7.5);
-	}
-
-	[Fact]
-	public void TryParseRetryAfter_PrefersDeltaHeader()
-	{
-		MethodInfo? method = typeof(OcrService).GetMethod("TryParseRetryAfter", BindingFlags.NonPublic | BindingFlags.Static);
-		Assert.NotNull(method);
-		var message = new HttpResponseMessage();
-		message.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(3));
-
-		TimeSpan? delay = (TimeSpan?)method!.Invoke(null, new object?[] { message.Headers });
-
-		Assert.True(delay.HasValue);
-		Assert.InRange(delay!.Value.TotalSeconds, 2.5, 3.5);
-	}
-
-	[Fact]
 	public void ExpandFile_CreatesPdfWorkItemPerPage()
 	{
 		string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
