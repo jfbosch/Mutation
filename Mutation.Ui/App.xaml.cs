@@ -8,7 +8,6 @@ using Microsoft.UI.Xaml.Controls;
 using Mutation.Ui.Services;
 using OpenAI;
 using OpenAI.Audio;
-using Azure.AI.OpenAI;
 using System.ClientModel;
 using System;
 using System.Collections.Generic;
