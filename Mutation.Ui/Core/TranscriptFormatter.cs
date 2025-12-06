@@ -38,7 +38,7 @@ public class TranscriptFormatter
 
 	public async Task<string> FormatWithLlmAsync(string transcript, string systemPrompt, string modelName)
 	{
-		if (transcript is null)
+		if (string.IsNullOrWhiteSpace(transcript))
 			return transcript;
 
 		var messages = new List<ChatMessage>

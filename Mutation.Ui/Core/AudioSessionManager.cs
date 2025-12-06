@@ -163,7 +163,7 @@ internal class AudioSessionManager : IDisposable
         await PlaySelectedSessionAsync();
     }
 
-    public async Task StartStopRecordingAsync(ISpeechToTextService activeService, bool useLlmFormatting, string prompt)
+    public async Task StartStopRecordingAsync(ISpeechToTextService activeService, bool useLlmFormatting, string prompt, string llmPrompt = "")
     {
         try
         {
@@ -197,7 +197,7 @@ internal class AudioSessionManager : IDisposable
                 try
                 {
                     string text = await _speechManager.StopRecordingAndTranscribeAsync(activeService, prompt, CancellationToken.None);
-                    await ProcessTranscriptAsync(text, prompt);
+                    await ProcessTranscriptAsync(text, llmPrompt);
                 }
                 catch (OperationCanceledException)
                 {
@@ -292,7 +292,7 @@ internal class AudioSessionManager : IDisposable
         }
     }
 
-    private async Task ProcessTranscriptAsync(string text, string prompt)
+    private async Task ProcessTranscriptAsync(string text, string llmPrompt)
     {
         // Always run rules-based formatting first
         string rulesFormattedText = _transcriptFormatter.ApplyRules(text, false);
@@ -305,7 +305,7 @@ internal class AudioSessionManager : IDisposable
                 StatusMessage?.Invoke(this, "Formatting with LLM...");
                 string modelName = _settings.LlmSettings.SelectedLlmModel ?? LlmSettings.DefaultModel;
                 // Pass the rules-formatted text to the LLM
-                finalFormattedText = await _transcriptFormatter.FormatWithLlmAsync(rulesFormattedText, prompt, modelName);
+                finalFormattedText = await _transcriptFormatter.FormatWithLlmAsync(rulesFormattedText, llmPrompt, modelName);
             }
             catch (Exception ex)
             {

@@ -1202,7 +1202,8 @@ public sealed partial class MainWindow : Window, IDisposable
 				return;
             }
             
-            await _audioSessionManager.StartStopRecordingAsync(_activeSpeechService, useLlmFormatting, GetActivePrompt());
+            string llmPrompt = TxtFormatPrompt.Text;
+            await _audioSessionManager.StartStopRecordingAsync(_activeSpeechService, useLlmFormatting, GetActivePrompt(), llmPrompt);
 		}
 		catch (Exception ex)
 		{
