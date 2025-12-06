@@ -1428,7 +1428,7 @@ public sealed partial class MainWindow : Window
                                             {
                                                 ShowStatus("Speech to Text", "Formatting with LLM...", InfoBarSeverity.Informational);
                                                 string prompt = TxtFormatPrompt.Text;
-                                                string modelName = _settings.LlmSettings.SelectedLlmModel ?? "gpt-4";
+                                                string modelName = _settings.LlmSettings.SelectedLlmModel ?? LlmSettings.DefaultModel;
                                                 // Pass the rules-formatted text to the LLM
                                                 finalFormattedText = await _transcriptFormatter.FormatWithLlmAsync(rulesFormattedText, prompt, modelName);
                                             }
@@ -1505,7 +1505,7 @@ public sealed partial class MainWindow : Window
 			string rulesFormatted = _transcriptFormatter.ApplyRules(raw, false);
 
 			string prompt = TxtFormatPrompt.Text;
-			string modelName = _settings.LlmSettings?.SelectedLlmModel ?? "gpt-4";
+			string modelName = _settings.LlmSettings?.SelectedLlmModel ?? LlmSettings.DefaultModel;
 			string formatted = await _transcriptFormatter.FormatWithLlmAsync(rulesFormatted, prompt, modelName);
 			TxtFormatTranscript.Text = formatted;
 			_clipboard.SetText(formatted);

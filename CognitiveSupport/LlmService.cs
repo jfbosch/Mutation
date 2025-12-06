@@ -6,19 +6,16 @@ namespace CognitiveSupport;
 public class LlmService : ILlmService
 {
 	private readonly Dictionary<string, ChatClient> _chatClients;
-	private readonly string _reasoningEffort;
 
 	public LlmService(
 		string apiKey,
-		List<string> models,
-		string reasoningEffort)
+		List<string> models)
 	{
 		if (string.IsNullOrEmpty(apiKey)) throw new ArgumentNullException(nameof(apiKey));
 		if (models is null || !models.Any())
 			throw new ArgumentNullException(nameof(models));
 
 		_chatClients = new Dictionary<string, ChatClient>();
-		_reasoningEffort = reasoningEffort;
 
 		foreach (var model in models)
 		{
@@ -40,13 +37,6 @@ public class LlmService : ILlmService
 		{
 			Temperature = (float)temperature
 		};
-
-		/*
-		if (!string.IsNullOrWhiteSpace(_reasoningEffort) && Enum.TryParse<ChatReasoningEffort>(_reasoningEffort, true, out var effort))
-		{
-			options.ReasoningEffort = effort;
-		}
-		*/
 
 		ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages, options);
 

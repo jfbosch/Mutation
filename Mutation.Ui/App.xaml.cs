@@ -62,8 +62,7 @@ public partial class App : Application
 			builder.Services.AddSingleton<ILlmService>(
 					  new LlmService(
 							 settings.LlmSettings?.ApiKey ?? string.Empty,
-							 settings.LlmSettings?.Models ?? new List<string>(),
-							 settings.LlmSettings?.ReasoningEffort ?? "low"));
+							 settings.LlmSettings?.Models ?? new List<string>()));
 			builder.Services.AddSingleton<TranscriptFormatter>();
                         builder.Services.AddSingleton<ITextToSpeechService, TextToSpeechService>();
 			builder.Services.AddHttpClient(OpenAiHttpClientName);
