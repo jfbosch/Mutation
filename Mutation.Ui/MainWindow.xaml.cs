@@ -92,6 +92,7 @@ public sealed partial class MainWindow : Window
 	private const string StopGlyph = "\uE71A";
 	private const string ProcessingGlyph = "\uE8A0";
 	private const string PlayGlyph = "\uE768";
+	private const string MagicGlyph = "\uE890";
 
 	private const int WaveformSampleRate = 16_000;
 	private const int WaveformWindowMilliseconds = 40;
@@ -1102,6 +1103,19 @@ public sealed partial class MainWindow : Window
 		}
 	}
 
+	public async void BtnSpeechToTextWithFormat_Click(object? sender, RoutedEventArgs? e)
+	{
+		try
+		{
+			await StartStopSpeechToTextAsync(true);
+		}
+		catch (Exception ex)
+		{
+			ShowStatus("Speech to Text", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Speech to Text Error", ex);
+		}
+	}
+
         private async void BtnPlayLatestRecording_Click(object? sender, RoutedEventArgs? e)
         {
                 try
@@ -1534,10 +1548,43 @@ public sealed partial class MainWindow : Window
 
 	private void UpdateSpeechButtonVisuals(string label, string glyph, bool isEnabled = true)
 	{
-		BtnSpeechToTextIcon.Glyph = glyph;
-		BtnSpeechToText.IsEnabled = isEnabled;
-		AutomationProperties.SetName(BtnSpeechToText, label);
-		ConfigureButtonHotkey(BtnSpeechToText, null, _settings.SpeechToTextSettings?.SpeechToTextHotKey, label);
+		if (label == "Record")
+		{
+			// Idle state
+			BtnSpeechToTextIcon.Glyph = RecordGlyph;
+			BtnSpeechToText.IsEnabled = true;
+			AutomationProperties.SetName(BtnSpeechToText, "Record");
+			ConfigureButtonHotkey(BtnSpeechToText, null, _settings.SpeechToTextSettings?.SpeechToTextHotKey, "Record");
+
+			BtnSpeechToTextWithFormatIcon.Glyph = MagicGlyph;
+			BtnSpeechToTextWithFormat.IsEnabled = true;
+			AutomationProperties.SetName(BtnSpeechToTextWithFormat, "Record and Format");
+			ConfigureButtonHotkey(BtnSpeechToTextWithFormat, null, _settings.SpeechToTextSettings?.SpeechToTextWithLlmFormattingHotKey, "Record and Format");
+		}
+		else if (label == "Stop")
+		{
+			// Recording state
+			BtnSpeechToTextIcon.Glyph = StopGlyph;
+			BtnSpeechToText.IsEnabled = true;
+			AutomationProperties.SetName(BtnSpeechToText, "Stop");
+			ConfigureButtonHotkey(BtnSpeechToText, null, _settings.SpeechToTextSettings?.SpeechToTextHotKey, "Stop");
+
+			BtnSpeechToTextWithFormatIcon.Glyph = StopGlyph;
+			BtnSpeechToTextWithFormat.IsEnabled = true;
+			AutomationProperties.SetName(BtnSpeechToTextWithFormat, "Stop and Format");
+			ConfigureButtonHotkey(BtnSpeechToTextWithFormat, null, _settings.SpeechToTextSettings?.SpeechToTextWithLlmFormattingHotKey, "Stop and Format");
+		}
+		else
+		{
+			// Transcribing / Processing
+			BtnSpeechToTextIcon.Glyph = glyph;
+			BtnSpeechToText.IsEnabled = isEnabled;
+			AutomationProperties.SetName(BtnSpeechToText, label);
+
+			BtnSpeechToTextWithFormatIcon.Glyph = glyph;
+			BtnSpeechToTextWithFormat.IsEnabled = isEnabled;
+			AutomationProperties.SetName(BtnSpeechToTextWithFormat, label);
+		}
 	}
 
         private void UpdatePlaybackButtonVisuals(string automationName, string glyph)

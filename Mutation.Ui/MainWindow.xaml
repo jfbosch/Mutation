@@ -110,6 +110,7 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Grid Width="28" Height="28" VerticalAlignment="Center">
                                             <FontIcon
@@ -143,62 +144,58 @@
                                             AutomationProperties.Name="Microphone selection"
                                             ToolTipService.ToolTip="Choose the input microphone"
                                             SelectionChanged="CmbMicrophone_SelectionChanged" />
+                                        <Button
+                                            x:Name="BtnToggleMic"
+                                            Grid.Column="2"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Click="BtnToggleMic_Click"
+                                            AccessKey="M"
+                                            AutomationProperties.Name="Toggle microphone"
+                                            ToolTipService.ToolTip="Toggle microphone mute state (Alt+Q)">
+                                            <Grid Width="28" Height="28">
+                                                <FontIcon
+                                                    x:Name="BtnToggleMicIcon"
+                                                    Glyph="&#xE720;"
+                                                    FontFamily="Segoe Fluent Icons"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                />
+                                                <Rectangle
+                                                    x:Name="BtnToggleMicSlash"
+                                                    Width="20"
+                                                    Height="2"
+                                                    RadiusX="1"
+                                                    RadiusY="1"
+                                                    Fill="{Binding Foreground, ElementName=BtnToggleMicIcon}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="Collapsed"
+                                                    IsHitTestVisible="False"
+                                                    RenderTransformOrigin="0.5,0.5">
+                                                    <Rectangle.RenderTransform>
+                                                        <CompositeTransform Rotation="-45" />
+                                                    </Rectangle.RenderTransform>
+                                                </Rectangle>
+                                            </Grid>
+                                        </Button>
                                     </Grid>
                                 </StackPanel>
                             </Grid>
 
                             <Grid Margin="0,4,0,0" x:Name="MicWaveContainer">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <Button
-                                    x:Name="BtnToggleMic"
-                                    Grid.Column="0"
-                                    Margin="0,0,12,0"
-                                    VerticalAlignment="Top"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Click="BtnToggleMic_Click"
-                                    AccessKey="M"
-                                    AutomationProperties.Name="Toggle microphone"
-                                    ToolTipService.ToolTip="Toggle microphone mute state (Alt+Q)">
-                                    <Grid Width="28" Height="28">
-                                        <FontIcon
-                                            x:Name="BtnToggleMicIcon"
-                                            Glyph="&#xE720;"
-                                            FontFamily="Segoe Fluent Icons"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                        />
-                                        <Rectangle
-                                            x:Name="BtnToggleMicSlash"
-                                            Width="20"
-                                            Height="2"
-                                            RadiusX="1"
-                                            RadiusY="1"
-                                            Fill="{Binding Foreground, ElementName=BtnToggleMicIcon}"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Visibility="Collapsed"
-                                            IsHitTestVisible="False"
-                                            RenderTransformOrigin="0.5,0.5">
-                                            <Rectangle.RenderTransform>
-                                                <CompositeTransform Rotation="-45" />
-                                            </Rectangle.RenderTransform>
-                                        </Rectangle>
-                                    </Grid>
-                                </Button>
-
-                                <Grid x:Name="MicWaveArea" Grid.Column="1" PointerReleased="MicWaveArea_PointerReleased">
+                                <Grid x:Name="MicWaveArea" Grid.Column="0" PointerReleased="MicWaveArea_PointerReleased">
                                     <ScottPlot:WinUIPlot
                                         x:Name="MicWaveformPlot"
                                         Height="120"
                                         IsHitTestVisible="False" />
                                     <TextBlock x:Name="MicWaveformOffLabel" Text="Off" FontSize="32" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
                                 </Grid>
-                                <StackPanel Grid.Column="2" Margin="12,0,0,0" Spacing="6" VerticalAlignment="Stretch">
+                                <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="6" VerticalAlignment="Stretch">
                                     <Grid
                                         Width="16"
                                         Height="120"
@@ -226,7 +223,6 @@
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Speech to Text" Style="{StaticResource SectionHeaderTextStyle}" />
-                                <TextBlock Text="Choose a service and record clear transcripts with responsive controls." Style="{StaticResource CaptionTextStyle}" />
                             </StackPanel>
 
                             <Grid ColumnSpacing="16" RowSpacing="12">
@@ -241,31 +237,41 @@
                                 </Grid.RowDefinitions>
 
                                 <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
-                                    <TextBlock x:Name="LblSpeechService" Text="Speech service" Style="{StaticResource CaptionTextStyle}" />
                                     <ComboBox
                                         x:Name="CmbSpeechService"
                                         PlaceholderText="Select a speech-to-text service"
-                                        AutomationProperties.LabeledBy="{Binding ElementName=LblSpeechService}"
                                         AutomationProperties.Name="Speech-to-text service selection"
                                         ToolTipService.ToolTip="Pick the transcription engine"
                                         SelectionChanged="CmbSpeechService_SelectionChanged" />
                                 </StackPanel>
 
-                                <Button
-                                    x:Name="BtnSpeechToText"
-                                    Grid.Row="0"
-                                    Grid.Column="1"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Click="BtnSpeechToText_Click"
-                                    AccessKey="R"
-                                    AutomationProperties.Name="Record"
-                                    ToolTipService.ToolTip="Start or stop speech capture (Shift+Alt+U)">
-                                    <FontIcon
-                                        x:Name="BtnSpeechToTextIcon"
-                                        Glyph="&#xE7C8;"
-                                        FontFamily="Segoe Fluent Icons"
-                                    />
-                                </Button>
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <Button
+                                        x:Name="BtnSpeechToText"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Click="BtnSpeechToText_Click"
+                                        AccessKey="R"
+                                        AutomationProperties.Name="Record"
+                                        ToolTipService.ToolTip="Start or stop speech capture (Shift+Alt+U)">
+                                        <FontIcon
+                                            x:Name="BtnSpeechToTextIcon"
+                                            Glyph="&#xE7C8;"
+                                            FontFamily="Segoe Fluent Icons"
+                                        />
+                                    </Button>
+                                    <Button
+                                        x:Name="BtnSpeechToTextWithFormat"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Click="BtnSpeechToTextWithFormat_Click"
+                                        AutomationProperties.Name="Record and Format"
+                                        ToolTipService.ToolTip="Start or stop speech capture and format with LLM">
+                                        <FontIcon
+                                            x:Name="BtnSpeechToTextWithFormatIcon"
+                                            Glyph="&#xE890;"
+                                            FontFamily="Segoe Fluent Icons"
+                                        />
+                                    </Button>
+                                </StackPanel>
 
                                 <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
                                     <Button
@@ -324,7 +330,14 @@
                                         PlaceholderText="Optional prompt for context or keywords"
                                         AutomationProperties.LabeledBy="{Binding ElementName=LblSpeechToTextPrompt}"
                                         AutomationProperties.Name="Speech to text prompt"
-                                        TextChanged="TxtSpeechToTextPrompt_TextChanged" />
+                                        TextChanged="TxtSpeechToTextPrompt_TextChanged"
+                                        TextWrapping="Wrap"
+                                        AcceptsReturn="True"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                        ScrollViewer.VerticalScrollMode="Auto"
+                                        ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                        ScrollViewer.HorizontalScrollMode="Auto"
+                                        MaxHeight="120" />
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
