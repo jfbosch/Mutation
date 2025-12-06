@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Mutation.Ui;
 
-internal class SpeechToTextState
+internal class SpeechToTextState : IDisposable
 {
 	internal SemaphoreSlim AudioRecorderLock { get; } = new SemaphoreSlim(1, 1);
 
@@ -32,5 +32,9 @@ internal class SpeechToTextState
 		this.TranscriptionCancellationTokenSource = null;
 	}
 
-
+	public void Dispose()
+	{
+		AudioRecorderLock.Dispose();
+		TranscriptionCancellationTokenSource?.Dispose();
+	}
 }

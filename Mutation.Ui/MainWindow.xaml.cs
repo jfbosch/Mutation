@@ -28,7 +28,7 @@ using WinRT.Interop;
 
 namespace Mutation.Ui;
 
-public sealed partial class MainWindow : Window
+public sealed partial class MainWindow : Window, IDisposable
 {
 	private readonly ClipboardManager _clipboard;
 	private readonly UiStateManager _uiStateManager;
@@ -684,9 +684,9 @@ public sealed partial class MainWindow : Window
 		StopPlayback();
 		_playbackPlayer.MediaEnded -= PlaybackPlayer_MediaEnded;
 		_playbackPlayer.MediaFailed -= PlaybackPlayer_MediaFailed;
-		_playbackPlayer.Dispose();
 		BeepPlayer.DisposePlayers();
 		DisposeMicrophoneVisualization();
+		Dispose();
 	}
 
 	private void CopyText_Click(object sender, RoutedEventArgs e)
@@ -1477,9 +1477,9 @@ public sealed partial class MainWindow : Window
 		await dialog.ShowAsync();
 	}
 
-	public void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
+	public async void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
 	{
-		string text = _clipboard.GetText();
+		string text = await _clipboard.GetTextAsync();
 		_textToSpeech.SpeakText(text);
 		ShowStatus("Text to Speech", "Speaking clipboard text.", InfoBarSeverity.Informational);
 	}
@@ -2148,5 +2148,17 @@ public sealed partial class MainWindow : Window
 		};
 
 		await settingsDialog.ShowAsync();
+	}
+
+	public void Dispose()
+	{
+		_speechManager?.Dispose();
+		_waveformCapture?.Dispose();
+		_playbackPlayer?.Dispose();
+		_formatDebounceCts?.Dispose();
+		_promptDebounceCts?.Dispose();
+		_statusDismissTimer?.Stop();
+		_waveformTimer?.Stop();
+		_playbackStream?.Dispose();
 	}
 }

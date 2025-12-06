@@ -39,10 +39,10 @@ public class ClipboardManager
 		Clipboard.SetContent(data);
 	}
 
-	public string GetText()
+	public async Task<string> GetTextAsync()
 	{
 		var content = Clipboard.GetContent();
-		return content.Contains(StandardDataFormats.Text) ? content.GetTextAsync().AsTask().Result : string.Empty;
+		return content.Contains(StandardDataFormats.Text) ? await content.GetTextAsync() : string.Empty;
 	}
 
 	public async Task SetImageAsync(SoftwareBitmap bitmap)

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Mutation.Ui;
 
-internal class SpeechToTextManager
+internal class SpeechToTextManager : IDisposable
 {
 	private const string SessionFilePrefix = "session_";
 	private const string SessionTimestampFormat = "yyyy-MM-dd_HH-mm-ss";
@@ -476,4 +476,10 @@ internal class SpeechToTextManager
 
 	private static bool PathsEqual(string left, string right) =>
 			  string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+	public void Dispose()
+	{
+		_state.Dispose();
+		_audioRecorder?.Dispose();
+	}
 }
