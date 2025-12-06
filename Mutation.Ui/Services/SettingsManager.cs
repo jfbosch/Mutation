@@ -410,15 +410,9 @@ End of summary.
 		{
 			llmSettings.Models = new List<string>
 			{
-				"gpt-4.1",
-				"gpt-5.1"
+				LlmSettings.DefaultModel,
+				LlmSettings.DefaultSecondaryModel
 			};
-			somethingWasMissing = true;
-		}
-
-		if (string.IsNullOrWhiteSpace(llmSettings.ReasoningEffort))
-		{
-			llmSettings.ReasoningEffort = "low";
 			somethingWasMissing = true;
 		}
 

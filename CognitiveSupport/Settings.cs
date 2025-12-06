@@ -146,10 +146,12 @@ public class SpeechToTextServiceSettings
 
 public class LlmSettings
 {
+	public const string DefaultModel = "gpt-4.1";
+	public const string DefaultSecondaryModel = "gpt-5.1";
+
 	public string? ApiKey { get; set; }
 	public List<string> Models { get; set; }
 	public string? SelectedLlmModel { get; set; }
-	public string? ReasoningEffort { get; set; } = "low";
 	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
 	public string? FormatTranscriptPrompt { get; set; }
 	public string? FormatWithLlmHotKey { get; set; }
@@ -161,11 +163,10 @@ public class LlmSettings
 		TranscriptFormatRules = new List<TranscriptFormatRule>();
 	}
 
-	public LlmSettings(string? apiKey, List<string> models, string? reasoningEffort, List<TranscriptFormatRule> transcriptFormatRules, string? formatTranscriptPrompt)
+	public LlmSettings(string? apiKey, List<string> models, List<TranscriptFormatRule> transcriptFormatRules, string? formatTranscriptPrompt)
 	{
 		ApiKey = apiKey;
 		Models = models;
-		ReasoningEffort = reasoningEffort;
 		TranscriptFormatRules = transcriptFormatRules;
 		FormatTranscriptPrompt = formatTranscriptPrompt;
 	}
