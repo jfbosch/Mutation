@@ -99,12 +99,12 @@
                     <Border x:Name="MicrophoneCard" Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="0">
                         <Grid>
                             <Rectangle x:Name="MicPulseOverlay" Fill="{ThemeResource PrimaryBrush}" Opacity="0" IsHitTestVisible="False" RadiusX="16" RadiusY="16" />
-                            <StackPanel Spacing="16">
-                            <StackPanel Spacing="4">
+                            <StackPanel Spacing="0">
+                            <StackPanel Spacing="4" Margin="0,0,0,16">
                                 <TextBlock Text="Microphone" Style="{StaticResource SectionHeaderTextStyle}" />
                             </StackPanel>
 
-                            <Grid ColumnSpacing="16" RowSpacing="12">
+                            <Grid ColumnSpacing="16" RowSpacing="12" Margin="0,0,0,10">
                                 <StackPanel Spacing="6">
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
@@ -141,6 +141,7 @@
                                             Grid.Column="1"
                                             PlaceholderText="Select a microphone"
                                             HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
                                             AutomationProperties.Name="Microphone selection"
                                             ToolTipService.ToolTip="Choose the input microphone"
                                             SelectionChanged="CmbMicrophone_SelectionChanged" />
@@ -148,6 +149,7 @@
                                             x:Name="BtnToggleMic"
                                             Grid.Column="2"
                                             Style="{StaticResource AccentButtonStyle}"
+                                            VerticalAlignment="Center"
                                             Click="BtnToggleMic_Click"
                                             AccessKey="M"
                                             AutomationProperties.Name="Toggle microphone"
@@ -182,7 +184,7 @@
                                 </StackPanel>
                             </Grid>
 
-                            <Grid Margin="0,4,0,0" x:Name="MicWaveContainer">
+                            <Grid x:Name="MicWaveContainer">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
@@ -236,7 +238,7 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6">
+                                <StackPanel Grid.Column="0" Grid.Row="0" Spacing="6" VerticalAlignment="Center">
                                     <ComboBox
                                         x:Name="CmbSpeechService"
                                         PlaceholderText="Select a speech-to-text service"
@@ -245,7 +247,7 @@
                                         SelectionChanged="CmbSpeechService_SelectionChanged" />
                                 </StackPanel>
 
-                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                     <Button
                                         x:Name="BtnSpeechToText"
                                         Style="{StaticResource AccentButtonStyle}"
