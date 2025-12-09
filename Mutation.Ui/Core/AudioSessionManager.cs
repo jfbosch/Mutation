@@ -170,6 +170,7 @@ internal class AudioSessionManager : IDisposable
             if (IsTranscribing)
             {
                 _speechManager.CancelTranscription();
+                BeepPlayer.Play(BeepType.Failure);
                 StateChanged?.Invoke(this, EventArgs.Empty);
                 StatusMessage?.Invoke(this, "Transcription cancelled.");
                 return;
