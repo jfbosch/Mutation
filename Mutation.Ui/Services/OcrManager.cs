@@ -538,6 +538,12 @@ public class OcrManager
             int length = Math.Abs(srcStride) * height;
             byte[] pixels = new byte[length];
             System.Runtime.InteropServices.Marshal.Copy(data.Scan0, pixels, 0, length);
+
+            if (_settings.AzureComputerVisionSettings?.InvertScreenshot == true)
+            {
+                InvertPixels(pixels);
+            }
+
             var ibuffer = pixels.AsBuffer();
             bmp = new SoftwareBitmap(BitmapPixelFormat.Bgra8, width, height, BitmapAlphaMode.Premultiplied);
             bmp.CopyFromBuffer(ibuffer);
@@ -585,5 +591,19 @@ public class OcrManager
         };
         BitmapTransform transform = new() { Bounds = bounds };
         return await decoder.GetSoftwareBitmapAsync(decoder.BitmapPixelFormat, decoder.BitmapAlphaMode, transform, ExifOrientationMode.IgnoreExifOrientation, ColorManagementMode.DoNotColorManage);
+    }
+
+    private static void InvertPixels(byte[] pixels)
+    {
+        // Assuming 32bpp (4 bytes per pixel: B, G, R, A)
+        // Parallelize for performance on large screenshots
+        Parallel.For(0, pixels.Length / 4, i =>
+        {
+            int offset = i * 4;
+            pixels[offset] = (byte)(255 - pixels[offset]);         // B
+            pixels[offset + 1] = (byte)(255 - pixels[offset + 1]); // G
+            pixels[offset + 2] = (byte)(255 - pixels[offset + 2]); // R
+            // Alpha at offset+3 is left alone
+        });
     }
 }
