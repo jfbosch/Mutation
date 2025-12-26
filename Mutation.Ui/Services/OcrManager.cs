@@ -19,6 +19,7 @@ using Windows.Storage.Streams;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace Mutation.Ui.Services;
@@ -506,19 +507,35 @@ public class OcrManager
         BeepPlayer.Play(type);
     }
 
-    private async Task<SoftwareBitmap?> CaptureScreenshotAsync()
-    {
-        var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-        FormWindowState? prevState = null;
-        IntPtr? hwnd = null;
-        try
+        [DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
+
+        private const int SM_XVIRTUALSCREEN = 76;
+        private const int SM_YVIRTUALSCREEN = 77;
+        private const int SM_CXVIRTUALSCREEN = 78;
+        private const int SM_CYVIRTUALSCREEN = 79;
+
+        private async Task<SoftwareBitmap?> CaptureScreenshotAsync()
         {
-            if (_window is not null)
+            // Use GetSystemMetrics to retrieve the physical pixel bounds of the virtual screen.
+            // This avoids the scaling issues associated with System.Windows.Forms.SystemInformation.VirtualScreen on high-DPI displays.
+            int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+            int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+            int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+            int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+            var bounds = new Rectangle(left, top, width, height);
+
+            FormWindowState? prevState = null;
+            IntPtr? hwnd = null;
+            try
             {
-                hwnd = WinRT.Interop.WindowNative.GetWindowHandle(_window);
+                if (_window is not null)
+                {
+                    hwnd = WinRT.Interop.WindowNative.GetWindowHandle(_window);
+                }
             }
-        }
-        catch { }
+            catch { }
 
         using Bitmap gdiBmp = new(bounds.Width, bounds.Height, PixelFormat.Format32bppPArgb);
         using (Graphics g = Graphics.FromImage(gdiBmp))
@@ -533,9 +550,9 @@ public class OcrManager
         try
         {
             int srcStride = data.Stride;
-            int height = data.Height;
-            int width = data.Width;
-            int length = Math.Abs(srcStride) * height;
+            int pixelHeight = data.Height;
+            int pixelWidth = data.Width;
+            int length = Math.Abs(srcStride) * pixelHeight;
             byte[] pixels = new byte[length];
             System.Runtime.InteropServices.Marshal.Copy(data.Scan0, pixels, 0, length);
 
@@ -545,7 +562,7 @@ public class OcrManager
             }
 
             var ibuffer = pixels.AsBuffer();
-            bmp = new SoftwareBitmap(BitmapPixelFormat.Bgra8, width, height, BitmapAlphaMode.Premultiplied);
+            bmp = new SoftwareBitmap(BitmapPixelFormat.Bgra8, pixelWidth, pixelHeight, BitmapAlphaMode.Premultiplied);
             bmp.CopyFromBuffer(ibuffer);
         }
         finally
