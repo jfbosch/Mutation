@@ -99,6 +99,14 @@ public sealed partial class RegionSelectionWindow : Window
 	private const uint SWP_NOACTIVATE = 0x0010;
 	private const int SW_RESTORE = 9;
 	private const int FocusRetryDelayMilliseconds = 50; // Allow Windows message pump to settle before retrying focus restoration
+
+	[DllImport("user32.dll")]
+	private static extern int GetSystemMetrics(int nIndex);
+
+	private const int SM_XVIRTUALSCREEN = 76;
+	private const int SM_YVIRTUALSCREEN = 77;
+	private const int SM_CXVIRTUALSCREEN = 78;
+	private const int SM_CYVIRTUALSCREEN = 79;
 	public RegionSelectionWindow()
 	{
 		this.InitializeComponent();
@@ -113,8 +121,11 @@ public sealed partial class RegionSelectionWindow : Window
 		{
 			this.Activate();
 			SetForegroundWindow(_hwnd);
-			var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-			SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOMOVE | SWP_NOSIZE);
+			int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+			int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+			int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+			int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+			SetWindowPos(_hwnd, HWND_TOPMOST, left, top, width, height, SWP_NOMOVE | SWP_NOSIZE);
 			TryFocusOverlay();
 		}
 		catch { }
@@ -132,28 +143,32 @@ public sealed partial class RegionSelectionWindow : Window
 		// Ensure refs in case constructor timing varies
 		EnsureElementRefs();
 		// Prepare window for full-bleed content and no chrome; size to full virtual screen
-		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+		int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+		int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+		int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+		int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
 		var appWindow = this.AppWindow;
-                if (appWindow != null)
-                {
-                        try
-                        {
-                                appWindow.MoveAndResize(new RectInt32(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
-                                if (appWindow.Presenter is OverlappedPresenter presenter)
-                                {
-                                        presenter.IsResizable = false;
-                                        presenter.IsMaximizable = false;
-                                        presenter.IsMinimizable = false;
-                                        presenter.SetBorderAndTitleBar(false, false);
-                                }
-                        }
-                        catch { }
-                }
-                try
-                {
-                        SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOACTIVATE);
-                }
-                catch { }
+		if (appWindow != null)
+		{
+			try
+			{
+				appWindow.MoveAndResize(new RectInt32(left, top, width, height));
+				if (appWindow.Presenter is OverlappedPresenter presenter)
+				{
+					presenter.IsResizable = false;
+					presenter.IsMaximizable = false;
+					presenter.IsMinimizable = false;
+					presenter.SetBorderAndTitleBar(false, false);
+				}
+			}
+			catch { }
+		}
+		try
+		{
+			SetWindowPos(_hwnd, HWND_TOPMOST, left, top, width, height, SWP_NOACTIVATE);
+		}
+		catch { }
 		// Expand content into title bar area (hide chrome).
 		if (this.AppWindow?.TitleBar is AppWindowTitleBar tb)
 		{
@@ -179,22 +194,25 @@ public sealed partial class RegionSelectionWindow : Window
 		_bmpH = wb.PixelHeight;
 	}
 
-        public Task<Rect?> SelectRegionAsync()
-        {
-                _tcs = new TaskCompletionSource<Rect?>();
-                _dragging = false;
-                _lastPointerPos = null;
-                ResetSelection();
-                RememberForegroundWindow();
-                // Show and activate for input (in case window was hidden for reuse)
-                try { this.AppWindow?.Show(); } catch { }
-                this.Activate();
-                TryFocusOverlay();
-                // Ensure TopMost without using SWP_SHOWWINDOW to avoid flicker
-                var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
-                SetWindowPos(_hwnd, HWND_TOPMOST, bounds.Left, bounds.Top, bounds.Width, bounds.Height, SWP_NOMOVE | SWP_NOSIZE);
-                return _tcs.Task;
-        }
+	public Task<Rect?> SelectRegionAsync()
+	{
+		_tcs = new TaskCompletionSource<Rect?>();
+		_dragging = false;
+		_lastPointerPos = null;
+		ResetSelection();
+		RememberForegroundWindow();
+		// Show and activate for input (in case window was hidden for reuse)
+		try { this.AppWindow?.Show(); } catch { }
+		this.Activate();
+		TryFocusOverlay();
+		// Ensure TopMost without using SWP_SHOWWINDOW to avoid flicker
+		int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+		int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+		int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+		int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+		SetWindowPos(_hwnd, HWND_TOPMOST, left, top, width, height, SWP_NOMOVE | SWP_NOSIZE);
+		return _tcs.Task;
+	}
 
 	private void Overlay_PointerPressed(object sender, PointerRoutedEventArgs e)
 	{
@@ -301,11 +319,23 @@ public sealed partial class RegionSelectionWindow : Window
 		// Map selection (Overlay coords in DIP) to bitmap pixel coords for accurate crop
 		double scaleX = _bmpW / Math.Max(1.0, _overlay.ActualWidth);
 		double scaleY = _bmpH / Math.Max(1.0, _overlay.ActualHeight);
+
+		int ix = (int)Math.Round(x * scaleX);
+		int iy = (int)Math.Round(y * scaleY);
+		int iw = (int)Math.Round(w * scaleX);
+		int ih = (int)Math.Round(h * scaleY);
+
+		// Clamp to bitmap bounds
+		int x1 = Math.Max(0, Math.Min(ix, _bmpW));
+		int y1 = Math.Max(0, Math.Min(iy, _bmpH));
+		int x2 = Math.Max(0, Math.Min(ix + iw, _bmpW));
+		int y2 = Math.Max(0, Math.Min(iy + ih, _bmpH));
+
 		Rect rectPx = new(
-			Math.Max(0, Math.Round(x * scaleX)),
-			Math.Max(0, Math.Round(y * scaleY)),
-			Math.Max(1, Math.Round(w * scaleX)),
-			Math.Max(1, Math.Round(h * scaleY))
+			x1,
+			y1,
+			Math.Max(0, x2 - x1),
+			Math.Max(0, y2 - y1)
 		);
 		_tcs?.TrySetResult(rectPx);
 		ResetSelection();
@@ -423,7 +453,13 @@ public sealed partial class RegionSelectionWindow : Window
 	{
 		if (_initialLayoutDone) return;
 		_initialLayoutDone = true;
-		var bounds = System.Windows.Forms.SystemInformation.VirtualScreen;
+		
+		int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+		int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+		int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+		int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+		var bounds = new System.Drawing.Rectangle(left, top, width, height);
+		
 		InitializeCrosshairAtCursor(bounds);
 		TryFocusOverlay();
 	}
