@@ -1251,12 +1251,19 @@ public sealed partial class MainWindow : Window, IDisposable
 		{
 			BeepPlayer.Play(BeepType.Start);
 			TxtFormatTranscript.Text = "Formatting...";
-			string raw = TxtRawTranscript.Text;
-			string rulesFormatted = _transcriptFormatter.ApplyRules(raw, false);
+			string raw = await _clipboard.GetTextAsync();
+			if (string.IsNullOrWhiteSpace(raw))
+			{
+				ShowStatus("Formatting", "Clipboard is empty.", InfoBarSeverity.Warning);
+				TxtFormatTranscript.Text = string.Empty;
+				return;
+			}
+			// We don't need to apply rules to clipboard text as it might already be processed or come from elsewhere
+			// string rulesFormatted = _transcriptFormatter.ApplyRules(raw, false); 
 
 			string prompt = TxtFormatPrompt.Text;
 			string modelName = _settings.LlmSettings?.SelectedLlmModel ?? LlmSettings.DefaultModel;
-			string formatted = await _transcriptFormatter.FormatWithLlmAsync(rulesFormatted, prompt, modelName);
+			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt, modelName);
 			TxtFormatTranscript.Text = formatted;
 			_clipboard.SetText(formatted);
 			InsertIntoActiveApplication(formatted);
