@@ -1,5 +1,6 @@
 ﻿using CognitiveSupport;
 using Microsoft.UI.Xaml;
+using Mutation.Ui.Core;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -347,8 +348,11 @@ public class HotkeyManager : IDisposable
 					allSentViaInput = false;
 					break;
 				}
-				// small gap between chords
-				Thread.Sleep(25);
+				// Small gap between chords. Thread.Sleep is acceptable here because:
+				// - This runs on a background thread via Task.Run
+				// - The delay is very short (25ms)
+				// - Converting to async would add complexity without significant benefit
+					Thread.Sleep(AppConstants.HotkeyChordDelayMs);
 			}
 			catch (Exception ex)
 			{
@@ -440,7 +444,7 @@ public class HotkeyManager : IDisposable
 	private static bool SendHotkeyViaSendInput(Hotkey hotkey)
 	{
 		// Wait until user releases modifier keys from the original chord to avoid contamination
-		WaitForModifierRelease(timeoutMs: 200);
+		WaitForModifierRelease(timeoutMs: AppConstants.ModifierReleaseTimeoutMs);
 
 		var inputs = new List<INPUT>();
 
@@ -464,7 +468,9 @@ public class HotkeyManager : IDisposable
 			var preSent = SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
 			Log($"Pre-release injected {preSent}/{inputs.Count} modifier key-ups.");
 			inputs.Clear();
-			Thread.Sleep(10);
+			// Brief delay after releasing modifiers. Thread.Sleep is acceptable here
+			// as this runs on a background thread and the delay is minimal.
+			Thread.Sleep(AppConstants.ModifierReleaseDelayMs);
 		}
 
 		// Press modifiers (Ctrl, Shift, Alt) down in canonical order
@@ -558,7 +564,9 @@ public class HotkeyManager : IDisposable
 			if (!(ctrlDown || shiftDown || altDown || winDown))
 				break;
 
-			Thread.Sleep(10);
+			// Thread.Sleep is acceptable in this polling loop as it runs on a
+			// background thread and keeps CPU usage low while waiting.
+			Thread.Sleep(AppConstants.ModifierReleaseDelayMs);
 		}
 	}
 
