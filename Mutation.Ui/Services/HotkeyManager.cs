@@ -325,7 +325,7 @@ public class HotkeyManager : IDisposable
 				SendKeysOnUiThread(mappedHotkey);
 				return;
 			}
-			catch { /* ignore */ }
+			catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SendKeys env override failed: {ex.Message}"); }
 		}
 
 		// Support sequences like "Ctrl+C, Ctrl+V"
@@ -350,8 +350,9 @@ public class HotkeyManager : IDisposable
 				// small gap between chords
 				Thread.Sleep(25);
 			}
-			catch
+			catch (Exception ex)
 			{
+				System.Diagnostics.Debug.WriteLine($"SendInput parse failed for chord: {ex.Message}");
 				allSentViaInput = false;
 				break;
 			}
@@ -366,7 +367,7 @@ public class HotkeyManager : IDisposable
 				Log($"Fallback SendKeys: '{mappedHotkey}' (from '{hotkey}')");
 				SendKeysOnUiThread(mappedHotkey);
 			}
-			catch { /* give up silently */ }
+			catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SendKeys fallback failed: {ex.Message}"); }
 		}
 	}
 
@@ -383,7 +384,7 @@ public class HotkeyManager : IDisposable
 			// Post asynchronously; no need to wait/block.
 			_ = PostSendKeysAsync(mapped);
 		}
-		catch { /* swallow intentionally as this is a best-effort fallback path */ }
+		catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SendKeysOnUiThread failed: {ex.Message}"); }
 	}
 
 	private static Task PostSendKeysAsync(string mapped)
@@ -562,20 +563,32 @@ public class HotkeyManager : IDisposable
 	}
 
 	private static readonly string LogFile = Path.Combine(Path.GetTempPath(), "Mutation.Hotkey.log");
+	private const long MaxLogFileSize = 100 * 1024; // 100 KB max log size
 	private static void Log(string message)
 	{
 		try
 		{
+			// Rotate log file if it exceeds max size
+			if (File.Exists(LogFile))
+			{
+				var fileInfo = new FileInfo(LogFile);
+				if (fileInfo.Length > MaxLogFileSize)
+				{
+					string backupPath = LogFile + ".old";
+					if (File.Exists(backupPath))
+						File.Delete(backupPath);
+					File.Move(LogFile, backupPath);
+				}
+			}
 			var line = $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}";
 			File.AppendAllText(LogFile, line);
 		}
-		catch { }
+		catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"HotkeyManager.Log failed: {ex.Message}"); }
 	}
 
 	private static string NormalizeHotkey(Hotkey hk)
 	{
 		// Construct a deterministic modifier order & uppercase key for set membership
-		Span<char> buffer = stackalloc char[64];
 		var sb = new System.Text.StringBuilder(32);
 		if (hk.Control) sb.Append("CTRL+");
 		if (hk.Shift) sb.Append("SHIFT+");

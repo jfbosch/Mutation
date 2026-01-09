@@ -108,6 +108,6 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 			return keyterms;
 		}
 		else
-			return null;
+			return new List<string>();
 	}
 }

@@ -69,7 +69,7 @@ public partial class App : Application
 			string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"CrashLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
 			File.WriteAllText(logPath, message);
 		}
-		catch { /* Ignore logging failures */ }
+		catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Crash log write failed: {ex.Message}"); }
 
 		// Show topmost message box using P/Invoke (guaranteed to be on top)
 		MessageBox(IntPtr.Zero, message, source, MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND);
@@ -362,7 +362,7 @@ public partial class App : Application
 			_window.Closed += async (_, __) =>
 			{
 				// Ensure global hooks are released promptly
-				try { hkManager.Dispose(); } catch { }
+				try { hkManager.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"HotkeyManager dispose failed: {ex.Message}"); }
 				// Stop background host services and exit the app
 				await ShutdownAsync();
 			};
