@@ -239,7 +239,13 @@ public class OcrService : IOcrService, IDisposable
 				_window = window;
 			}
 
-			public async Task WaitAsync(CancellationToken token)
+			/// <summary>
+		/// Waits asynchronously until a request slot is available within the rate limit window.
+		/// Note: This uses a lock-based pattern which is safe here because the lock is only held
+		/// for brief synchronous operations (queue manipulation), and all async work (Task.Delay)
+		/// occurs outside the lock.
+		/// </summary>
+		public async Task WaitAsync(CancellationToken token)
 			{
 				while (true)
 				{

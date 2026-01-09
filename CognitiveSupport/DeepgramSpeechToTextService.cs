@@ -12,7 +12,6 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 	public string ServiceName { get; init; }
 
 	private readonly string _modelId;
-	private readonly object _lock = new object();
 	private readonly Deepgram.Clients.Interfaces.v1.IListenRESTClient _deepgramClient;
 	private readonly int _timeoutSeconds;
 
@@ -61,7 +60,7 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
 			int timeout = Math.Min(_timeoutSeconds * attempt, 60);
-			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+			using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
 			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
 			if (attempt > 0)
@@ -109,6 +108,6 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 			return keyterms;
 		}
 		else
-			return null;
+			return new List<string>();
 	}
 }

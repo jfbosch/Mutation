@@ -13,6 +13,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace Mutation.Ui;
 
@@ -23,10 +25,58 @@ public partial class App : Application
 	private const string OpenAiHttpClientName = "openai-http-client";
 	private bool _isShuttingDown = false;
 
+	// P/Invoke for topmost MessageBox
+	[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+	private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+	private const uint MB_OK = 0x00000000;
+	private const uint MB_ICONERROR = 0x00000010;
+	private const uint MB_TOPMOST = 0x00040000;
+	private const uint MB_SETFOREGROUND = 0x00010000;
+
         public App()
         {
-
+		// Global crash handlers for debugging - last resort before process termination
+		Application.Current.UnhandledException += OnUnhandledException;
+		AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
+		TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
         }
+
+	private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+	{
+		e.Handled = true; // Try to prevent immediate termination
+		HandleFatalException("Unhandled UI Exception", e.Exception);
+	}
+
+	private void OnAppDomainUnhandledException(object sender, System.UnhandledExceptionEventArgs e)
+	{
+		HandleFatalException("Unhandled AppDomain Exception", e.ExceptionObject as Exception);
+	}
+
+	private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+	{
+		e.SetObserved(); // Prevent termination on .NET 4+
+		HandleFatalException("Unobserved Task Exception", e.Exception);
+	}
+
+	private void HandleFatalException(string source, Exception? exception)
+	{
+		string message = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {source}\n\n{exception}";
+
+		// Write to crash log file
+		try
+		{
+			string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"CrashLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+			File.WriteAllText(logPath, message);
+		}
+		catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Crash log write failed: {ex.Message}"); }
+
+		// Show topmost message box using P/Invoke (guaranteed to be on top)
+		MessageBox(IntPtr.Zero, message, source, MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND);
+
+		// Forcefully terminate the entire process immediately
+		Environment.FailFast($"Fatal crash: {source}", exception);
+	}
 
         protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
@@ -312,7 +362,7 @@ public partial class App : Application
 			_window.Closed += async (_, __) =>
 			{
 				// Ensure global hooks are released promptly
-				try { hkManager.Dispose(); } catch { }
+				try { hkManager.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"HotkeyManager dispose failed: {ex.Message}"); }
 				// Stop background host services and exit the app
 				await ShutdownAsync();
 			};

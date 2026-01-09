@@ -1,5 +1,6 @@
 ﻿using CognitiveSupport;
 using Microsoft.UI.Xaml;
+using Mutation.Ui.Core;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -29,7 +30,8 @@ public class HotkeyManager : IDisposable
 	private static SynchronizationContext? s_uiCtx;
 	private int _id;
 	private IntPtr _prevWndProc;
-        private WndProcDelegate? _newWndProc;
+	private WndProcDelegate? _newWndProc;
+	private GCHandle _wndProcHandle;
 
 		public List<string> FailedRegistrations { get; } = new(); // aggregate (router + core)
 		public IReadOnlyList<string> CoreFailedRegistrations => _coreFailedRegistrations; // only core (non-router) failures
@@ -107,6 +109,7 @@ public class HotkeyManager : IDisposable
 		_hwnd = WindowNative.GetWindowHandle(window);
 		_settings = settings ?? throw new ArgumentNullException(nameof(settings));
 		_newWndProc = WndProc;
+		_wndProcHandle = GCHandle.Alloc(_newWndProc);
 		_prevWndProc = SetWindowLongPtr(_hwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_newWndProc));
 		// Capture UI thread context so we can run SendKeys fallback on STA with a message pump
 		s_uiCtx ??= SynchronizationContext.Current;
@@ -323,7 +326,7 @@ public class HotkeyManager : IDisposable
 				SendKeysOnUiThread(mappedHotkey);
 				return;
 			}
-			catch { /* ignore */ }
+			catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SendKeys env override failed: {ex.Message}"); }
 		}
 
 		// Support sequences like "Ctrl+C, Ctrl+V"
@@ -345,11 +348,15 @@ public class HotkeyManager : IDisposable
 					allSentViaInput = false;
 					break;
 				}
-				// small gap between chords
-				Thread.Sleep(25);
+				// Small gap between chords. Thread.Sleep is acceptable here because:
+				// - This runs on a background thread via Task.Run
+				// - The delay is very short (25ms)
+				// - Converting to async would add complexity without significant benefit
+					Thread.Sleep(AppConstants.HotkeyChordDelayMs);
 			}
-			catch
+			catch (Exception ex)
 			{
+				System.Diagnostics.Debug.WriteLine($"SendInput parse failed for chord: {ex.Message}");
 				allSentViaInput = false;
 				break;
 			}
@@ -364,7 +371,7 @@ public class HotkeyManager : IDisposable
 				Log($"Fallback SendKeys: '{mappedHotkey}' (from '{hotkey}')");
 				SendKeysOnUiThread(mappedHotkey);
 			}
-			catch { /* give up silently */ }
+			catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SendKeys fallback failed: {ex.Message}"); }
 		}
 	}
 
@@ -381,7 +388,7 @@ public class HotkeyManager : IDisposable
 			// Post asynchronously; no need to wait/block.
 			_ = PostSendKeysAsync(mapped);
 		}
-		catch { /* swallow intentionally as this is a best-effort fallback path */ }
+		catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"SendKeysOnUiThread failed: {ex.Message}"); }
 	}
 
 	private static Task PostSendKeysAsync(string mapped)
@@ -437,7 +444,7 @@ public class HotkeyManager : IDisposable
 	private static bool SendHotkeyViaSendInput(Hotkey hotkey)
 	{
 		// Wait until user releases modifier keys from the original chord to avoid contamination
-		WaitForModifierRelease(timeoutMs: 200);
+		WaitForModifierRelease(timeoutMs: AppConstants.ModifierReleaseTimeoutMs);
 
 		var inputs = new List<INPUT>();
 
@@ -461,7 +468,9 @@ public class HotkeyManager : IDisposable
 			var preSent = SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf<INPUT>());
 			Log($"Pre-release injected {preSent}/{inputs.Count} modifier key-ups.");
 			inputs.Clear();
-			Thread.Sleep(10);
+			// Brief delay after releasing modifiers. Thread.Sleep is acceptable here
+			// as this runs on a background thread and the delay is minimal.
+			Thread.Sleep(AppConstants.ModifierReleaseDelayMs);
 		}
 
 		// Press modifiers (Ctrl, Shift, Alt) down in canonical order
@@ -555,25 +564,39 @@ public class HotkeyManager : IDisposable
 			if (!(ctrlDown || shiftDown || altDown || winDown))
 				break;
 
-			Thread.Sleep(10);
+			// Thread.Sleep is acceptable in this polling loop as it runs on a
+			// background thread and keeps CPU usage low while waiting.
+			Thread.Sleep(AppConstants.ModifierReleaseDelayMs);
 		}
 	}
 
 	private static readonly string LogFile = Path.Combine(Path.GetTempPath(), "Mutation.Hotkey.log");
+	private const long MaxLogFileSize = 100 * 1024; // 100 KB max log size
 	private static void Log(string message)
 	{
 		try
 		{
+			// Rotate log file if it exceeds max size
+			if (File.Exists(LogFile))
+			{
+				var fileInfo = new FileInfo(LogFile);
+				if (fileInfo.Length > MaxLogFileSize)
+				{
+					string backupPath = LogFile + ".old";
+					if (File.Exists(backupPath))
+						File.Delete(backupPath);
+					File.Move(LogFile, backupPath);
+				}
+			}
 			var line = $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}";
 			File.AppendAllText(LogFile, line);
 		}
-		catch { }
+		catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"HotkeyManager.Log failed: {ex.Message}"); }
 	}
 
 	private static string NormalizeHotkey(Hotkey hk)
 	{
 		// Construct a deterministic modifier order & uppercase key for set membership
-		Span<char> buffer = stackalloc char[64];
 		var sb = new System.Text.StringBuilder(32);
 		if (hk.Control) sb.Append("CTRL+");
 		if (hk.Shift) sb.Append("SHIFT+");
@@ -586,7 +609,17 @@ public class HotkeyManager : IDisposable
 	public void Dispose()
 	{
 		UnregisterAll();
+		// Restore the original window procedure BEFORE freeing the delegate handle
+		// to prevent access violation if WndProc is called while being collected
 		if (_prevWndProc != IntPtr.Zero)
+		{
 			SetWindowLongPtr(_hwnd, GWLP_WNDPROC, _prevWndProc);
+			_prevWndProc = IntPtr.Zero;
+		}
+
+		// Free the GCHandle only after the window procedure has been restored
+		if (_wndProcHandle.IsAllocated)
+			_wndProcHandle.Free();
+		_newWndProc = null;
 	}
 }

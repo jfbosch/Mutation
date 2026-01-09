@@ -1,4 +1,5 @@
 ﻿using CognitiveSupport;
+using Mutation.Ui.Core;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,7 +15,7 @@ internal class SpeechToTextManager : IDisposable
 {
 	private const string SessionFilePrefix = "session_";
 	private const string SessionTimestampFormat = "yyyy-MM-dd_HH-mm-ss";
-	private const int MaxSessions = 10;
+	private const int MaxSessions = AppConstants.MaxSpeechSessions;
 	private static readonly TimeSpan SessionRetryDelay = TimeSpan.FromSeconds(1);
 	private static readonly Regex SessionFilePattern = new(
 			  "^session_(\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2})\\.[A-Za-z0-9]+$",

@@ -71,6 +71,10 @@ public class OcrManager
             await _clipboard.SetImageAsync(bitmap);
             _ = Task.Run(() => PlayBeep(BeepType.Success));
         }
+        else
+        {
+            _ = Task.Run(() => PlayBeep(BeepType.Failure));
+        }
     }
 
     public async Task<OcrResult> TakeScreenshotAndExtractTextAsync(OcrReadingOrder order)

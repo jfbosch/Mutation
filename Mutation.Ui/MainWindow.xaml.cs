@@ -1629,6 +1629,15 @@ public sealed partial class MainWindow : Window, IDisposable
 		if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
 		{
 			_activeSpeechService = svc;
+
+			// Persist the selection immediately so it survives app restart
+			if (_settings.SpeechToTextSettings != null &&
+				_settings.SpeechToTextSettings.ActiveSpeechToTextService != svc.ServiceName)
+			{
+				_settings.SpeechToTextSettings.ActiveSpeechToTextService = svc.ServiceName;
+				_settingsManager.SaveSettingsToFile(_settings);
+			}
+
 			var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == svc.ServiceName);
 			if (serviceSettings != null)
 			{
@@ -1790,6 +1799,35 @@ public sealed partial class MainWindow : Window, IDisposable
 		};
 
 		await settingsDialog.ShowAsync();
+	}
+
+	// Debug crash simulation handlers - for testing global exception handling
+	private void DebugSimulateUiCrash_Click(object sender, RoutedEventArgs e)
+	{
+		throw new InvalidOperationException("Simulated UI thread crash for debugging purposes.");
+	}
+
+	private void DebugSimulateBackgroundCrash_Click(object sender, RoutedEventArgs e)
+	{
+		System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+		{
+			throw new InvalidOperationException("Simulated background thread crash for debugging purposes.");
+		});
+	}
+
+	private void DebugSimulateTaskCrash_Click(object sender, RoutedEventArgs e)
+	{
+		// Fire-and-forget task that throws an unobserved exception
+		_ = Task.Run(() =>
+		{
+			throw new InvalidOperationException("Simulated unobserved Task crash for debugging purposes.");
+		});
+		// Force garbage collection to trigger UnobservedTaskException
+		Task.Delay(500).ContinueWith(_ =>
+		{
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+		});
 	}
 
 	public void Dispose()

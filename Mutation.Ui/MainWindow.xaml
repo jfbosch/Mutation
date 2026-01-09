@@ -47,6 +47,24 @@
                                 <FontIcon Glyph="&#xE713;"/>
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutSubItem Text="Debug">
+                            <MenuFlyoutSubItem.Icon>
+                                <FontIcon Glyph="&#xEBE8;"/>
+                            </MenuFlyoutSubItem.Icon>
+                            <MenuFlyoutItem 
+                                Text="Simulate UI Crash" 
+                                Click="DebugSimulateUiCrash_Click"
+                                ToolTipService.ToolTip="Throws an unhandled exception on the UI thread"/>
+                            <MenuFlyoutItem 
+                                Text="Simulate Background Crash" 
+                                Click="DebugSimulateBackgroundCrash_Click"
+                                ToolTipService.ToolTip="Throws an unhandled exception on a background thread"/>
+                            <MenuFlyoutItem 
+                                Text="Simulate Task Crash" 
+                                Click="DebugSimulateTaskCrash_Click"
+                                ToolTipService.ToolTip="Throws an unobserved exception in an async Task"/>
+                        </MenuFlyoutSubItem>
                     </MenuFlyout>
                 </Button.Flyout>
                 <FontIcon Glyph="&#xE700;" FontFamily="Segoe Fluent Icons"/>

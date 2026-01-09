@@ -304,7 +304,7 @@ internal class AudioSessionManager : IDisposable
             try
             {
                 StatusMessage?.Invoke(this, "Formatting with LLM...");
-                string modelName = _settings.LlmSettings.SelectedLlmModel ?? LlmSettings.DefaultModel;
+                string modelName = _settings.LlmSettings?.SelectedLlmModel ?? LlmSettings.DefaultModel;
                 // Pass the rules-formatted text to the LLM
                 finalFormattedText = await _transcriptFormatter.FormatWithLlmAsync(rulesFormattedText, llmPrompt, modelName);
             }
