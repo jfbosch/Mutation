@@ -1629,6 +1629,15 @@ public sealed partial class MainWindow : Window, IDisposable
 		if (CmbSpeechService.SelectedItem is ISpeechToTextService svc)
 		{
 			_activeSpeechService = svc;
+
+			// Persist the selection immediately so it survives app restart
+			if (_settings.SpeechToTextSettings != null &&
+				_settings.SpeechToTextSettings.ActiveSpeechToTextService != svc.ServiceName)
+			{
+				_settings.SpeechToTextSettings.ActiveSpeechToTextService = svc.ServiceName;
+				_settingsManager.SaveSettingsToFile(_settings);
+			}
+
 			var serviceSettings = _settings.SpeechToTextSettings?.Services?.FirstOrDefault(s => s.Name == svc.ServiceName);
 			if (serviceSettings != null)
 			{
