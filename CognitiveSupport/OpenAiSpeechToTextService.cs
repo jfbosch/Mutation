@@ -54,7 +54,7 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
 			int timeout = Math.Min(_timeoutSeconds * attempt, 60);
-			var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+			using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
 			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
 			if (attempt > 0)

@@ -29,7 +29,8 @@ public class HotkeyManager : IDisposable
 	private static SynchronizationContext? s_uiCtx;
 	private int _id;
 	private IntPtr _prevWndProc;
-        private WndProcDelegate? _newWndProc;
+	private WndProcDelegate? _newWndProc;
+	private GCHandle _wndProcHandle;
 
 		public List<string> FailedRegistrations { get; } = new(); // aggregate (router + core)
 		public IReadOnlyList<string> CoreFailedRegistrations => _coreFailedRegistrations; // only core (non-router) failures
@@ -107,6 +108,7 @@ public class HotkeyManager : IDisposable
 		_hwnd = WindowNative.GetWindowHandle(window);
 		_settings = settings ?? throw new ArgumentNullException(nameof(settings));
 		_newWndProc = WndProc;
+		_wndProcHandle = GCHandle.Alloc(_newWndProc);
 		_prevWndProc = SetWindowLongPtr(_hwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_newWndProc));
 		// Capture UI thread context so we can run SendKeys fallback on STA with a message pump
 		s_uiCtx ??= SynchronizationContext.Current;
@@ -586,7 +588,17 @@ public class HotkeyManager : IDisposable
 	public void Dispose()
 	{
 		UnregisterAll();
+		// Restore the original window procedure BEFORE freeing the delegate handle
+		// to prevent access violation if WndProc is called while being collected
 		if (_prevWndProc != IntPtr.Zero)
+		{
 			SetWindowLongPtr(_hwnd, GWLP_WNDPROC, _prevWndProc);
+			_prevWndProc = IntPtr.Zero;
+		}
+
+		// Free the GCHandle only after the window procedure has been restored
+		if (_wndProcHandle.IsAllocated)
+			_wndProcHandle.Free();
+		_newWndProc = null;
 	}
 }
