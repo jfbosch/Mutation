@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace Mutation.Ui;
 
@@ -25,8 +26,48 @@ public partial class App : Application
 
         public App()
         {
-
+		// Global crash handlers for debugging - last resort before process termination
+		Application.Current.UnhandledException += OnUnhandledException;
+		AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
+		TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
         }
+
+	private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+	{
+		e.Handled = true; // Try to prevent immediate termination
+		HandleFatalException("Unhandled UI Exception", e.Exception);
+	}
+
+	private void OnAppDomainUnhandledException(object sender, System.UnhandledExceptionEventArgs e)
+	{
+		HandleFatalException("Unhandled AppDomain Exception", e.ExceptionObject as Exception);
+	}
+
+	private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+	{
+		e.SetObserved(); // Prevent termination on .NET 4+
+		HandleFatalException("Unobserved Task Exception", e.Exception);
+	}
+
+	private void HandleFatalException(string source, Exception? exception)
+	{
+		string message = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {source}\n\n{exception}";
+
+		// Write to crash log file
+		try
+		{
+			string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"CrashLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+			File.WriteAllText(logPath, message);
+		}
+		catch { /* Ignore logging failures */ }
+
+		// Show message box (synchronous - guaranteed to display before exit)
+		System.Windows.Forms.MessageBox.Show(
+			message,
+			source,
+			System.Windows.Forms.MessageBoxButtons.OK,
+			System.Windows.Forms.MessageBoxIcon.Error);
+	}
 
         protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
