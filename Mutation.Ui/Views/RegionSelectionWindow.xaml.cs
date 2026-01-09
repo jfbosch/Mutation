@@ -92,6 +92,22 @@ public sealed partial class RegionSelectionWindow : Window
 	[DllImport("kernel32.dll")]
 	private static extern uint GetCurrentThreadId();
 
+	// Low-level keyboard hook for global Escape key capture
+	private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+	[DllImport("user32.dll", SetLastError = true)]
+	private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+	[DllImport("user32.dll", SetLastError = true)]
+	private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+	[DllImport("user32.dll")]
+	private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+	[DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+	private static extern IntPtr GetModuleHandle(string? lpModuleName);
+	private const int WH_KEYBOARD_LL = 13;
+	private const int WM_KEYDOWN = 0x0100;
+	private const int VK_ESCAPE = 0x1B;
+	private IntPtr _keyboardHookHandle = IntPtr.Zero;
+	private LowLevelKeyboardProc? _keyboardHookProc;
+
 	private static readonly IntPtr HWND_TOPMOST = new(-1);
 	private const uint SWP_SHOWWINDOW = 0x0040; // keep for reference, but avoid using to prevent flicker
 	private const uint SWP_NOMOVE = 0x0002;
@@ -201,6 +217,7 @@ public sealed partial class RegionSelectionWindow : Window
 		_lastPointerPos = null;
 		ResetSelection();
 		RememberForegroundWindow();
+		InstallKeyboardHook();
 		// Show and activate for input (in case window was hidden for reuse)
 		try { this.AppWindow?.Show(); } catch { }
 		this.Activate();
@@ -570,6 +587,7 @@ public sealed partial class RegionSelectionWindow : Window
 
 	private void HideAndRestore()
 	{
+		UninstallKeyboardHook();
 		try { this.AppWindow?.Hide(); } catch { }
 		if (TryRestoreForegroundWindow() || _previousForeground == IntPtr.Zero)
 		{
@@ -604,5 +622,45 @@ public sealed partial class RegionSelectionWindow : Window
 				}
 			});
 		});
+	}
+
+	private void InstallKeyboardHook()
+	{
+		if (_keyboardHookHandle != IntPtr.Zero)
+			return; // Already installed
+
+		_keyboardHookProc = KeyboardHookCallback;
+		using var curProcess = System.Diagnostics.Process.GetCurrentProcess();
+		using var curModule = curProcess.MainModule;
+		var moduleHandle = GetModuleHandle(curModule?.ModuleName);
+		_keyboardHookHandle = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardHookProc, moduleHandle, 0);
+	}
+
+	private void UninstallKeyboardHook()
+	{
+		if (_keyboardHookHandle == IntPtr.Zero)
+			return;
+
+		UnhookWindowsHookEx(_keyboardHookHandle);
+		_keyboardHookHandle = IntPtr.Zero;
+		_keyboardHookProc = null;
+	}
+
+	private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+	{
+		if (nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN)
+		{
+			int vkCode = Marshal.ReadInt32(lParam);
+			if (vkCode == VK_ESCAPE)
+			{
+				// Cancel the selection on Escape key
+				_dragging = false;
+				_tcs?.TrySetResult(null);
+				// Use dispatcher to ensure UI operations happen on the correct thread
+				_dispatcherQueue?.TryEnqueue(() => HideAndRestore());
+				return (IntPtr)1; // Suppress the key
+			}
+		}
+		return CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
 	}
 }
