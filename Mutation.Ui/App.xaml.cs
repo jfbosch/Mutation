@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Mutation.Ui;
@@ -23,6 +24,15 @@ public partial class App : Application
 	private IHost? _host;
 	private const string OpenAiHttpClientName = "openai-http-client";
 	private bool _isShuttingDown = false;
+
+	// P/Invoke for topmost MessageBox
+	[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+	private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+	private const uint MB_OK = 0x00000000;
+	private const uint MB_ICONERROR = 0x00000010;
+	private const uint MB_TOPMOST = 0x00040000;
+	private const uint MB_SETFOREGROUND = 0x00010000;
 
         public App()
         {
@@ -61,12 +71,11 @@ public partial class App : Application
 		}
 		catch { /* Ignore logging failures */ }
 
-		// Show message box (synchronous - guaranteed to display before exit)
-		System.Windows.Forms.MessageBox.Show(
-			message,
-			source,
-			System.Windows.Forms.MessageBoxButtons.OK,
-			System.Windows.Forms.MessageBoxIcon.Error);
+		// Show topmost message box using P/Invoke (guaranteed to be on top)
+		MessageBox(IntPtr.Zero, message, source, MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND);
+
+		// Forcefully terminate the entire process immediately
+		Environment.FailFast($"Fatal crash: {source}", exception);
 	}
 
         protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)

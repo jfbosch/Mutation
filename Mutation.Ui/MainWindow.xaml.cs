@@ -1801,6 +1801,35 @@ public sealed partial class MainWindow : Window, IDisposable
 		await settingsDialog.ShowAsync();
 	}
 
+	// Debug crash simulation handlers - for testing global exception handling
+	private void DebugSimulateUiCrash_Click(object sender, RoutedEventArgs e)
+	{
+		throw new InvalidOperationException("Simulated UI thread crash for debugging purposes.");
+	}
+
+	private void DebugSimulateBackgroundCrash_Click(object sender, RoutedEventArgs e)
+	{
+		System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+		{
+			throw new InvalidOperationException("Simulated background thread crash for debugging purposes.");
+		});
+	}
+
+	private void DebugSimulateTaskCrash_Click(object sender, RoutedEventArgs e)
+	{
+		// Fire-and-forget task that throws an unobserved exception
+		_ = Task.Run(() =>
+		{
+			throw new InvalidOperationException("Simulated unobserved Task crash for debugging purposes.");
+		});
+		// Force garbage collection to trigger UnobservedTaskException
+		Task.Delay(500).ContinueWith(_ =>
+		{
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+		});
+	}
+
 	public void Dispose()
 	{
 		_audioSessionManager?.Dispose();
