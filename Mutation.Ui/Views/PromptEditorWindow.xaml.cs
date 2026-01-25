@@ -1,0 +1,160 @@
+using CognitiveSupport;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using System;
+using Windows.ApplicationModel.DataTransfer;
+using Microsoft.UI.Windowing;
+using WinRT.Interop;
+using Microsoft.UI;
+
+namespace Mutation.Ui.Views;
+
+public sealed partial class PromptEditorWindow : Window
+{
+    public LlmSettings.LlmPrompt Prompt { get; private set; }
+    public bool IsSaved { get; private set; }
+    private readonly TranscriptFormatter _formatter;
+
+    public PromptEditorWindow(LlmSettings.LlmPrompt prompt, TranscriptFormatter formatter)
+    {
+        this.InitializeComponent();
+        _formatter = formatter;
+        
+        // Set window size
+        IntPtr hWnd = WindowNative.GetWindowHandle(this);
+        WindowId windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
+        AppWindow appWindow = AppWindow.GetFromWindowId(windowId);
+        appWindow.Resize(new Windows.Graphics.SizeInt32(600, 500));
+        
+        // Center the window
+        var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
+        if (displayArea != null)
+        {
+            var centeredX = (displayArea.WorkArea.Width - 600) / 2;
+            var centeredY = (displayArea.WorkArea.Height - 500) / 2;
+            appWindow.Move(new Windows.Graphics.PointInt32(displayArea.WorkArea.X + centeredX, displayArea.WorkArea.Y + centeredY));
+        }
+
+        // Make it effective modal (always on top)
+        if (appWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.IsAlwaysOnTop = true;
+            // presenter.IsModal = true; // CRASH FIX: IsModal requires an owner to be set via P/Invoke, which we aren't doing accurately enough. checking IsAlwaysOnTop is sufficient.
+        }
+
+        if (prompt == null)
+        {
+            Prompt = new LlmSettings.LlmPrompt();
+            Prompt = new LlmSettings.LlmPrompt();
+            Title = "Add New Prompt";
+        }
+        else
+        {
+            Prompt = prompt;
+            Prompt = prompt;
+            Title = "Edit Prompt";
+            
+            // Populate fields
+            TxtName.Text = Prompt.Name;
+            TxtHotkey.Text = Prompt.Hotkey;
+            TxtContent.Text = Prompt.Content;
+            ChkAutoRun.IsChecked = Prompt.AutoRun;
+        }
+    }
+
+    private void BtnSave_Click(object sender, RoutedEventArgs e)
+    {
+        // Validation
+        if (string.IsNullOrWhiteSpace(TxtName.Text))
+        {
+            ShowError("Name is required.");
+            return;
+        }
+
+        // Update object
+        Prompt.Name = TxtName.Text;
+        Prompt.Hotkey = TxtHotkey.Text; // Basic text for now, could implement validation later
+        Prompt.Content = TxtContent.Text;
+        Prompt.AutoRun = ChkAutoRun.IsChecked ?? false;
+
+        IsSaved = true;
+
+        // Set DialogResult logic (using Tag or similar if Window doesn't support DialogResult natively like WPF)
+        // Since this is WinUI 3 Window, we don't have DialogResult. 
+        // We can just close and the caller checks the object properties or we use an event.
+        // But commonly checking if properties were set is enough if we handle "Cancel" by not updating.
+        // Wait, I updated only the object on Save. 
+        // If the caller passed a reference to an existing object, I modified it in place. 
+        // If "Cancel" is clicked, I should probably have cloned it first?
+        // Correct approach: Clone on entry, apply to original on Save. OR just modify properties on Save.
+        // Since I am modifying `Prompt` which is a reference, if I modify it on Save, that is fine.
+        // If I modify it as I type (bindings), Cancel is harder. I am not using bindings here, just direct set on Save.
+        
+        this.Close();
+    }
+
+    private void BtnCancel_Click(object sender, RoutedEventArgs e)
+    {
+         // If we don't save, we don't update potential output or we indicate failure?
+         // For a new prompt, we can return null? 
+         // But `Prompt` is a property.
+         // Let's add a `Confirmed` property.
+         Prompt = null; 
+         this.Close();
+    }
+
+    private async void BtnTest_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dataPackageView = Clipboard.GetContent();
+            if (dataPackageView.Contains(StandardDataFormats.Text))
+            {
+                string text = await dataPackageView.GetTextAsync();
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    // Use the CURRENT text in the content box, not the saved one
+                    string currentContent = TxtContent.Text;
+                    string result = await _formatter.FormatWithLlmAsync(text, currentContent, LlmSettings.DefaultModel); // Using default model for test
+                    
+                    // Show result in a dialog or just a message box?
+                    // WinUI 3 MessageDialog or ContentDialog requires XamlRoot.
+                    // This is a Window, so we have a root.
+                    
+                    var dialog = new ContentDialog
+                    {
+                        Title = "Test Result",
+                        Content = new ScrollViewer { Content = new TextBlock { Text = result, TextWrapping = TextWrapping.Wrap } },
+                        CloseButtonText = "Close",
+                        XamlRoot = this.Content.XamlRoot
+                    };
+                    await dialog.ShowAsync();
+                }
+                else
+                {
+                    ShowError("Clipboard is empty.");
+                }
+            }
+            else
+            {
+                ShowError("Clipboard does not contain text.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Test failed: {ex.Message}");
+        }
+    }
+
+    private async void ShowError(string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Error",
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = this.Content.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+}

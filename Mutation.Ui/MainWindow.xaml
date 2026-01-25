@@ -8,6 +8,7 @@
     xmlns:ScottPlot="using:ScottPlot.WinUI"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:Mutation.Ui.Converters"
     mc:Ignorable="d"
     Title="Mutation">
 
@@ -16,6 +17,9 @@
     </Window.SystemBackdrop>
 
     <Grid Background="{ThemeResource AppBackgroundBrush}">
+        <Grid.Resources>
+            <converters:BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -366,31 +370,58 @@
                     <!-- Format Prompt -->
                     <Border x:Name="FormatPromptCard" Style="{StaticResource CardStyle}" Grid.Row="1" Grid.ColumnSpan="2">
                         <StackPanel Spacing="12">
-                            <TextBlock Text="Format Prompt" Style="{StaticResource SectionHeaderTextStyle}" />
-                            <TextBlock Text="Add optional guidance for LLM formatting." Style="{StaticResource CaptionTextStyle}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Format Prompts" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <TextBlock Text="Configure multiple prompts for LLM formatting." Style="{StaticResource CaptionTextStyle}" />
+                                </StackPanel>
+                                <Button x:Name="BtnAddPrompt" Grid.Column="1" Content="Add Prompt" Click="BtnAddPrompt_Click" />
+                            </Grid>
+
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBox
-                                    x:Name="TxtFormatPrompt"
-                                    Grid.Column="0"
-                                    PlaceholderText="Add optional guidance for LLM formatting"
-                                    AcceptsReturn="True"
-                                    TextWrapping="Wrap"
-                                    ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                    ScrollViewer.VerticalScrollMode="Auto"
-                                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                    ScrollViewer.HorizontalScrollMode="Auto"
-                                    AutomationProperties.Name="Format prompt"
-                                    ToolTipService.ToolTip="Prompt used for large language model formatting" />
+                                
+                                <ListView x:Name="LstPrompts" Grid.Column="0" SelectionMode="None" MaxHeight="200">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnSpacing="12" Padding="0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Text="{Binding Hotkey}" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock Text="(Auto-Run)" FontSize="12" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Visibility="{Binding AutoRun, Converter={StaticResource BoolToVisConverter}}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <Button Grid.Column="1" Content="Run" Click="BtnRunPrompt_Click" Tag="{Binding}" Style="{StaticResource OutlinedButtonStyle}" />
+                                                <Button Grid.Column="2" Content="Edit" Click="BtnEditPrompt_Click" Tag="{Binding}" />
+                                                <Button Grid.Column="3" Content="Delete" Click="BtnDeletePrompt_Click" Tag="{Binding}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+
                                 <ComboBox
                                     x:Name="CmbLlmModel"
                                     Grid.Column="1"
                                     Header="LLM Model"
                                     PlaceholderText="Select a model"
                                     HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Top"
                                     SelectionChanged="CmbLlmModel_SelectionChanged" />
                             </Grid>
                         </StackPanel>
