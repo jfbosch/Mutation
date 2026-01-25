@@ -1165,6 +1165,12 @@ public sealed partial class MainWindow : Window, IDisposable
             picker.FileTypeFilter.Add(".opus");
             picker.FileTypeFilter.Add(".wma");
             picker.FileTypeFilter.Add(".webm");
+            picker.FileTypeFilter.Add(".mp4");
+            picker.FileTypeFilter.Add(".avi");
+            picker.FileTypeFilter.Add(".mkv");
+            picker.FileTypeFilter.Add(".mov");
+            picker.FileTypeFilter.Add(".wmv");
+            picker.FileTypeFilter.Add(".m4v");
 
             InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
             StorageFile? file = await picker.PickSingleFileAsync();

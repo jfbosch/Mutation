@@ -47,23 +47,55 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 					}
 				);
 
-		var context = new Context();
-		context[AttemptKey] = 1;
 
-		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
+		string processedFilePath = audioffilePath;
+		bool isTemporaryFile = false;
+
+		// Move conversion outside the retry loop to avoid re-converting on retry
+		if (AudioFileConverter.IsVideoFile(audioffilePath))
 		{
-			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			int timeout = Math.Min(_timeoutSeconds * attempt, 60);
-			using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
+			try
+			{
+				processedFilePath = AudioFileConverter.ConvertMp4ToMp3(audioffilePath);
+				isTemporaryFile = true;
+			}
+			catch (Exception ex)
+			{
+				// If conversion fails, fail fast.
+				throw new InvalidOperationException($"Failed to convert MP4 to MP3: {ex.Message}", ex);
+			}
+		}
 
-			if (attempt > 0)
-				this.Beep(attempt);
+		try
+		{
+			var context = new Context();
+			context[AttemptKey] = 1;
 
-			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, linkedCts.Token).ConfigureAwait(false);
-		}, context, overallCancellationToken).ConfigureAwait(false);
+			var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
+			{
+				int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+				int timeout = Math.Min(_timeoutSeconds * attempt, 60);
+				using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+				using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
-		return response;
+				if (attempt > 0)
+					this.Beep(attempt);
+
+				return await TranscribeViaWhisper(speechToTextPrompt, processedFilePath, linkedCts.Token).ConfigureAwait(false);
+			}, context, overallCancellationToken).ConfigureAwait(false);
+
+			return response;
+		}
+		finally
+		{
+			if (isTemporaryFile && File.Exists(processedFilePath))
+			{
+				try { File.Delete(processedFilePath); } catch { }
+			}
+		}
+
+
+
 	}
 
 	private async Task<string> TranscribeViaWhisper(

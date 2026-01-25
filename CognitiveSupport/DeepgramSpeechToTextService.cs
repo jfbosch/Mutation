@@ -37,40 +37,71 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 
 		List<string> keyterms = ParseKeyterms(speechToTextPrompt);
 
-		var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
-		const string AttemptKey = "Attempt";
 
-		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
-		var retryPolicy = Policy
-			.Handle<HttpRequestException>()
-			.Or<TimeoutRejectedException>()
-			.Or<TaskCanceledException>()
-				.WaitAndRetryAsync(
-					delay,
-					onRetry: (exception, timeSpan, attemptNumber, context) =>
-					{
-						int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-						context[AttemptKey] = ++attempt;
-					}
-				);
+		string processedFilePath = audioffilePath;
+		bool isTemporaryFile = false;
 
-		var context = new Context();
-		context[AttemptKey] = 1;
-		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
+		// Move conversion outside the retry loop
+		if (AudioFileConverter.IsVideoFile(audioffilePath))
 		{
-			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			int timeout = Math.Min(_timeoutSeconds * attempt, 60);
-			using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
+			try
+			{
+				processedFilePath = AudioFileConverter.ConvertMp4ToMp3(audioffilePath);
+				isTemporaryFile = true;
+			}
+			catch (Exception ex)
+			{
+				throw new InvalidOperationException($"Failed to convert MP4 to MP3: {ex.Message}", ex);
+			}
+		}
 
-			if (attempt > 0)
-				this.Beep(attempt);
+		try
+		{
+			var audioBytes = await File.ReadAllBytesAsync(processedFilePath).ConfigureAwait(false);
+			const string AttemptKey = "Attempt";
 
-			return await TranscribeViaDeepgram(keyterms, audioBytes, linkedCts).ConfigureAwait(false);
-		}, context, overallCancellationToken).ConfigureAwait(false);
+			var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
+			var retryPolicy = Policy
+				.Handle<HttpRequestException>()
+				.Or<TimeoutRejectedException>()
+				.Or<TaskCanceledException>()
+					.WaitAndRetryAsync(
+						delay,
+						onRetry: (exception, timeSpan, attemptNumber, context) =>
+						{
+							int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+							context[AttemptKey] = ++attempt;
+						}
+					);
 
-		return response.Results.Channels?.FirstOrDefault()?.Alternatives?.FirstOrDefault().Transcript
-			?? "(no transcript available)";
+			var context = new Context();
+			context[AttemptKey] = 1;
+			var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
+			{
+				int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+				int timeout = Math.Min(_timeoutSeconds * attempt, 60);
+				using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+				using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
+
+				if (attempt > 0)
+					this.Beep(attempt);
+
+				return await TranscribeViaDeepgram(keyterms, audioBytes, linkedCts).ConfigureAwait(false);
+			}, context, overallCancellationToken).ConfigureAwait(false);
+		
+			return response.Results.Channels?.FirstOrDefault()?.Alternatives?.FirstOrDefault().Transcript
+				?? "(no transcript available)";
+		}
+		finally
+		{
+			if (isTemporaryFile && File.Exists(processedFilePath))
+			{
+				try { File.Delete(processedFilePath); } catch { }
+			}
+		}
+
+
+
 	}
 
 	private async Task<SyncResponse> TranscribeViaDeepgram(
