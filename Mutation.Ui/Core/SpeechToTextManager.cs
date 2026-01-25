@@ -209,7 +209,8 @@ internal class SpeechToTextManager : IDisposable
 			_state.StartTranscription();
 			try
 			{
-				text = await service.ConvertAudioToText(prompt, session.FilePath, _state.TranscriptionCancellationTokenSource!.Token).ConfigureAwait(false);
+				int timeout = _settings.SpeechToTextSettings?.FileTranscriptionTimeoutSeconds ?? 300;
+				text = await service.ConvertAudioToText(prompt, session.FilePath, _state.TranscriptionCancellationTokenSource!.Token, timeout).ConfigureAwait(false);
 			}
 			finally
 			{

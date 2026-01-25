@@ -1839,13 +1839,16 @@ public sealed partial class MainWindow : Window, IDisposable
 			return;
 		}
 
-		var settingsDialog = new SettingsDialog
+		var settingsDialog = new SettingsDialog(_settings)
 		{
 			XamlRoot = rootElement.XamlRoot,
 			RequestedTheme = rootElement.ActualTheme
 		};
 
-		await settingsDialog.ShowAsync();
+		if (await settingsDialog.ShowAsync() == ContentDialogResult.Primary)
+		{
+			_settingsManager.SaveSettingsToFile(_settings);
+		}
 	}
 
 	// Debug crash simulation handlers - for testing global exception handling

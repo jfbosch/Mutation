@@ -131,6 +131,8 @@ public class SpeechToTextSettings
 
         public SpeechToTextServiceSettings[]? Services { get; set; }
         public string? ActiveSpeechToTextService { get; set; }
+
+        public int FileTranscriptionTimeoutSeconds { get; set; } = 300;
 }
 
 public class SpeechToTextServiceSettings
