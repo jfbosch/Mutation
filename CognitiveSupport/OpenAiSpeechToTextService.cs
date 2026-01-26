@@ -57,13 +57,13 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 		{
 			try
 			{
-				processedFilePath = AudioFileConverter.ConvertMp4ToMp3(audioffilePath);
+				processedFilePath = AudioFileConverter.ConvertMp4ToOgg(audioffilePath);
 				isTemporaryFile = true;
 			}
 			catch (Exception ex)
 			{
 				// If conversion fails, fail fast.
-				throw new InvalidOperationException($"Failed to convert MP4 to MP3: {ex.Message}", ex);
+				throw new InvalidOperationException($"Failed to convert MP4 to OGG: {ex.Message}", ex);
 			}
 		}
 

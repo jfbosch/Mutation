@@ -121,7 +121,7 @@ internal class SpeechToTextManager : IDisposable
 	public async Task<SpeechSession> StartRecordingAsync(int microphoneDeviceIndex)
 	{
 		EnsureSessionsDirectory();
-		string path = await CreateSessionFileAsync(".mp3").ConfigureAwait(false);
+		string path = await CreateSessionFileAsync(".ogg").ConfigureAwait(false);
 		if (!TryCreateSession(path, out var session))
 			throw new InvalidOperationException($"Generated session path '{Path.GetFileName(path)}' could not be parsed.");
 

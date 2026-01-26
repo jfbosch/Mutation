@@ -64,6 +64,7 @@ public sealed partial class MainWindow : Window, IDisposable
 	private CancellationTokenSource _promptDebounceCts = new();
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
 	private readonly DispatcherTimer _statusDismissTimer;
+	private bool _isDialogOpen;
 	private bool _hotkeyRouterInitialized;
 
 	private static readonly IReadOnlyDictionary<string, string> AudioMimeTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -1215,7 +1216,7 @@ public sealed partial class MainWindow : Window, IDisposable
 				AutomationProperties.SetName(dlg, "Warning");
 				AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
 				ShowStatus("Speech to Text", "Select a speech-to-text service to begin.", InfoBarSeverity.Warning);
-				await dlg.ShowAsync();
+				await ShowDialogAsync(dlg);
 				return;
             }
             
@@ -1241,7 +1242,7 @@ public sealed partial class MainWindow : Window, IDisposable
 		AutomationProperties.SetName(dialog, title);
 		AutomationProperties.SetHelpText(dialog, message);
 
-		await dialog.ShowAsync();
+		await ShowDialogAsync(dialog);
 	}
 
 	public async void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
@@ -1623,8 +1624,30 @@ public sealed partial class MainWindow : Window, IDisposable
 		};
 		AutomationProperties.SetName(dialog, title);
 		AutomationProperties.SetHelpText(dialog, message);
-		await dialog.ShowAsync();
+		await ShowDialogAsync(dialog);
 	}
+
+    private async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
+    {
+        if (_isDialogOpen)
+            return ContentDialogResult.None;
+
+        _isDialogOpen = true;
+        try
+        {
+            return await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // Fallback safety if something else goes wrong with the dialog
+            ShowStatus("Dialog Error", $"Failed to show dialog: {ex.Message}", InfoBarSeverity.Error);
+            return ContentDialogResult.None;
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
+    }
 
 	private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
@@ -1845,7 +1868,7 @@ public sealed partial class MainWindow : Window, IDisposable
 			RequestedTheme = rootElement.ActualTheme
 		};
 
-		if (await settingsDialog.ShowAsync() == ContentDialogResult.Primary)
+		if (await ShowDialogAsync(settingsDialog) == ContentDialogResult.Primary)
 		{
 			_settingsManager.SaveSettingsToFile(_settings);
 		}
