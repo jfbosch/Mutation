@@ -261,11 +261,24 @@ internal class SpeechToTextManager : IDisposable
 		if (string.IsNullOrWhiteSpace(extension))
 			throw new InvalidOperationException("Uploaded audio must have a file extension.");
 
-		string destinationPath = await CreateSessionFileAsync(extension).ConfigureAwait(false);
-		await CopyFileAsync(sourcePath, destinationPath, token).ConfigureAwait(false);
+		// If this is a video file, convert to OGG Opus format
+		if (AudioFileConverter.IsVideoFile(sourcePath))
+		{
+			string destinationPath = await CreateSessionFileAsync(".ogg").ConfigureAwait(false);
+			await Task.Run(() => AudioFileConverter.ConvertMp4ToOgg(sourcePath, destinationPath), token).ConfigureAwait(false);
 
-		if (!TryCreateSession(destinationPath, out var session))
-			throw new InvalidOperationException($"Unable to parse uploaded session '{Path.GetFileName(destinationPath)}'.");
+			if (!TryCreateSession(destinationPath, out var convertedSession))
+				throw new InvalidOperationException($"Unable to parse converted session '{Path.GetFileName(destinationPath)}'.");
+
+			return convertedSession;
+		}
+
+		// For audio files, copy directly
+		string audioDestinationPath = await CreateSessionFileAsync(extension).ConfigureAwait(false);
+		await CopyFileAsync(sourcePath, audioDestinationPath, token).ConfigureAwait(false);
+
+		if (!TryCreateSession(audioDestinationPath, out var session))
+			throw new InvalidOperationException($"Unable to parse uploaded session '{Path.GetFileName(audioDestinationPath)}'.");
 
 		return session;
 	}

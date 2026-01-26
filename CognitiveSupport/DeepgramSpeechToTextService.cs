@@ -38,71 +38,43 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 
 		List<string> keyterms = ParseKeyterms(speechToTextPrompt);
 
+		var audioBytes = await File.ReadAllBytesAsync(audioffilePath).ConfigureAwait(false);
+		const string AttemptKey = "Attempt";
 
-		string processedFilePath = audioffilePath;
-		bool isTemporaryFile = false;
+		var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
+		var retryPolicy = Policy
+			.Handle<HttpRequestException>()
+			.Or<TimeoutRejectedException>()
+			.Or<TaskCanceledException>()
+				.WaitAndRetryAsync(
+					delay,
+					onRetry: (exception, timeSpan, attemptNumber, context) =>
+					{
+						int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+						context[AttemptKey] = ++attempt;
+					}
+				);
 
-		// Move conversion outside the retry loop
-		if (AudioFileConverter.IsVideoFile(audioffilePath))
+		var context = new Context();
+		context[AttemptKey] = 1;
+		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
-			try
-			{
-				processedFilePath = AudioFileConverter.ConvertMp4ToOgg(audioffilePath);
-				isTemporaryFile = true;
-			}
-			catch (Exception ex)
-			{
-				throw new InvalidOperationException($"Failed to convert MP4 to OGG: {ex.Message}", ex);
-			}
-		}
+			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+			int baseTimeout = timeoutSeconds ?? _timeoutSeconds;
+			// Linear backoff for timeout duration, but respect the requested timeout as a minimum for the first attempt.
+			// Removing the 60s cap to allow for longer file transcriptions.
+			int timeout = baseTimeout * attempt;
+			using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
-		try
-		{
-			var audioBytes = await File.ReadAllBytesAsync(processedFilePath).ConfigureAwait(false);
-			const string AttemptKey = "Attempt";
+			if (attempt > 0)
+				this.Beep(attempt);
 
-			var delay = Backoff.LinearBackoff(TimeSpan.FromMilliseconds(500), retryCount: 3, factor: 1);
-			var retryPolicy = Policy
-				.Handle<HttpRequestException>()
-				.Or<TimeoutRejectedException>()
-				.Or<TaskCanceledException>()
-					.WaitAndRetryAsync(
-						delay,
-						onRetry: (exception, timeSpan, attemptNumber, context) =>
-						{
-							int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-							context[AttemptKey] = ++attempt;
-						}
-					);
-
-			var context = new Context();
-			context[AttemptKey] = 1;
-			var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
-			{
-				int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-				int baseTimeout = timeoutSeconds ?? _timeoutSeconds;
-				// Linear backoff for timeout duration, but respect the requested timeout as a minimum for the first attempt.
-				// Removing the 60s cap to allow for longer file transcriptions.
-				int timeout = baseTimeout * attempt;
-				using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-				using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
-
-				if (attempt > 0)
-					this.Beep(attempt);
-
-				return await TranscribeViaDeepgram(keyterms, audioBytes, linkedCts).ConfigureAwait(false);
-			}, context, overallCancellationToken).ConfigureAwait(false);
-		
-			return response.Results.Channels?.FirstOrDefault()?.Alternatives?.FirstOrDefault().Transcript
-				?? "(no transcript available)";
-		}
-		finally
-		{
-			if (isTemporaryFile && File.Exists(processedFilePath))
-			{
-				try { File.Delete(processedFilePath); } catch { }
-			}
-		}
+			return await TranscribeViaDeepgram(keyterms, audioBytes, linkedCts).ConfigureAwait(false);
+		}, context, overallCancellationToken).ConfigureAwait(false);
+	
+		return response.Results.Channels?.FirstOrDefault()?.Alternatives?.FirstOrDefault().Transcript
+			?? "(no transcript available)";
 
 
 

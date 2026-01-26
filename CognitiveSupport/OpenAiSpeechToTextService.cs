@@ -48,53 +48,24 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 					}
 				);
 
+		var context = new Context();
+		context[AttemptKey] = 1;
 
-		string processedFilePath = audioffilePath;
-		bool isTemporaryFile = false;
-
-		// Move conversion outside the retry loop to avoid re-converting on retry
-		if (AudioFileConverter.IsVideoFile(audioffilePath))
+		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
-			try
-			{
-				processedFilePath = AudioFileConverter.ConvertMp4ToOgg(audioffilePath);
-				isTemporaryFile = true;
-			}
-			catch (Exception ex)
-			{
-				// If conversion fails, fail fast.
-				throw new InvalidOperationException($"Failed to convert MP4 to OGG: {ex.Message}", ex);
-			}
-		}
+			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
+			int baseTimeout = timeoutSeconds ?? _timeoutSeconds;
+			int timeout = baseTimeout * attempt;
+			using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
+			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
-		try
-		{
-			var context = new Context();
-			context[AttemptKey] = 1;
+			if (attempt > 0)
+				this.Beep(attempt);
 
-			var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
-			{
-				int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-				int baseTimeout = timeoutSeconds ?? _timeoutSeconds;
-				int timeout = baseTimeout * attempt;
-				using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
-				using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
+			return await TranscribeViaWhisper(speechToTextPrompt, audioffilePath, linkedCts.Token).ConfigureAwait(false);
+		}, context, overallCancellationToken).ConfigureAwait(false);
 
-				if (attempt > 0)
-					this.Beep(attempt);
-
-				return await TranscribeViaWhisper(speechToTextPrompt, processedFilePath, linkedCts.Token).ConfigureAwait(false);
-			}, context, overallCancellationToken).ConfigureAwait(false);
-
-			return response;
-		}
-		finally
-		{
-			if (isTemporaryFile && File.Exists(processedFilePath))
-			{
-				try { File.Delete(processedFilePath); } catch { }
-			}
-		}
+		return response;
 
 
 
