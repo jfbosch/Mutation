@@ -1,61 +1,135 @@
 # Mutation
 
 ## Introduction
-Mutation is a .NET multifaceted tool that boosts productivity and accessibility through configurable global hotkeys. It lets you toggle microphones, capture screens, run Optical Character Recognition (OCR), and convert speech to text—using Azure Vision Services, OpenAI, Deepgram, and other APIs under the hood.
+Mutation is a .NET productivity tool that provides configurable global hotkeys for essential accessibility and workflow tasks. It lets you toggle microphones, capture screens, run Optical Character Recognition (OCR), convert speech to text, and process text with LLMs—all powered by Azure Vision Services, OpenAI, Deepgram, and other APIs.
 
 ## Features
+
 ### 1. Toggle Microphone Mute  
-Press one hotkey to mute or unmute every enabled microphone system-wide—independent of which meeting app or input device you use.
+Press one hotkey to mute or unmute every enabled microphone system-wide—independent of which meeting app or input device you use. A real-time waveform visualisation shows microphone input levels, and audio beeps confirm the current mute state.
+
+**Hotkey:** `MicrophoneToggleMuteHotKey`
 
 ### 2. Screen Capturing and OCR  
-Mutation supports two OCR reading orders via Azure **Computer Vision** (part of Vision Services):
+Mutation supports two OCR reading orders via Azure **Computer Vision**:
 
 * **Natural layout** – reads top-to-bottom within each column, then left-to-right across columns. Best for newspapers, journals, brochures, or any multi-column PDF.  
 * **Basic layout** – reads strictly left-to-right, top-to-bottom. Best for tables, spreadsheets, forms, invoices, or any row-oriented content.
 
-Hotkeys:
+**Hotkeys:**
 
-* **ScreenshotHotKey** – instantly captures the full screen and then lets you draw a rectangle with a crosshair cursor (press **Esc** to cancel); the selected region goes to the clipboard.
-* **OcrHotKey** – OCR the clipboard image with **Natural** layout.  
-* **ScreenshotOcrHotKey** – take a screenshot and OCR it with **Natural** layout in one step.  
-* **OcrLeftToRightTopToBottomHotKey** – OCR the clipboard image with **Basic** layout.  
-* **ScreenshotLeftToRightTopToBottomOcrHotKey** – take a screenshot and OCR it with **Basic** layout in one step.
+| Hotkey | Description |
+|--------|-------------|
+| `ScreenshotHotKey` | Captures the full screen and lets you draw a rectangle with a crosshair cursor (press **Esc** to cancel); the selected region is copied to the clipboard. |
+| `OcrHotKey` | OCR the clipboard image with **Natural** layout. |
+| `ScreenshotOcrHotKey` | Take a screenshot and OCR it with **Natural** layout in one step. |
+| `OcrLeftToRightTopToBottomHotKey` | OCR the clipboard image with **Basic** layout. |
+| `ScreenshotLeftToRightTopToBottomOcrHotKey` | Take a screenshot and OCR it with **Basic** layout in one step. |
+| `SendHotkeyAfterOcrOperation` | Sends a specified hotkey after OCR completes (e.g., to trigger screen reader). |
 
-Azure Computer Vision greatly outperforms the Windows 10/11 built-in OCR engine.
-
-For document OCR workloads, Mutation can respect the Azure Computer Vision free tier by default. The `UseFreeTier` flag keeps the
-batch to the first two pages of each PDF (configurable via `FreeTierPageLimit`), while `MaxParallelDocuments` and `MaxParallelRequests`
-let you dial concurrency up or down for paid tiers. You can also cap uploads with `MaxDocumentBytes` to avoid unexpectedly large
-files.
+**Additional Options:**
+- `InvertScreenshot` – inverts screenshot colours (useful for accessibility)
+- `UseFreeTier` – respects Azure free tier limits by default
+- `FreeTierPageLimit` – limits pages per PDF on free tier (default: 2)
+- `MaxParallelDocuments` / `MaxParallelRequests` – concurrency controls for paid tiers
+- `MaxDocumentBytes` – caps upload size to avoid unexpectedly large files
 
 ### 3. Speech to Text Conversion  
 Press one hotkey to start recording, press it again to stop and send the audio for transcription. Supported providers:
 
 * OpenAI Whisper family (gpt-4o-transcribe, gpt-4o-mini-transcribe)  
 * Deepgram nova-3  
+* Groq Whisper
 * Any service exposing an OpenAI-compatible Whisper API
 
-The transcribed text is copied to the clipboard and can optionally be injected into the active text field.
+**Hotkeys:**
+
+| Hotkey | Description |
+|--------|-------------|
+| `SpeechToTextHotKey` | Start/stop recording for transcription. |
+| `SpeechToTextWithLlmFormattingHotKey` | Start/stop recording with automatic LLM formatting applied. |
+| `SendHotkeyAfterTranscriptionOperation` | Sends a specified hotkey after transcription completes. |
+
+**Additional Features:**
+- **Audio Session History:** Navigate through past recordings using session buttons; replay any previous recording.
+- **Audio File Upload:** Transcribe existing audio or video files (MP3, WAV, M4A, AAC, FLAC, OGG, OPUS, WMA, WEBM, MP4, AVI, MKV, MOV, WMV, M4V).
+- **Retry Transcription:** Re-transcribe the selected session with a different provider or prompt.
+- **Dictation Insert Options:** Choose between pasting, typing (SendKeys), or clipboard-only for inserting transcriptions.
+
+### 4. LLM Processing  
+Process text through OpenAI or compatible LLMs with configurable prompts. Define multiple prompts and assign each a hotkey for quick access.
+
+**Hotkeys:**
+
+| Hotkey | Description |
+|--------|-------------|
+| `FormatWithLlmHotKey` | Apply the auto-run prompt to clipboard text. |
+| Per-prompt `Hotkey` | Trigger a specific prompt directly. |
+
+**Prompt Configuration:**
+- Create named prompts with custom system instructions
+- Mark one prompt as "AutoRun" for the default LLM action
+- Assign individual hotkeys to prompts for instant access
+
+### 5. Transcript Formatting Rules  
+Apply find-and-replace rules to transcripts before or instead of LLM processing:
+
+- **Plain** – literal text replacement
+- **RegEx** – regular expression matching
+- **Smart** – intelligent matching (e.g., whole word boundaries)
+
+Rules run before LLM formatting, enabling pre-processing of transcribed text.
+
+### 6. Hotkey Router  
+Remap any global hotkey to another. When a "From" hotkey is pressed, Mutation sends the corresponding "To" hotkey instead. Useful for creating shortcut aliases or working around application conflicts.
+
+**Configuration:**
+```json
+"HotKeyRouterSettings": {
+  "Mappings": [
+    { "FromHotKey": "Ctrl+Alt+1", "ToHotKey": "Ctrl+Shift+M" }
+  ]
+}
+```
+
+### 7. Custom Audio Feedback  
+Replace the default system beeps with custom audio files for different actions:
+
+- `BeepSuccessFile` – played on successful operations
+- `BeepFailureFile` – played on errors
+- `BeepStartFile` / `BeepEndFile` – for recording start/stop
+- `BeepMuteFile` / `BeepUnmuteFile` – for microphone state changes
 
 ## Getting Started
-Install the .NET 7 runtime (or newer) and run **Mutation.exe**. On first launch, the app writes *Mutation.json* and opens it in Notepad for you to configure.
+Install the .NET 10 runtime (or newer) and run **Mutation.exe**. On first launch, the app writes *Mutation.json* and opens it in Notepad for you to configure.
 
 ## Configuration / Settings
 All hotkeys are global and fully customisable. Below is a comprehensive example with every section and key.
 
 ```json
 {
-  "ToggleMicMuteHotKey": "Ctrl+Shift+M",
-  "ScreenshotHotKey": "Ctrl+Shift+S",
+  "AudioSettings": {
+    "MicrophoneToggleMuteHotKey": "Ctrl+Shift+M",
+    "EnableMicrophoneVisualization": true,
+    "CustomBeepSettings": {
+      "UseCustomBeeps": false,
+      "BeepSuccessFile": "sounds/success.wav",
+      "BeepFailureFile": "sounds/failure.wav",
+      "BeepMuteFile": "sounds/mute.wav",
+      "BeepUnmuteFile": "sounds/unmute.wav"
+    }
+  },
 
   "AzureComputerVisionSettings": {
-    "SubscriptionKey": "<your Azure key>",
+    "ApiKey": "<your Azure key>",
     "Endpoint": "https://<region>.api.cognitive.microsoft.com/",
+    "ScreenshotHotKey": "Ctrl+Shift+S",
     "OcrHotKey": "Ctrl+Shift+O",
     "ScreenshotOcrHotKey": "Ctrl+Shift+Q",
     "OcrLeftToRightTopToBottomHotKey": "Ctrl+Shift+L",
     "ScreenshotLeftToRightTopToBottomOcrHotKey": "Ctrl+Shift+K",
     "SendHotkeyAfterOcrOperation": "Ctrl+Alt+C",
+    "InvertScreenshot": false,
     "UseFreeTier": true,
     "FreeTierPageLimit": 2,
     "MaxParallelDocuments": 2,
@@ -64,9 +138,11 @@ All hotkeys are global and fully customisable. Below is a comprehensive example 
   },
 
   "SpeechToTextSettings": {
-    "StartStopTranscriptionHotKey": "Ctrl+Shift+T",
+    "SpeechToTextHotKey": "Ctrl+Shift+T",
+    "SpeechToTextWithLlmFormattingHotKey": "Ctrl+Shift+Y",
     "SendHotkeyAfterTranscriptionOperation": "Ctrl+Alt+V",
-    "Providers": [
+    "FileTranscriptionTimeoutSeconds": 300,
+    "Services": [
       {
         "Name": "OpenAI gpt-4o-transcribe",
         "Provider": "OpenAi",
@@ -92,24 +168,48 @@ All hotkeys are global and fully customisable. Below is a comprehensive example 
   },
 
   "LlmSettings": {
-    "ApiKey": "<your Azure OpenAI key>",
-    "Endpoint": "https://<resource>.openai.azure.com/",
-    "ModelId": "gpt-4o-turbo"
+    "ApiKey": "<your OpenAI key>",
+    "Models": ["gpt-4.1", "gpt-5.1"],
+    "FormatWithLlmHotKey": "Ctrl+Shift+F",
+    "FormatTranscriptPrompt": "Clean up this transcript for readability.",
+    "TranscriptFormatRules": [
+      { "Find": "um", "ReplaceWith": "", "CaseSensitive": false, "MatchType": "Smart" }
+    ],
+    "Prompts": [
+      {
+        "Id": 1,
+        "Name": "Fix Grammar",
+        "Content": "Fix grammar and punctuation in the following text.",
+        "Hotkey": "Ctrl+Alt+G",
+        "AutoRun": true
+      }
+    ]
+  },
+
+  "HotKeyRouterSettings": {
+    "Mappings": [
+      { "FromHotKey": "Ctrl+Alt+1", "ToHotKey": "Ctrl+Shift+M" }
+    ]
+  },
+
+  "MainWindowUiSettings": {
+    "MaxTextBoxLineCount": 5,
+    "DictationInsertPreference": "Paste"
   }
 }
-````
+```
 
 ### Provisioning Azure Computer Vision
 
 1. Sign in to the [Azure Portal](https://portal.azure.com).
 2. **Create a resource** → search for **Computer Vision**.
-3. Choose your subscription, resource group, region, name, and the free pricing tier.
+3. Choose your subscription, resource group, region, name, and pricing tier.
 4. After deployment, copy the **Key** and **Endpoint** into `AzureComputerVisionSettings` and restart Mutation.
 
 ### Provisioning Speech-to-Text Providers
 
-* Follow each provider’s portal to create an account and API key.
-* Paste the credentials into the relevant object under `SpeechToTextSettings → Providers`.
+* Follow each provider's portal to create an account and API key.
+* Paste the credentials into the relevant object under `SpeechToTextSettings → Services`.
 
 ## Contribute
 
@@ -133,4 +233,3 @@ I don't think many people will use mutation, but I'm sure there will be a few th
 For myself, it is absolutely indispensable, and I could not go a day without it anymore. I will add to it as I think of more tools to make my life easier.
 
 Here's hoping it helps somebody else as well.
-
