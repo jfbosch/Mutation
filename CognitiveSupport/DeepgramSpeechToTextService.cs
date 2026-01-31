@@ -30,7 +30,8 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 	public async Task<string> ConvertAudioToText(
 		string speechToTextPrompt,
 		string audioffilePath,
-		CancellationToken overallCancellationToken)
+		CancellationToken overallCancellationToken,
+		int? timeoutSeconds = null)
 	{
 		if (string.IsNullOrEmpty(audioffilePath))
 			throw new ArgumentException($"'{nameof(audioffilePath)}' cannot be null or empty.", nameof(audioffilePath));
@@ -59,7 +60,10 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			int timeout = Math.Min(_timeoutSeconds * attempt, 60);
+			int baseTimeout = timeoutSeconds ?? _timeoutSeconds;
+			// Linear backoff for timeout duration, but respect the requested timeout as a minimum for the first attempt.
+			// Removing the 60s cap to allow for longer file transcriptions.
+			int timeout = baseTimeout * attempt;
 			using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
 			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
@@ -68,9 +72,12 @@ public class DeepgramSpeechToTextService : ISpeechToTextService
 
 			return await TranscribeViaDeepgram(keyterms, audioBytes, linkedCts).ConfigureAwait(false);
 		}, context, overallCancellationToken).ConfigureAwait(false);
-
+	
 		return response.Results.Channels?.FirstOrDefault()?.Alternatives?.FirstOrDefault().Transcript
 			?? "(no transcript available)";
+
+
+
 	}
 
 	private async Task<SyncResponse> TranscribeViaDeepgram(

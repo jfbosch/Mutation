@@ -8,10 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Media.Core;
-using Windows.Media.Playback;
 using Windows.Storage;
-using Windows.Storage.Streams;
 
 namespace Mutation.Ui.Core;
 
@@ -21,9 +18,7 @@ internal class AudioSessionManager : IDisposable
     private readonly AudioDeviceManager _audioDeviceManager;
     private readonly TranscriptFormatter _transcriptFormatter;
     private readonly Settings _settings;
-    private readonly MediaPlayer _playbackPlayer;
-
-    private InMemoryRandomAccessStream? _playbackStream;
+    private readonly AudioPlayer _playbackPlayer;
     private SpeechSession? _playingSession;
     private SpeechSession? _selectedSession;
     private bool _currentRecordingUsesLlmFormatting;
@@ -43,7 +38,7 @@ internal class AudioSessionManager : IDisposable
         }
     }
 
-    public bool IsPlaying => _playbackPlayer.PlaybackSession.PlaybackState == MediaPlaybackState.Playing;
+    public bool IsPlaying => _playbackPlayer.IsPlaying;
     public bool IsRecording => _speechManager.Recording;
     public bool IsTranscribing => _speechManager.Transcribing;
 
@@ -67,9 +62,9 @@ internal class AudioSessionManager : IDisposable
         _transcriptFormatter = transcriptFormatter;
         _settings = settings;
 
-        _playbackPlayer = new MediaPlayer { AutoPlay = false };
-        _playbackPlayer.MediaEnded += PlaybackPlayer_MediaEnded;
-        _playbackPlayer.MediaFailed += PlaybackPlayer_MediaFailed;
+        _playbackPlayer = new AudioPlayer();
+        _playbackPlayer.PlaybackEnded += PlaybackPlayer_PlaybackEnded;
+        _playbackPlayer.PlaybackFailed += PlaybackPlayer_PlaybackFailed;
     }
 
     public void RefreshSessions(SpeechSession? preferredSelection = null, string? preferredPath = null)
@@ -319,14 +314,14 @@ internal class AudioSessionManager : IDisposable
         StatusMessage?.Invoke(this, "Transcript ready and copied.");
     }
 
-    public async Task PlaySelectedSessionAsync()
+    public Task PlaySelectedSessionAsync()
     {
-        if (SelectedSession == null) return;
+        if (SelectedSession == null) return Task.CompletedTask;
 
         if (IsPlaying && _playingSession != null && PathsEqual(_playingSession.FilePath, SelectedSession.FilePath))
         {
             StopPlayback();
-            return;
+            return Task.CompletedTask;
         }
 
         try
@@ -337,23 +332,11 @@ internal class AudioSessionManager : IDisposable
             {
                 StatusMessage?.Invoke(this, "Audio file not found.");
                 RefreshSessions();
-                return;
+                return Task.CompletedTask;
             }
 
-            byte[] audioBytes = await File.ReadAllBytesAsync(SelectedSession.FilePath);
-            _playbackStream = new InMemoryRandomAccessStream();
-            using (var dataWriter = new DataWriter(_playbackStream))
-            {
-                dataWriter.WriteBytes(audioBytes);
-                await dataWriter.StoreAsync();
-                await dataWriter.FlushAsync();
-                dataWriter.DetachStream();
-            }
-            _playbackStream.Seek(0);
-
-            _playbackPlayer.Source = MediaSource.CreateFromStream(_playbackStream, SelectedSession.Extension);
             _playingSession = SelectedSession;
-            _playbackPlayer.Play();
+            _playbackPlayer.Play(SelectedSession.FilePath);
             
             PlaybackStarted?.Invoke(this, EventArgs.Empty);
         }
@@ -362,46 +345,39 @@ internal class AudioSessionManager : IDisposable
             StopPlayback();
             ErrorOccurred?.Invoke(this, $"Playback failed: {ex.Message}");
         }
+
+        return Task.CompletedTask;
     }
 
     public void StopPlayback()
     {
         try
         {
-            _playbackPlayer.Pause();
-            _playbackPlayer.Source = null;
+            _playbackPlayer.Stop();
         }
         catch { }
 
-        _playbackStream?.Dispose();
-        _playbackStream = null;
         _playingSession = null;
         
         PlaybackStopped?.Invoke(this, EventArgs.Empty);
     }
 
-    private void PlaybackPlayer_MediaEnded(MediaPlayer sender, object args)
+    private void PlaybackPlayer_PlaybackEnded(object? sender, EventArgs args)
     {
-        // Marshal to UI thread if needed? Events are usually handled on UI thread if invoked from there, 
-        // but MediaEnded might be on a background thread.
-        // We'll invoke the event and let the UI handler dispatch if necessary, 
-        // or we can use DispatcherQueue if we had access to it.
-        // Since this is a manager, it's better to just fire the event.
         StopPlayback();
     }
 
-    private void PlaybackPlayer_MediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
+    private void PlaybackPlayer_PlaybackFailed(object? sender, string errorMessage)
     {
         StopPlayback();
-        ErrorOccurred?.Invoke(this, $"Playback failed: {args.ErrorMessage}");
+        ErrorOccurred?.Invoke(this, errorMessage);
     }
 
     public void Dispose()
     {
-        _playbackPlayer.MediaEnded -= PlaybackPlayer_MediaEnded;
-        _playbackPlayer.MediaFailed -= PlaybackPlayer_MediaFailed;
+        _playbackPlayer.PlaybackEnded -= PlaybackPlayer_PlaybackEnded;
+        _playbackPlayer.PlaybackFailed -= PlaybackPlayer_PlaybackFailed;
         _playbackPlayer.Dispose();
-        _playbackStream?.Dispose();
     }
 
     public Task CleanupSessionsAsync()

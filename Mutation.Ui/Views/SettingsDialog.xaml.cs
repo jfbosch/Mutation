@@ -3,17 +3,20 @@ using System.Collections.ObjectModel;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using CognitiveSupport;
 
 namespace Mutation.Ui.Views;
 
 public sealed partial class SettingsDialog : ContentDialog
 {
 	private SettingsCategoryItem? _selectedCategory;
+	private readonly Settings _settings;
 
 	public ObservableCollection<SettingsCategoryItem> Categories { get; } = new();
 
-	public SettingsDialog()
+	public SettingsDialog(Settings settings)
 	{
+		_settings = settings ?? throw new ArgumentNullException(nameof(settings));
 		PopulateCategories();
 		InitializeComponent();
 		SetDialogSize();
@@ -63,7 +66,51 @@ public sealed partial class SettingsDialog : ContentDialog
 		CategoryTitle.Text = _selectedCategory.DisplayName;
 		CategorySummary.Text = _selectedCategory.Description;
 		AutomationProperties.SetName(CategoryDetails, _selectedCategory.DisplayName);
-		AutomationProperties.SetHelpText(CategoryDetails, "Configuration options will appear here in a future update.");
+		AutomationProperties.SetHelpText(CategoryDetails, "Configure settings for this category.");
+
+		// Clear dynamic children (index > 2: Title, Summary, Placeholder)
+		// We expect Title (0), Summary (1), Placeholder (2)
+		while (CategoryDetails.Children.Count > 3)
+		{
+			CategoryDetails.Children.RemoveAt(3);
+		}
+
+		if (_selectedCategory.Key == "speech")
+		{
+			if (PlaceholderText != null) PlaceholderText.Visibility = Visibility.Collapsed;
+
+			var panel = new StackPanel { Spacing = 8, Orientation = Orientation.Vertical, Margin = new Thickness(0, 12, 0, 0) };
+			panel.Children.Add(new TextBlock
+			{
+				Text = "File Transcription Timeout (seconds)",
+				Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"]
+			});
+
+			var numberBox = new NumberBox
+			{
+				Value = _settings.SpeechToTextSettings?.FileTranscriptionTimeoutSeconds ?? 300,
+				Minimum = 10,
+				Maximum = 7200, // 2 hours
+				SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
+				SmallChange = 10,
+				LargeChange = 60,
+				Width = 200,
+				HorizontalAlignment = HorizontalAlignment.Left
+			};
+
+			numberBox.ValueChanged += (s, e) =>
+			{
+				if (_settings.SpeechToTextSettings != null && !double.IsNaN(e.NewValue))
+					_settings.SpeechToTextSettings.FileTranscriptionTimeoutSeconds = (int)e.NewValue;
+			};
+
+			panel.Children.Add(numberBox);
+			CategoryDetails.Children.Add(panel);
+		}
+		else
+		{
+			if (PlaceholderText != null) PlaceholderText.Visibility = Visibility.Visible;
+		}
 	}
 
 	private void SetDialogSize()

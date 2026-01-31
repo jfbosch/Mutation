@@ -131,6 +131,8 @@ public class SpeechToTextSettings
 
         public SpeechToTextServiceSettings[]? Services { get; set; }
         public string? ActiveSpeechToTextService { get; set; }
+
+        public int FileTranscriptionTimeoutSeconds { get; set; } = 300;
 }
 
 public class SpeechToTextServiceSettings
@@ -155,12 +157,14 @@ public class LlmSettings
 	public List<TranscriptFormatRule> TranscriptFormatRules { get; set; }
 	public string? FormatTranscriptPrompt { get; set; }
 	public string? FormatWithLlmHotKey { get; set; }
+	public List<LlmPrompt> Prompts { get; set; } = new List<LlmPrompt>();
 
 
 	public LlmSettings()
 	{
 		Models = new List<string>();
 		TranscriptFormatRules = new List<TranscriptFormatRule>();
+		Prompts = new List<LlmPrompt>();
 	}
 
 	public LlmSettings(string? apiKey, List<string> models, List<TranscriptFormatRule> transcriptFormatRules, string? formatTranscriptPrompt)
@@ -169,6 +173,18 @@ public class LlmSettings
 		Models = models;
 		TranscriptFormatRules = transcriptFormatRules;
 		FormatTranscriptPrompt = formatTranscriptPrompt;
+		Prompts = new List<LlmPrompt>();
+	}
+
+	public class LlmPrompt
+	{
+		public int Id { get; set; }
+		public string Name { get; set; } = "Untitled";
+		public string Content { get; set; } = "";
+		public string? Hotkey { get; set; }
+		public bool AutoRun { get; set; }
+
+		public LlmPrompt() { }
 	}
 
 	public class TranscriptFormatRule

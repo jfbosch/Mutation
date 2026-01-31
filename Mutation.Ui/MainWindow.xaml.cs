@@ -64,6 +64,7 @@ public sealed partial class MainWindow : Window, IDisposable
 	private CancellationTokenSource _promptDebounceCts = new();
 	private DictationInsertOption _insertOption = DictationInsertOption.Paste;
 	private readonly DispatcherTimer _statusDismissTimer;
+	private bool _isDialogOpen;
 	private bool _hotkeyRouterInitialized;
 
 	private static readonly IReadOnlyDictionary<string, string> AudioMimeTypeMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -171,7 +172,7 @@ public sealed partial class MainWindow : Window, IDisposable
 		RestorePersistedSpeechServiceSelection();
 		UpdateRecordingActionAvailability();
 
-		TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
+		// TxtFormatPrompt.Text = _settings.LlmSettings?.FormatTranscriptPrompt ?? string.Empty;
 
 		if (_settings.LlmSettings != null)
 		{
@@ -186,6 +187,12 @@ public sealed partial class MainWindow : Window, IDisposable
 				_settings.LlmSettings.SelectedLlmModel = _settings.LlmSettings.Models[0];
 			}
 		}
+
+            // Populate Prompt Grid
+            if (_settings.LlmSettings != null)
+            {
+                LstPrompts.ItemsSource = _settings.LlmSettings.Prompts;
+            }
 
 		var tooltipManager = new TooltipManager(_settings);
 		tooltipManager.SetupTooltips(TxtRawTranscript, TxtFormatTranscript);
@@ -243,7 +250,7 @@ public sealed partial class MainWindow : Window, IDisposable
 	private IEnumerable<TextBox> GetMultiLineTextBoxes()
 	{
 		yield return TxtRawTranscript;
-		yield return TxtFormatPrompt;
+		// yield return TxtFormatPrompt;
 		yield return TxtFormatTranscript;
 		yield return TxtOcr;
 		yield return TxtClipboard;
@@ -253,6 +260,11 @@ public sealed partial class MainWindow : Window, IDisposable
 	{
 		_hotkeyManager = hotkeyManager;
 		RefreshHotkeyRouterRegistrations();
+
+        if (_settings.LlmSettings?.Prompts != null)
+        {
+           _hotkeyManager.RegisterPromptHotkeys(_settings.LlmSettings.Prompts, ExecutePrompt);
+        }
 	}
 
 	private void RestorePersistedSpeechServiceSelection()
@@ -318,7 +330,7 @@ public sealed partial class MainWindow : Window, IDisposable
 		ConfigureButtonHotkey(BtnScreenshotOcr, BtnScreenshotOcrHotkey, _settings.AzureComputerVisionSettings?.ScreenshotOcrHotKey, "Capture a screenshot and extract text automatically");
 		ConfigureButtonHotkey(BtnScreenshotOcrLrtb, BtnScreenshotOcrLrtbHotkey, _settings.AzureComputerVisionSettings?.ScreenshotLeftToRightTopToBottomOcrHotKey, "Capture a screenshot and extract text using left-to-right reading order");
 		ConfigureButtonHotkey(BtnTextToSpeech, BtnTextToSpeechHotkey, _settings.TextToSpeechSettings?.TextToSpeechHotKey, "Play the clipboard text using text-to-speech");
-		ConfigureButtonHotkey(BtnFormatLlm, null, _settings.LlmSettings?.FormatWithLlmHotKey, "Send transcript through the configured language model");
+		ConfigureButtonHotkey(BtnFormatLlm, null, null, "Send transcript through the configured language model");
 	}
 
 	private void InitializeHotkeyRouter()
@@ -667,7 +679,7 @@ public sealed partial class MainWindow : Window, IDisposable
 				serviceSettings.SpeechToTextPrompt = TxtSpeechToTextPrompt.Text;
 			}
 		}
-		_settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
+		// _settings.LlmSettings!.FormatTranscriptPrompt = TxtFormatPrompt.Text;
 
 		var normalizedPairs = SyncHotkeyRouterSettings();
 		_settingsManager.SaveSettingsToFile(_settings);
@@ -1154,6 +1166,12 @@ public sealed partial class MainWindow : Window, IDisposable
             picker.FileTypeFilter.Add(".opus");
             picker.FileTypeFilter.Add(".wma");
             picker.FileTypeFilter.Add(".webm");
+            picker.FileTypeFilter.Add(".mp4");
+            picker.FileTypeFilter.Add(".avi");
+            picker.FileTypeFilter.Add(".mkv");
+            picker.FileTypeFilter.Add(".mov");
+            picker.FileTypeFilter.Add(".wmv");
+            picker.FileTypeFilter.Add(".m4v");
 
             InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
             StorageFile? file = await picker.PickSingleFileAsync();
@@ -1198,12 +1216,12 @@ public sealed partial class MainWindow : Window, IDisposable
 				AutomationProperties.SetName(dlg, "Warning");
 				AutomationProperties.SetHelpText(dlg, "No speech-to-text service selected.");
 				ShowStatus("Speech to Text", "Select a speech-to-text service to begin.", InfoBarSeverity.Warning);
-				await dlg.ShowAsync();
+				await ShowDialogAsync(dlg);
 				return;
             }
             
-            string llmPrompt = TxtFormatPrompt.Text;
-            await _audioSessionManager.StartStopRecordingAsync(_activeSpeechService, useLlmFormatting, GetActivePrompt(), llmPrompt);
+            string llmPromptContent = GetAutoRunPromptContent();
+            await _audioSessionManager.StartStopRecordingAsync(_activeSpeechService, useLlmFormatting, GetActivePrompt(), llmPromptContent);
 		}
 		catch (Exception ex)
 		{
@@ -1224,7 +1242,7 @@ public sealed partial class MainWindow : Window, IDisposable
 		AutomationProperties.SetName(dialog, title);
 		AutomationProperties.SetHelpText(dialog, message);
 
-		await dialog.ShowAsync();
+		await ShowDialogAsync(dialog);
 	}
 
 	public async void BtnTextToSpeech_Click(object? sender, RoutedEventArgs? e)
@@ -1249,6 +1267,38 @@ public sealed partial class MainWindow : Window, IDisposable
 	{
 		try
 		{
+            // Use the prompt marked as AutoRun, or the first available one, or prompt user?
+            // For now, let's use the AutoRun prompt if available.
+            var prompt = _settings.LlmSettings?.Prompts.FirstOrDefault(p => p.AutoRun) 
+                         ?? _settings.LlmSettings?.Prompts.FirstOrDefault();
+                         
+            if (prompt == null)
+            {
+                ShowStatus("Formatting", "No prompts configured.", InfoBarSeverity.Warning);
+                return;
+            }
+
+            // If triggered manually, maybe we want to run the specific prompt logic directly
+            ExecutePrompt(prompt);
+		}
+		catch (Exception ex)
+		{
+			ShowStatus("Formatting", ex.Message, InfoBarSeverity.Error);
+			await ShowErrorDialog("Format with LLM Error", ex);
+		}
+	}
+
+    private async void ExecutePrompt(LlmSettings.LlmPrompt prompt)
+    {
+        try
+        {
+             // Marshaling to UI thread if called from hotkey background thread
+             if (!DispatcherQueue.HasThreadAccess)
+             {
+                 DispatcherQueue.TryEnqueue(() => ExecutePrompt(prompt));
+                 return;
+             }
+        
 			BeepPlayer.Play(BeepType.Start);
 			TxtFormatTranscript.Text = "Formatting...";
 			string raw = await _clipboard.GetTextAsync();
@@ -1258,25 +1308,23 @@ public sealed partial class MainWindow : Window, IDisposable
 				TxtFormatTranscript.Text = string.Empty;
 				return;
 			}
-			// We don't need to apply rules to clipboard text as it might already be processed or come from elsewhere
-			// string rulesFormatted = _transcriptFormatter.ApplyRules(raw, false); 
 
-			string prompt = TxtFormatPrompt.Text;
 			string modelName = _settings.LlmSettings?.SelectedLlmModel ?? LlmSettings.DefaultModel;
-			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt, modelName);
+			string formatted = await _transcriptFormatter.FormatWithLlmAsync(raw, prompt.Content, modelName);
+            
 			TxtFormatTranscript.Text = formatted;
 			_clipboard.SetText(formatted);
 			InsertIntoActiveApplication(formatted);
 			BeepPlayer.Play(BeepType.Success);
-			ShowStatus("Formatting", "Transcript refined with the language model.", InfoBarSeverity.Success);
+			ShowStatus("Formatting", $"Applied prompt '{prompt.Name}' with the language model.", InfoBarSeverity.Success);
 			HotkeyManager.SendHotkeyAfterDelay(_settings.SpeechToTextSettings?.SendHotkeyAfterTranscriptionOperation, Constants.SendHotkeyDelay);
-		}
-		catch (Exception ex)
-		{
-			ShowStatus("Formatting", ex.Message, InfoBarSeverity.Error);
-			await ShowErrorDialog("Format with LLM Error", ex);
-		}
-	}
+        }
+        catch (Exception ex)
+        {
+             ShowStatus("Formatting Failed", ex.Message, InfoBarSeverity.Error);
+             await ShowErrorDialog($"Error executing prompt '{prompt.Name}'", ex);
+        }
+    }
 
 	private void UpdateMicrophoneToggleVisuals()
 	{
@@ -1576,8 +1624,30 @@ public sealed partial class MainWindow : Window, IDisposable
 		};
 		AutomationProperties.SetName(dialog, title);
 		AutomationProperties.SetHelpText(dialog, message);
-		await dialog.ShowAsync();
+		await ShowDialogAsync(dialog);
 	}
+
+    private async Task<ContentDialogResult> ShowDialogAsync(ContentDialog dialog)
+    {
+        if (_isDialogOpen)
+            return ContentDialogResult.None;
+
+        _isDialogOpen = true;
+        try
+        {
+            return await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // Fallback safety if something else goes wrong with the dialog
+            ShowStatus("Dialog Error", $"Failed to show dialog: {ex.Message}", InfoBarSeverity.Error);
+            return ContentDialogResult.None;
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
+    }
 
 	private void CmbMicrophone_SelectionChanged(object sender, SelectionChangedEventArgs e)
 	{
@@ -1792,13 +1862,16 @@ public sealed partial class MainWindow : Window, IDisposable
 			return;
 		}
 
-		var settingsDialog = new SettingsDialog
+		var settingsDialog = new SettingsDialog(_settings)
 		{
 			XamlRoot = rootElement.XamlRoot,
 			RequestedTheme = rootElement.ActualTheme
 		};
 
-		await settingsDialog.ShowAsync();
+		if (await ShowDialogAsync(settingsDialog) == ContentDialogResult.Primary)
+		{
+			_settingsManager.SaveSettingsToFile(_settings);
+		}
 	}
 
 	// Debug crash simulation handlers - for testing global exception handling
@@ -1817,18 +1890,106 @@ public sealed partial class MainWindow : Window, IDisposable
 
 	private void DebugSimulateTaskCrash_Click(object sender, RoutedEventArgs e)
 	{
-		// Fire-and-forget task that throws an unobserved exception
-		_ = Task.Run(() =>
-		{
-			throw new InvalidOperationException("Simulated unobserved Task crash for debugging purposes.");
-		});
-		// Force garbage collection to trigger UnobservedTaskException
-		Task.Delay(500).ContinueWith(_ =>
-		{
-			GC.Collect();
-			GC.WaitForPendingFinalizers();
-		});
 	}
+
+    private string GetAutoRunPromptContent()
+    {
+        // Return content of the prompt marked as AutoRun, or empty if none (or fallback to first?)
+        // Spec says: "Only 1 prompt... can have Auto-Run". 
+        var prompt = _settings.LlmSettings?.Prompts.FirstOrDefault(p => p.AutoRun);
+        return prompt?.Content ?? string.Empty;
+    }
+
+    private void BtnAddPrompt_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new PromptEditorWindow(null, _transcriptFormatter);
+        // dialog.XamlRoot = this.Content.XamlRoot; 
+        // Window doesn't have XamlRoot property itself like ContentDialog?
+        // Wait, PromptEditorWindow is a Window. It doesn't need XamlRoot. it opens as a separate window.
+        // But for modal behavior over generic window? WinUI 3 Window is weird about modality.
+        // Let's assume non-modal or use .Activate().
+        // To make it modal to *this* window requires P/Invoke SetParent usually.
+        // For simplicity, I'll just show it. Ideally use ContentDialog for modal within app window, but I created a Window.
+        // Re-reading implementation plan: "PromptEditorWindow.xaml - A new Window/Dialog".
+        // If I use Window:
+        dialog.Activate();
+        
+        // Wait for it to close? We can't await a Window easily without events.
+        dialog.Closed += (s, args) => 
+        {
+             if (dialog.IsSaved && dialog.Prompt != null && !string.IsNullOrWhiteSpace(dialog.Prompt.Name))
+             {
+                 // Add new prompt
+                 dialog.Prompt.Id = (_settings.LlmSettings.Prompts.Max(p => (int?)p.Id) ?? 0) + 1;
+                 
+                 // Handle AutoRun exclusivity
+                 if (dialog.Prompt.AutoRun)
+                     foreach(var p in _settings.LlmSettings.Prompts) p.AutoRun = false;
+                     
+                 _settings.LlmSettings.Prompts.Add(dialog.Prompt);
+                 SaveAndRefreshPrompts();
+             }
+        };
+    }
+
+    private void BtnEditPrompt_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is LlmSettings.LlmPrompt prompt)
+        {
+             var dialog = new PromptEditorWindow(prompt, _transcriptFormatter);
+             dialog.Activate();
+             dialog.Closed += (s, args) =>
+             {
+                 if (dialog.IsSaved)
+                 {
+                     // Handle AutoRun exclusivity if this one is now AutoRun
+                     if (prompt.AutoRun)
+                     {
+                         foreach(var p in _settings.LlmSettings.Prompts)
+                         {
+                             if (p != prompt) p.AutoRun = false;
+                         }
+                     }
+                     
+                     SaveAndRefreshPrompts();
+                 }
+                 // If not saved (Cancel/Close), do nothing. The object references might have been modified 
+                 // if the dialog logic wasn't careful (it is careful to only modify on save now? 
+                 // actually I modified PromptEditorWindow to modify property on Save, but wait...
+                 // PromptEditorWindow takes a reference. If I type in the text box, does it update the reference?
+                 // No, PromptEditorWindow updates the object in BtnSave_Click. 
+                 // So we are safe.
+             };
+        }
+    }
+
+    private void BtnDeletePrompt_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is LlmSettings.LlmPrompt prompt)
+        {
+             _settings.LlmSettings.Prompts.Remove(prompt);
+             SaveAndRefreshPrompts();
+        }
+    }
+
+    private void BtnRunPrompt_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is LlmSettings.LlmPrompt prompt)
+        {
+             ExecutePrompt(prompt);
+        }
+    }
+
+    private void SaveAndRefreshPrompts()
+    {
+        _settingsManager.SaveSettingsToFile(_settings);
+        // Refresh List
+        LstPrompts.ItemsSource = null;
+        LstPrompts.ItemsSource = _settings.LlmSettings.Prompts;
+        
+        // Refresh Hotkeys
+        _hotkeyManager.RegisterPromptHotkeys(_settings.LlmSettings.Prompts, ExecutePrompt);
+    }
 
 	public void Dispose()
 	{

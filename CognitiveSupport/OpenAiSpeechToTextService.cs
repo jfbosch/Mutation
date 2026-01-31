@@ -26,7 +26,8 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 	public async Task<string> ConvertAudioToText(
 		string speechToTextPrompt,
 		string audioffilePath,
-		CancellationToken overallCancellationToken)
+		CancellationToken overallCancellationToken,
+		int? timeoutSeconds = null)
 	{
 		if (string.IsNullOrEmpty(audioffilePath))
 			throw new ArgumentException($"'{nameof(audioffilePath)}' cannot be null or empty.", nameof(audioffilePath));
@@ -53,7 +54,8 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 		var response = await retryPolicy.ExecuteAsync(async (context, overallToken) =>
 		{
 			int attempt = context.ContainsKey(AttemptKey) ? (int)context[AttemptKey] : 1;
-			int timeout = Math.Min(_timeoutSeconds * attempt, 60);
+			int baseTimeout = timeoutSeconds ?? _timeoutSeconds;
+			int timeout = baseTimeout * attempt;
 			using var thisTryCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeout));
 			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(overallToken, thisTryCts.Token);
 
@@ -64,6 +66,9 @@ public class OpenAiSpeechToTextService : ISpeechToTextService
 		}, context, overallCancellationToken).ConfigureAwait(false);
 
 		return response;
+
+
+
 	}
 
 	private async Task<string> TranscribeViaWhisper(

@@ -86,6 +86,7 @@
 					Style="{StaticResource BodyTextBlockStyle}"
 					Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 				<TextBlock
+					x:Name="PlaceholderText"
 					Text="Detailed controls for this category will appear here in a future update."
 					TextWrapping="Wrap"
 					Style="{StaticResource CaptionTextBlockStyle}"

@@ -22,9 +22,13 @@ public class HotkeyManager : IDisposable
 	// even though one instance is already active). This prevents false positives
 	// in the FailedRegistrations list when router hotkeys are refreshed.
 	private readonly HashSet<string> _registeredHotkeys = new(StringComparer.Ordinal);
-        private readonly List<int> _routerIds = new();
-        private readonly Dictionary<int, string> _routerNormalizedHotkeys = new();
-        private readonly List<string> _routerFailedRegistrations = new();
+    private readonly List<int> _routerIds = new();
+    private readonly Dictionary<int, string> _routerNormalizedHotkeys = new();
+    private readonly List<string> _routerFailedRegistrations = new();
+
+    private readonly List<int> _promptIds = new();
+    private readonly Dictionary<int, string> _promptNormalizedHotkeys = new();
+
 	private readonly List<string> _coreFailedRegistrations = new();
 	private readonly Settings _settings;
 	private static SynchronizationContext? s_uiCtx;
@@ -275,6 +279,55 @@ public class HotkeyManager : IDisposable
                 _routerFailedRegistrations.Clear();
         }
 
+        public void RegisterPromptHotkeys(IEnumerable<LlmSettings.LlmPrompt> prompts, Action<LlmSettings.LlmPrompt> callback)
+        {
+            ClearPromptHotkeys();
+            if (prompts == null) return;
+
+            foreach (var prompt in prompts)
+            {
+                if (string.IsNullOrWhiteSpace(prompt.Hotkey)) continue;
+
+                try
+                {
+                    var hotkey = Hotkey.Parse(prompt.Hotkey);
+                    var attempt = RegisterHotkeyInternal(hotkey, () => callback(prompt), isRouter: false); // Treat as core or unique type? 
+                    // reusing RegisterHotkeyInternal. 'isRouter' tracks failures separately. 
+                    // Let's treat prompts as core for failure tracking for now, or add a flag. 
+                    // The current method separates core vs router. 
+                    // If I pass isRouter=false, it adds to FailedRegistrations and _coreFailedRegistrations.
+                    // This seems acceptable.
+
+                    if (attempt.Success && attempt.Id > 0)
+                    {
+                        _promptIds.Add(attempt.Id);
+                        _promptNormalizedHotkeys[attempt.Id] = attempt.NormalizedHotkey;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"Prompt hotkey failed: {prompt.Name} ({prompt.Hotkey}) - {ex.Message}");
+                    FailedRegistrations.Add(prompt.Hotkey);
+                }
+            }
+        }
+
+        public void ClearPromptHotkeys()
+        {
+            foreach (var id in _promptIds)
+            {
+                UnregisterHotKey(_hwnd, id);
+                _callbacks.Remove(id);
+                if (_promptNormalizedHotkeys.TryGetValue(id, out var norm))
+                {
+                    _promptNormalizedHotkeys.Remove(id);
+                    _registeredHotkeys.Remove(norm);
+                }
+            }
+            _promptIds.Clear();
+            _promptNormalizedHotkeys.Clear();
+        }
+
         public void UnregisterAll()
         {
                 foreach (var kvp in _callbacks)
@@ -282,6 +335,8 @@ public class HotkeyManager : IDisposable
                 _callbacks.Clear();
                 _routerIds.Clear();
                 _routerNormalizedHotkeys.Clear();
+                _promptIds.Clear();
+                _promptNormalizedHotkeys.Clear();
                 _registeredHotkeys.Clear();
         }
 
